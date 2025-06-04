@@ -6,7 +6,9 @@ import { Link } from 'react-router-dom';
 const Hero = () => {
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900">
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%239C92AC\" fill-opacity=\"0.05\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"2\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+      <div className="absolute inset-0 opacity-20" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fillRule='evenodd'%3E%3Cg fill='%239C92AC' fillOpacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+      }}></div>
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="text-center">
@@ -33,7 +35,6 @@ const Hero = () => {
           </div>
         </div>
 
-        {/* Feature Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mt-20">
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 text-center hover:bg-white/20 transition-all duration-300 animate-scale-in" style={{ animationDelay: '0.6s' }}>
             <Shield className="h-12 w-12 text-emerald-400 mx-auto mb-4" />
@@ -60,7 +61,6 @@ const Hero = () => {
           </div>
         </div>
 
-        {/* Stats Section */}
         <div className="mt-20 text-center">
           <div className="grid md:grid-cols-3 gap-8">
             <div className="animate-fade-in" style={{ animationDelay: '1.4s' }}>
