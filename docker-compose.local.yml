@@ -1,0 +1,92 @@
+# ================================
+# Docker Compose - Local Development
+# ================================
+# Usage: docker compose -f docker-compose.local.yml up --build
+# ================================
+
+name: willchain-local
+
+services:
+  # ---- PostgreSQL Database ----
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-willchain_local}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-willchain_local_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-willchain_local_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-willchain_local} -d ${POSTGRES_DB:-willchain_local_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---- Backend API (Express + TypeScript) ----
+  backend:
+    image: willchain-local/backend:dev
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile
+      target: development
+    container_name: backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      # Database connection - uses postgres service name
+      DATABASE_URL: postgres://${POSTGRES_USER:-willchain_local}:${POSTGRES_PASSWORD:-willchain_local_secret}@postgres:5432/${POSTGRES_DB:-willchain_local_db}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-willchain_local}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-willchain_local_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-willchain_local_db}
+    ports:
+      - "4000:4000"
+    volumes:
+      # Mount source code for hot reload
+      - ./services/api/src:/app/src:delegated
+      - ./services/api/tsconfig.json:/app/tsconfig.json:ro
+      # Prevent overwriting node_modules with host's node_modules
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ---- Frontend (Next.js + TypeScript) ----
+  frontend:
+    image: willchain-local/frontend:dev
+    build:
+      context: ./services/web
+      dockerfile: Dockerfile
+      target: development
+    container_name: frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      # API URL for server-side calls (internal Docker network)
+      API_URL: http://backend:4000
+      # API URL for client-side calls (browser access)
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount source code for hot reload
+      - ./services/web/app:/app/app:delegated
+      - ./services/web/public:/app/public:delegated
+      - ./services/web/next.config.ts:/app/next.config.ts:ro
+      - ./services/web/tsconfig.json:/app/tsconfig.json:ro
+      # Prevent overwriting node_modules with host's node_modules
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+
+# ---- Volumes ----
+volumes:
+  postgres_data:
+    driver: local
