@@ -32,11 +32,11 @@ services:
     build:
       context: ./services/api
       dockerfile: Dockerfile
-      target: development
+      target: local
     container_name: backend
     restart: unless-stopped
     environment:
-      NODE_ENV: development
+      NODE_ENV: local
       PORT: 4000
       # Database connection - uses postgres service name
       DATABASE_URL: postgres://${POSTGRES_USER:-willchain_local}:${POSTGRES_PASSWORD:-willchain_local_secret}@postgres:5432/${POSTGRES_DB:-willchain_local_db}
@@ -63,7 +63,7 @@ services:
     build:
       context: ./services/web
       dockerfile: Dockerfile
-      target: development
+      target: local
     container_name: frontend
     restart: unless-stopped
     environment:

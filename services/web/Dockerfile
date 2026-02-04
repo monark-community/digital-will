@@ -22,6 +22,24 @@ RUN \
   else npm install; \
   fi
 
+# ---- Local Development ----
+FROM base AS local
+WORKDIR /app
+
+# Copy node_modules from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Expose port
+EXPOSE 3000
+
+# Set environment
+ENV NODE_ENV=local
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Start development server
+CMD ["npm", "run", "dev"]
+
 # ---- Development ----
 FROM base AS development
 WORKDIR /app

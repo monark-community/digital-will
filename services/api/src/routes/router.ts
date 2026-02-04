@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import authRoutes from './authRoutes';
+import { ROUTES } from '../utils/constants';
 
 const router = Router();
 
@@ -9,11 +10,10 @@ const router = Router();
  */
 
 // Authentication routes
-router.use('/auth', authRoutes);
+router.use(ROUTES.AUTH.BASE, authRoutes);
 
-// Future routes will be added here
-// router.use('/users', userRoutes);
-// router.use('/wills', willRoutes);
-// router.use('/beneficiaries', beneficiaryRoutes);
+// Future routes
+// router.use(ROUTES.USERS.BASE, userRoutes);
+// router.use(ROUTES.WILLS.BASE, willRoutes);
 
 export default router;
