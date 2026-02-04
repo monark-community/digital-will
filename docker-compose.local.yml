@@ -21,7 +21,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-willchain_local} -d ${POSTGRES_DB:-willchain_local_db}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-willchain_local} -d ${POSTGRES_DB:-willchain_local_db}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -77,9 +81,9 @@ services:
     volumes:
       # Mount source code for hot reload
       - ./services/web/app:/app/app:delegated
+      - ./services/web/lib:/app/lib:delegated
       - ./services/web/public:/app/public:delegated
-      - ./services/web/next.config.ts:/app/next.config.ts:ro
-      - ./services/web/tsconfig.json:/app/tsconfig.json:ro
+      - ./services/web/.env:/app/.env:ro
       # Prevent overwriting node_modules with host's node_modules
       - /app/node_modules
       - /app/.next

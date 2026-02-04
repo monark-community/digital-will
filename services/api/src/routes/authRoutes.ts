@@ -1,10 +1,13 @@
-import { Router } from 'express';
-import { StatusCodes } from 'http-status-codes';
-import { handleSignUp, handleSignIn } from '../controllers/authController';
-import { verifyToken } from '../middlewares/authMiddleware';
-import { validateSignUp, validateSignIn } from '../middlewares/validationMiddleware';
-import { asyncHandler } from '../middlewares/errorMiddleware';
-import { ROUTES } from '../utils/constants';
+import { Router } from "express";
+import { StatusCodes } from "http-status-codes";
+import { handleSignUp, handleSignIn } from "../controllers/authController";
+import { verifyToken } from "../middlewares/authMiddleware";
+import {
+  validateSignUp,
+  validateSignIn,
+} from "../middlewares/validationMiddleware";
+import { asyncHandler } from "../middlewares/errorMiddleware";
+import { ROUTES } from "../utils/constants";
 
 const router = Router();
 
@@ -30,10 +33,22 @@ router.post(ROUTES.AUTH.SIGNIN, asyncHandler(validateSignIn), handleSignIn);
 router.get(ROUTES.AUTH.ME, verifyToken, (req, res) => {
   res.status(StatusCodes.OK).json({
     success: true,
-    message: 'Authenticated user',
+    message: "Authenticated user",
     data: {
       user: req.user,
     },
+  });
+});
+
+/**
+ * @route   POST /auth/logout
+ * @desc    Logout user (client-side token removal)
+ * @access  Private
+ */
+router.post(ROUTES.AUTH.LOGOUT, verifyToken, (req, res) => {
+  res.status(StatusCodes.OK).json({
+    success: true,
+    message: "Logged out successfully",
   });
 });
 

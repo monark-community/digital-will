@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { StatusCodes } from "http-status-codes";
 import { loadEnvironment, validateEnvironment } from "./config/env";
 import { config } from "./config/config";
@@ -18,6 +19,14 @@ try {
 }
 
 const app = express();
+
+// CORS configuration
+app.use(
+  cors({
+    origin: config.api.corsOrigin,
+    credentials: true,
+  }),
+);
 
 // Middleware
 app.use(express.json());

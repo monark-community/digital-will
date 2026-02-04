@@ -16,18 +16,19 @@ export const PASSWORD = {
 
 // API Routes
 export const ROUTES = {
-  BASE: '/api',
+  BASE: "/api",
   AUTH: {
-    BASE: '/auth',
-    SIGNUP: '/signup',
-    SIGNIN: '/signin',
-    ME: '/me',
+    BASE: "/auth",
+    SIGNUP: "/signup",
+    SIGNIN: "/signin",
+    ME: "/me",
+    LOGOUT: "/logout",
   },
   // Future routes
   USERS: {
-    BASE: '/users',
+    BASE: "/users",
   },
   WILLS: {
-    BASE: '/wills',
+    BASE: "/wills",
   },
 } as const;

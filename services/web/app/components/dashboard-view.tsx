@@ -1,15 +1,19 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   type MemberRole,
-  STUB_USER,
   PrimaryMemberContent,
   SecondaryMemberContent,
-} from './dashboard';
+} from "./dashboard";
+import type { User } from "@/lib/types";
 
-export default function DashboardView() {
-  const [activeRole, setActiveRole] = useState<MemberRole>('primary');
+interface DashboardViewProps {
+  user: User;
+}
+
+export default function DashboardView({ user }: DashboardViewProps) {
+  const [activeRole, setActiveRole] = useState<MemberRole>("primary");
 
   return (
     <div className="min-h-screen bg-[var(--bg-page)]">
@@ -18,22 +22,22 @@ export default function DashboardView() {
         <div className="flex gap-1 p-1 rounded-lg bg-[var(--bg-section)] border border-[var(--border-section)] w-fit mb-6">
           <button
             type="button"
-            onClick={() => setActiveRole('primary')}
+            onClick={() => setActiveRole("primary")}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeRole === 'primary'
-                ? 'bg-[var(--accent)] text-white'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
+              activeRole === "primary"
+                ? "bg-[var(--accent)] text-white"
+                : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]"
             }`}
           >
             Primary member
           </button>
           <button
             type="button"
-            onClick={() => setActiveRole('secondary')}
+            onClick={() => setActiveRole("secondary")}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeRole === 'secondary'
-                ? 'bg-[var(--accent)] text-white'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
+              activeRole === "secondary"
+                ? "bg-[var(--accent)] text-white"
+                : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]"
             }`}
           >
             Secondary member
@@ -43,14 +47,14 @@ export default function DashboardView() {
         {/* Welcome */}
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-[var(--text-primary)]">
-            Welcome back, {STUB_USER.firstName} {STUB_USER.lastName}
+            Welcome back, {user.firstName} {user.lastName}
           </h1>
           <p className="text-[var(--text-muted)] mt-1">
             Manage your digital inheritance and secure your legacy
           </p>
         </div>
 
-        {activeRole === 'secondary' ? (
+        {activeRole === "secondary" ? (
           <SecondaryMemberContent />
         ) : (
           <PrimaryMemberContent />
