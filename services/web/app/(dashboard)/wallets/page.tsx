@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useWallets, useAddWallet, useRemoveWallet, useUpdateWalletLabel } from "@/lib/hooks";
+import { useWallets, useAddWallet, useRemoveWallet, useUpdateWalletLabel, useCurrentUser } from "@/lib/hooks";
 import { connectWallet, isMetaMaskInstalled } from "@/lib/utils/wallet";
+import Header from "@/app/components/ui/Header";
 import type { Wallet } from "@/lib/types";
 
 export default function WalletsPage() {
@@ -10,6 +11,7 @@ export default function WalletsPage() {
   const { mutate: addWallet, isPending: isAdding } = useAddWallet();
   const { mutate: removeWallet } = useRemoveWallet();
   const { mutate: updateLabel } = useUpdateWalletLabel();
+  const { data: user } = useCurrentUser();
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState<string | null>(null);
@@ -79,23 +81,31 @@ export default function WalletsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
-        <div className="text-[var(--text-muted)]">Loading wallets...</div>
-      </div>
+      <>
+        <Header isAuthenticated={true} user={user} />
+        <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
+          <div className="text-[var(--text-muted)]">Loading wallets...</div>
+        </div>
+      </>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
-        <div className="text-red-400">Failed to load wallets</div>
-      </div>
+      <>
+        <Header isAuthenticated={true} user={user} />
+        <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
+          <div className="text-red-400">Failed to load wallets</div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-page)] py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+    <>
+      <Header isAuthenticated={true} user={user} />
+      <div className="min-h-screen bg-[var(--bg-page)] py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">My Wallets</h1>
           <p className="text-[var(--text-muted)]">
@@ -209,6 +219,7 @@ export default function WalletsPage() {
           ))}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
