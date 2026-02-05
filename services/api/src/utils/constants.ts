@@ -23,6 +23,9 @@ export const ROUTES = {
     SIGNIN: "/signin",
     ME: "/me",
     LOGOUT: "/logout",
+    WALLET_CHECK: "/wallet/check",
+    WALLET_SIGNIN: "/wallet/signin",
+    WALLET_CREATE: "/wallet/create",
   },
   // Future routes
   USERS: {

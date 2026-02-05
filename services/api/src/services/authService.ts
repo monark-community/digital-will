@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
 import { ConflictError, UnauthorizedError, BadRequestError, NotFoundError } from '../utils/errors';
 import { PASSWORD } from '../utils/constants';
+import { verifyWalletSignature, validateMessageTimestamp, validateWalletAddress } from '../utils/crypto';
 
 const prisma = new PrismaClient();
 
@@ -27,6 +28,7 @@ interface UserResponse {
   lastName: string;
   email: string;
   phoneNo?: string | null;
+  walletAddress?: string | null;
 }
 
 interface AuthResponse {
@@ -109,6 +111,154 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
       lastName: user.lastName,
       email: user.email,
       phoneNo: user.phoneNo,
+      walletAddress: user.walletAddress,
+    },
+    token,
+  };
+}
+
+/**
+ * Check if user exists by wallet address
+ */
+export async function checkWalletExists(walletAddress: string): Promise<{ exists: boolean; userId?: string }> {
+  const user = await prisma.user.findUnique({
+    where: { walletAddress: walletAddress.toLowerCase() },
+  });
+
+  return {
+    exists: !!user,
+    userId: user?.userId,
+  };
+}
+
+/**
+ * Authenticate with wallet (sign in if exists)
+ */
+export async function walletSignIn(
+  walletAddress: string,
+  signature: string,
+  message: string
+): Promise<AuthResponse> {
+  // Validate wallet address format
+  validateWalletAddress(walletAddress);
+
+  // Verify the signature
+  verifyWalletSignature(message, signature, walletAddress);
+
+  // Validate timestamp to prevent replay attacks
+  validateMessageTimestamp(message);
+
+  const user = await prisma.user.findUnique({
+    where: { walletAddress: walletAddress.toLowerCase() },
+  });
+
+  if (!user) {
+    throw new NotFoundError('No account found with this wallet address');
+  }
+
+  // Generate JWT token
+  const token = jwt.sign(
+    { userId: user.userId, email: user.email },
+    config.jwt.secret,
+    { expiresIn: config.jwt.expiresIn }
+  );
+
+  return {
+    user: {
+      userId: user.userId,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phoneNo: user.phoneNo,
+      walletAddress: user.walletAddress,
+    },
+    token,
+  };
+}
+
+/**
+ * Link wallet to existing user account
+ */
+export async function linkWallet(userId: string, walletAddress: string): Promise<UserResponse> {
+  const existingWallet = await prisma.user.findUnique({
+    where: { walletAddress: walletAddress.toLowerCase() },
+  });
+
+  if (existingWallet && existingWallet.userId !== userId) {
+    throw new ConflictError('This wallet is already linked to another account');
+  }
+
+  const user = await prisma.user.update({
+    where: { userId },
+    data: { walletAddress: walletAddress.toLowerCase() },
+  });
+
+  return {
+    userId: user.userId,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    phoneNo: user.phoneNo,
+    walletAddress: user.walletAddress,
+  };
+}
+
+/**
+ * Create account with wallet address
+ */
+export async function createAccountWithWallet(data: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNo?: string;
+  walletAddress: string;
+  signature: string;
+  message: string;
+}): Promise<AuthResponse> {
+  const { firstName, lastName, email, phoneNo, walletAddress, signature, message } = data;
+
+  validateWalletAddress(walletAddress);
+
+  verifyWalletSignature(message, signature, walletAddress);
+
+  validateMessageTimestamp(message);
+
+  const existingWallet = await prisma.user.findUnique({
+    where: { walletAddress: walletAddress.toLowerCase() },
+  });
+
+  if (existingWallet) {
+    throw new ConflictError('This wallet is already linked to an account');
+  }
+
+  const randomPassword = Math.random().toString(36).substring(2, 15);
+  const passwordHash = await bcrypt.hash(randomPassword, PASSWORD.SALT_ROUNDS);
+
+  const user = await prisma.user.create({
+    data: {
+      firstName,
+      lastName,
+      email,
+      phoneNo,
+      passwordHash,
+      walletAddress: walletAddress.toLowerCase(),
+    },
+  });
+
+  const token = jwt.sign(
+    { userId: user.userId, email: user.email },
+    config.jwt.secret,
+    { expiresIn: config.jwt.expiresIn }
+  );
+
+  return {
+    user: {
+      userId: user.userId,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phoneNo: user.phoneNo,
+      walletAddress: user.walletAddress,
     },
     token,
   };

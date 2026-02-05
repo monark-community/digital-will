@@ -2,16 +2,22 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSignIn } from "@/lib/hooks";
+import { useRouter } from "next/navigation";
+import { useSignIn, useCheckWallet, useWalletSignIn } from "@/lib/hooks";
+import { connectWallet, isMetaMaskInstalled } from "@/lib/utils/wallet";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [walletConnecting, setWalletConnecting] = useState(false);
 
   const { mutate: signIn, isPending, error, reset } = useSignIn();
+  const { mutate: checkWallet } = useCheckWallet();
+  const { mutate: walletSignIn } = useWalletSignIn();
 
   // Update local error state when mutation error changes
   useEffect(() => {
@@ -35,6 +41,51 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMessage(null);
     signIn(formData);
+  };
+
+  const handleMetaMaskConnect = async () => {
+    try {
+      setWalletConnecting(true);
+      setErrorMessage(null);
+
+      if (!isMetaMaskInstalled()) {
+        setErrorMessage("MetaMask is not installed. Please install MetaMask to continue.");
+        return;
+      }
+
+      const { address, signature, message } = await connectWallet();
+
+      checkWallet(address, {
+        onSuccess: (data) => {
+          if (data.exists) {
+            walletSignIn(
+              { walletAddress: address, signature, message },
+              {
+                onError: (error: any) => {
+                  const message = error?.response?.data?.message || "Failed to sign in with wallet";
+                  setErrorMessage(message);
+                },
+              }
+            );
+          } else {
+            const params = new URLSearchParams({
+              address,
+              signature,
+              message,
+            });
+            router.push(`/signup/wallet?${params.toString()}`);
+          }
+        },
+        onError: (error: any) => {
+          const message = error?.response?.data?.message || "Failed to check wallet";
+          setErrorMessage(message);
+        },
+      });
+    } catch (error: any) {
+      setErrorMessage(error.message || "Failed to connect to MetaMask");
+    } finally {
+      setWalletConnecting(false);
+    }
   };
 
   return (
@@ -125,6 +176,67 @@ export default function LoginPage() {
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-[var(--accent)] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
             >
               {isPending ? "Signing in..." : "Sign in"}
+            </button>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[var(--border-section)]"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-[var(--bg-card)] text-[var(--text-muted)]">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={handleMetaMaskConnect}
+              disabled={walletConnecting || isPending}
+              className="group relative w-full flex justify-center items-center py-3 px-4 border border-[var(--border-section)] text-sm font-semibold rounded-lg text-[var(--text-primary)] bg-[var(--bg-section)] hover:bg-[var(--bg-page)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg
+                className="w-5 h-5 mr-2"
+                viewBox="0 0 40 40"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M32.5 5L20.5 13.5L22.5 8.5L32.5 5Z"
+                  fill="#E17726"
+                  stroke="#E17726"
+                  strokeWidth="0.25"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M7.5 5L19.5 13.5L17.5 8.5L7.5 5Z"
+                  fill="#E27625"
+                  stroke="#E27625"
+                  strokeWidth="0.25"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M28 26L24.5 31.5L31.5 33.5L33.5 26H28Z"
+                  fill="#E27625"
+                  stroke="#E27625"
+                  strokeWidth="0.25"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M6.5 26L8.5 33.5L15.5 31.5L12 26H6.5Z"
+                  fill="#E27625"
+                  stroke="#E27625"
+                  strokeWidth="0.25"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              {walletConnecting ? "Connecting..." : "Connect with MetaMask"}
             </button>
           </div>
         </form>

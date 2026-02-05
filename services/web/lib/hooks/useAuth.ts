@@ -3,7 +3,12 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { authService } from "@/lib/services";
-import type { SignInRequest, SignUpRequest } from "@/lib/types";
+import type { 
+  SignInRequest, 
+  SignUpRequest, 
+  CreateAccountWithWalletRequest,
+  WalletAuthRequest
+} from "@/lib/types";
 import { AxiosError } from "axios";
 
 /**
@@ -70,5 +75,56 @@ export function useLogout() {
 export function useCurrentUser() {
   return useMutation({
     mutationFn: () => authService.getMe(),
+  });
+}
+
+/**
+ * Hook to check if wallet exists
+ */
+export function useCheckWallet() {
+  return useMutation({
+    mutationFn: (walletAddress: string) => authService.checkWallet(walletAddress),
+    onError: (error: AxiosError<{ message: string }>) => {
+      console.error("Check wallet error:", error.response?.data?.message);
+    },
+  });
+}
+
+/**
+ * Hook for wallet sign in
+ */
+export function useWalletSignIn() {
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: (data: WalletAuthRequest) => authService.walletSignIn(data),
+    onSuccess: (response) => {
+      authService.setToken(response.token);
+      authService.setUser(response.user);
+      router.push("/dashboard");
+    },
+    onError: (error: AxiosError<{ message: string }>) => {
+      console.error("Wallet sign in error:", error.response?.data?.message);
+    },
+  });
+}
+
+/**
+ * Hook to create account with wallet
+ */
+export function useCreateAccountWithWallet() {
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: (data: CreateAccountWithWalletRequest) => 
+      authService.createAccountWithWallet(data),
+    onSuccess: (response) => {
+      authService.setToken(response.token);
+      authService.setUser(response.user);
+      router.push("/dashboard");
+    },
+    onError: (error: AxiosError<{ message: string }>) => {
+      console.error("Create account with wallet error:", error.response?.data?.message);
+    },
   });
 }

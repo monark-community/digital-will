@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import { signUp, signIn } from "../services/authService";
+import { signUp, signIn, checkWalletExists, walletSignIn, createAccountWithWallet } from "../services/authService";
 import { asyncHandler } from "../middlewares/errorMiddleware";
 
 /**
@@ -40,6 +40,64 @@ export const handleSignIn = asyncHandler(
     res.status(StatusCodes.OK).json({
       success: true,
       message: "Sign in successful",
+      data: result,
+    });
+  },
+);
+
+/**
+ * Check if wallet exists
+ */
+export const handleCheckWallet = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { walletAddress } = req.body;
+
+    const result = await checkWalletExists(walletAddress);
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: result,
+    });
+  },
+);
+
+/**
+ * Wallet sign in controller
+ */
+export const handleWalletSignIn = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { walletAddress, signature, message } = req.body;
+
+    const result = await walletSignIn(walletAddress, signature, message);
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Wallet authentication successful",
+      data: result,
+    });
+  },
+);
+
+/**
+ * Create account with wallet
+ */
+export const handleCreateAccountWithWallet = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { firstName, lastName, email, phoneNo, walletAddress, signature, message } = req.body;
+
+    const result = await createAccountWithWallet({
+      firstName,
+      lastName,
+      email,
+      phoneNo,
+      walletAddress,
+      signature,
+      message,
+    });
+
+    res.status(StatusCodes.CREATED).json({
+      success: true,
+      message: "Account created and wallet linked successfully",
       data: result,
     });
   },
