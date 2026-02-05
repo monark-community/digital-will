@@ -234,6 +234,14 @@ export async function createAccountWithWallet(data: {
     throw new ConflictError('This wallet is already linked to an account');
   }
 
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (existingUser) {
+    throw new ConflictError('An account with this email already exists');
+  }
+
   const randomPassword = Math.random().toString(36).substring(2, 15);
   const passwordHash = await bcrypt.hash(randomPassword, PASSWORD.SALT_ROUNDS);
 
