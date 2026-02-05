@@ -8,6 +8,7 @@ export interface User {
   lastName: string;
   email: string;
   phoneNo?: string | null;
+  walletAddress?: string | null;
 }
 
 export interface SignUpRequest {
@@ -22,6 +23,27 @@ export interface SignUpRequest {
 export interface SignInRequest {
   email: string;
   password: string;
+}
+
+export interface WalletCheckResponse {
+  exists: boolean;
+  userId?: string;
+}
+
+export interface WalletAuthRequest {
+  walletAddress: string;
+  signature: string;
+  message: string;
+}
+
+export interface CreateAccountWithWalletRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNo?: string;
+  walletAddress: string;
+  signature: string;
+  message: string;
 }
 
 export interface AuthResponse {

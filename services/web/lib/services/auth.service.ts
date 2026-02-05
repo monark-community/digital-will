@@ -5,6 +5,8 @@ import type {
   SignInRequest,
   AuthResponse,
   User,
+  WalletCheckResponse,
+  CreateAccountWithWalletRequest,
 } from "../types";
 
 /**
@@ -105,5 +107,40 @@ export const authService = {
    */
   isAuthenticated: (): boolean => {
     return !!authService.getToken();
+  },
+
+  /**
+   * Check if wallet address exists
+   */
+  checkWallet: async (walletAddress: string): Promise<WalletCheckResponse> => {
+    const response = await apiClient.post<{
+      success: boolean;
+      data: WalletCheckResponse;
+    }>(API_ROUTES.AUTH.WALLET_CHECK, { walletAddress });
+    return response.data.data;
+  },
+
+  /**
+   * Sign in with wallet address
+   */
+  walletSignIn: async (data: { walletAddress: string; signature: string; message: string }): Promise<AuthResponse> => {
+    const response = await apiClient.post<{
+      success: boolean;
+      data: AuthResponse;
+    }>(API_ROUTES.AUTH.WALLET_SIGNIN, data);
+    return response.data.data;
+  },
+
+  /**
+   * Create account with wallet
+   */
+  createAccountWithWallet: async (
+    data: CreateAccountWithWalletRequest
+  ): Promise<AuthResponse> => {
+    const response = await apiClient.post<{
+      success: boolean;
+      data: AuthResponse;
+    }>(API_ROUTES.AUTH.WALLET_CREATE, data);
+    return response.data.data;
   },
 };

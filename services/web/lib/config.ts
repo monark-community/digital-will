@@ -18,5 +18,8 @@ export const API_ROUTES = {
     SIGNIN: "/api/auth/signin",
     ME: "/api/auth/me",
     LOGOUT: "/api/auth/logout",
+    WALLET_CHECK: "/api/auth/wallet/check",
+    WALLET_SIGNIN: "/api/auth/wallet/signin",
+    WALLET_CREATE: "/api/auth/wallet/create",
   },
 } as const;

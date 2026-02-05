@@ -1,6 +1,12 @@
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
-import { handleSignUp, handleSignIn } from "../controllers/authController";
+import { 
+  handleSignUp, 
+  handleSignIn, 
+  handleCheckWallet, 
+  handleWalletSignIn,
+  handleCreateAccountWithWallet 
+} from "../controllers/authController";
 import { verifyToken } from "../middlewares/authMiddleware";
 import {
   validateSignUp,
@@ -24,6 +30,27 @@ router.post(ROUTES.AUTH.SIGNUP, asyncHandler(validateSignUp), handleSignUp);
  * @access  Public
  */
 router.post(ROUTES.AUTH.SIGNIN, asyncHandler(validateSignIn), handleSignIn);
+
+/**
+ * @route   POST /auth/wallet/check
+ * @desc    Check if wallet address exists
+ * @access  Public
+ */
+router.post(ROUTES.AUTH.WALLET_CHECK, handleCheckWallet);
+
+/**
+ * @route   POST /auth/wallet/signin
+ * @desc    Sign in with wallet address
+ * @access  Public
+ */
+router.post(ROUTES.AUTH.WALLET_SIGNIN, handleWalletSignIn);
+
+/**
+ * @route   POST /auth/wallet/create
+ * @desc    Create account with wallet address
+ * @access  Public
+ */
+router.post(ROUTES.AUTH.WALLET_CREATE, handleCreateAccountWithWallet);
 
 /**
  * @route   GET /auth/me
