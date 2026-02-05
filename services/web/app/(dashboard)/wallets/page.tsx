@@ -43,6 +43,11 @@ export default function WalletsPage() {
   };
 
   const handleRemoveWallet = (walletId: string) => {
+    if (wallets && wallets.length === 1) {
+      setErrorMessage("Cannot remove the last wallet from your account. You must have at least one wallet.");
+      return;
+    }
+
     if (confirm("Are you sure you want to remove this wallet?")) {
       removeWallet(walletId, {
         onError: (error: any) => {
