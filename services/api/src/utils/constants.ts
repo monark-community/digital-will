@@ -34,4 +34,9 @@ export const ROUTES = {
   WILLS: {
     BASE: "/wills",
   },
+  WALLETS: {
+    BASE: "/wallets",
+    BY_ID: "/wallets/:walletId",
+    UPDATE_LABEL: "/wallets/:walletId/label",
+  },
 } as const;

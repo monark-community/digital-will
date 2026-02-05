@@ -28,7 +28,6 @@ interface UserResponse {
   lastName: string;
   email: string;
   phoneNo?: string | null;
-  walletAddress?: string | null;
 }
 
 interface AuthResponse {
@@ -118,16 +117,17 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
 }
 
 /**
- * Check if user exists by wallet address
+ * Check if wallet exists and get associated user
  */
 export async function checkWalletExists(walletAddress: string): Promise<{ exists: boolean; userId?: string }> {
-  const user = await prisma.user.findUnique({
-    where: { walletAddress: walletAddress.toLowerCase() },
+  const wallet = await prisma.wallet.findUnique({
+    where: { address: walletAddress.toLowerCase() },
+    include: { user: true },
   });
 
   return {
-    exists: !!user,
-    userId: user?.userId,
+    exists: !!wallet,
+    userId: wallet?.userId,
   };
 }
 
@@ -148,13 +148,16 @@ export async function walletSignIn(
   // Validate timestamp to prevent replay attacks
   validateMessageTimestamp(message);
 
-  const user = await prisma.user.findUnique({
-    where: { walletAddress: walletAddress.toLowerCase() },
+  const wallet = await prisma.wallet.findUnique({
+    where: { address: walletAddress.toLowerCase() },
+    include: { user: true },
   });
 
-  if (!user) {
+  if (!wallet) {
     throw new NotFoundError('No account found with this wallet address');
   }
+
+  const user = wallet.user;
 
   // Generate JWT token
   const token = jwt.sign(
@@ -223,8 +226,8 @@ export async function createAccountWithWallet(data: {
 
   validateMessageTimestamp(message);
 
-  const existingWallet = await prisma.user.findUnique({
-    where: { walletAddress: walletAddress.toLowerCase() },
+  const existingWallet = await prisma.wallet.findUnique({
+    where: { address: walletAddress.toLowerCase() },
   });
 
   if (existingWallet) {
@@ -241,9 +244,18 @@ export async function createAccountWithWallet(data: {
       email,
       phoneNo,
       passwordHash,
-      walletAddress: walletAddress.toLowerCase(),
+      wallets: {
+        create: {
+          address: walletAddress.toLowerCase(),
+        },
+      },
+    },
+    include: {
+      wallets: true,
     },
   });
+
+  const primaryWallet = user.wallets[0];
 
   const token = jwt.sign(
     { userId: user.userId, email: user.email },
@@ -258,7 +270,7 @@ export async function createAccountWithWallet(data: {
       lastName: user.lastName,
       email: user.email,
       phoneNo: user.phoneNo,
-      walletAddress: user.walletAddress,
+      walletAddress: primaryWallet.address,
     },
     token,
   };

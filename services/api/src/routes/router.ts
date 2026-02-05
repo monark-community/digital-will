@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import authRoutes from './authRoutes';
+import walletRoutes from './walletRoutes';
 import { ROUTES } from '../utils/constants';
 
 const router = Router();
@@ -11,6 +12,9 @@ const router = Router();
 
 // Authentication routes
 router.use(ROUTES.AUTH.BASE, authRoutes);
+
+// Wallet routes
+router.use(ROUTES.WALLETS.BASE, walletRoutes);
 
 // Future routes
 // router.use(ROUTES.USERS.BASE, userRoutes);

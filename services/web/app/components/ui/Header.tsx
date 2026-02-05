@@ -109,6 +109,12 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
                     My Wills
                   </a>
                   <a
+                    href="/wallets"
+                    className="text-[var(--text-muted)] hover:text-[var(--accent)] px-3 py-2 text-sm font-medium transition-colors"
+                  >
+                    Wallets
+                  </a>
+                  <a
                     href="/beneficiaries"
                     className="text-[var(--text-muted)] hover:text-[var(--accent)] px-3 py-2 text-sm font-medium transition-colors"
                   >

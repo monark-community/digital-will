@@ -8,7 +8,13 @@ export interface User {
   lastName: string;
   email: string;
   phoneNo?: string | null;
-  walletAddress?: string | null;
+}
+
+export interface Wallet {
+  walletId: string;
+  address: string;
+  label?: string | null;
+  createdAt: string;
 }
 
 export interface SignUpRequest {

@@ -16,9 +16,22 @@ model User {
   email        String   @unique
   phoneNo      String?
   passwordHash String
-  walletAddress String? @unique
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  wallets      Wallet[]
 
   @@map("users")
+}
+
+model Wallet {
+  walletId      String   @id @default(uuid())
+  address       String   @unique
+  label         String?
+  userId        String
+  user          User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@map("wallets")
 }
