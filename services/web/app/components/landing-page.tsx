@@ -12,7 +12,7 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold text-[var(--text-primary)] mb-6">
-              Secure Your Digital Legacy with ZEKI
+              Secure Your Digital Legacy with
               <span className="text-[var(--accent)] block">
                 Blockchain Technology
               </span>

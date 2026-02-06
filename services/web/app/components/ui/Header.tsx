@@ -106,7 +106,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
                     href="/wills"
                     className="text-[var(--text-muted)] hover:text-[var(--accent)] px-3 py-2 text-sm font-medium transition-colors"
                   >
-                    My Wills
+                    Wills
                   </a>
                   <a
                     href="/wallets"
@@ -118,13 +118,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
                     href="/beneficiaries"
                     className="text-[var(--text-muted)] hover:text-[var(--accent)] px-3 py-2 text-sm font-medium transition-colors"
                   >
-                    Beneficiaries
-                  </a>
-                  <a
-                    href="/settings"
-                    className="text-[var(--text-muted)] hover:text-[var(--accent)] px-3 py-2 text-sm font-medium transition-colors"
-                  >
-                    Settings
+                    My contacts
                   </a>
                 </>
               )}

@@ -34,7 +34,7 @@ export default function PrimaryMemberContent() {
         </div>
         <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-between">
           <div>
-            <p className="text-sm text-[var(--text-muted-alt)]">Beneficiaries</p>
+            <p className="text-sm text-[var(--text-muted-alt)]">Secondary members</p>
             <p className="text-xl font-bold text-[var(--text-primary)] mt-1">{STUB_METRICS.beneficiaries}</p>
           </div>
           <div className="w-12 h-12 rounded-full bg-violet-500/20 flex items-center justify-center">
