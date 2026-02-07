@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import Footer from "./components/ui/Footer";
+import { Providers } from "./providers";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Digital Will",
@@ -12,8 +17,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('willchain-theme');document.documentElement.setAttribute('data-theme',t==='light'||t==='dark'?t:'dark');})();`,
+          }}
+        />
+      </head>
+      <body className={`${inter.className} flex min-h-screen flex-col`}>
+        <Providers>
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </Providers>
+      </body>
     </html>
   );
 }

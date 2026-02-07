@@ -1,1 +1,19 @@
-/** Routes Index */
+import { Router } from 'express';
+import authRoutes from './authRoutes';
+
+const router = Router();
+
+/**
+ * Central route configuration
+ * All route modules are registered here
+ */
+
+// Authentication routes
+router.use('/auth', authRoutes);
+
+// Future routes will be added here
+// router.use('/users', userRoutes);
+// router.use('/wills', willRoutes);
+// router.use('/beneficiaries', beneficiaryRoutes);
+
+export default router;

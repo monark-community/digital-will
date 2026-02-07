@@ -1,10 +1,75 @@
-:root {
-  --foreground: #111;
-  --background: #fff;
+@import "tailwindcss";
+
+/* WillChain theme: dark blue-green + teal accent (Tailwind v4 uses @theme, not tailwind.config.js) */
+@theme {
+  /* Primary: green accent (buttons, highlights) */
+  --color-primary-50: #ecfdf5;
+  --color-primary-100: #d1fae5;
+  --color-primary-200: #a7f3d0;
+  --color-primary-300: #6ee7b7;
+  --color-primary-400: #34d399;
+  --color-primary-500: #22c55e;
+  --color-primary-600: #16a34a;
+  --color-primary-700: #15803d;
+  --color-primary-800: #166534;
+  --color-primary-900: #14532d;
+  --color-primary-950: #052e16;
+ 
+  /* Secondary: dark blue-grey background (#0A192F, #172A45) */
+  --color-secondary-50: #f0f9ff;
+  --color-secondary-100: #e0f2fe;
+  --color-secondary-200: #bae6fd;
+  --color-secondary-300: #7dd3fc;
+  --color-secondary-400: #38bdf8;
+  --color-secondary-500: #0ea5e9;
+  --color-secondary-600: #1e3a5f;
+  --color-secondary-700: #1e3a5f;
+  --color-secondary-800: #172a45;
+  --color-secondary-900: #0a192f;
+  --color-secondary-950: #020c1b;
+}
+
+/* Dark theme (default) */
+:root,
+[data-theme="dark"] {
+  --bg-page: #0a192f;
+  --bg-section: #172a45;
+  --bg-card: #1e3a5f;
+  --border-section: #2d4a6f;
+  --text-primary: #ffffff;
+  --text-muted: #d1d5db;
+  --text-muted-alt: #9ca3af;
+  --accent: #22c55e;
+  --accent-hover: #16a34a;
+  --cta-bg: #16a34a;
+  --cta-text: #ffffff;
+  --dotted-opacity: 0.08;
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --bg-page: #f1f5f9;
+  --bg-section: #e2e8f0;
+  --bg-card: #ffffff;
+  --border-section: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-muted: #475569;
+  --text-muted-alt: #64748b;
+  --accent: #16a34a;
+  --accent-hover: #15803d;
+  --cta-bg: #16a34a;
+  --cta-text: #ffffff;
+  --dotted-opacity: 0.15;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: system-ui, sans-serif;
+  color: var(--text-primary);
+  background: var(--bg-page);
+  font-family: Inter, system-ui, sans-serif;
+}
+
+/* Dotted grid overlay (theme-aware) */
+.bg-dotted-grid {
+  background-image: radial-gradient(circle, rgba(34, 197, 94, var(--dotted-opacity)) 1px, transparent 1px);
+  background-size: 24px 24px;
 }

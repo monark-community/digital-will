@@ -8,8 +8,8 @@ WORKDIR /app
 
 # ---- Dependencies ----
 FROM base AS deps
-# Install dependencies needed for native modules
-RUN apk add --no-cache libc6-compat
+# Install dependencies needed for native modules and Prisma
+RUN apk add --no-cache libc6-compat openssl
 
 # Copy package files
 COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* ./
@@ -22,9 +22,32 @@ RUN \
   else npm install; \
   fi
 
+# ---- Local Development ----
+FROM base AS local
+WORKDIR /app
+
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
+# Copy node_modules from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Expose port
+EXPOSE 4000
+
+# Set environment
+ENV NODE_ENV=local
+
+# Generate Prisma Client and push schema, then start dev server
+CMD ["sh", "-c", "npx prisma generate && npx prisma db push --accept-data-loss && npm run dev"]
+
 # ---- Development ----
 FROM base AS development
 WORKDIR /app
+
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
 
 # Copy node_modules from deps stage
 COPY --from=deps /app/node_modules ./node_modules
@@ -36,8 +59,8 @@ EXPOSE 4000
 # Set environment
 ENV NODE_ENV=development
 
-# Start development server with hot reload
-CMD ["npm", "run", "dev"]
+# Generate Prisma Client and deploy migrations, then start dev server
+CMD ["sh", "-c", "npx prisma generate && npx prisma migrate deploy && npm run dev"]
 
 # ---- Builder ----
 FROM base AS builder
@@ -46,14 +69,14 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build TypeScript
-RUN npm run build
-
 # ---- Production ----
 FROM base AS production
 WORKDIR /app
 
 ENV NODE_ENV=production
+
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
@@ -63,9 +86,11 @@ RUN adduser --system --uid 1001 expressjs
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/prisma ./prisma
 
 USER expressjs
 
 EXPOSE 4000
 
-CMD ["node", "dist/index.js"]
+# Generate Prisma Client and deploy migrations, then start production server
+CMD ["sh", "-c", "npx prisma generate && npx prisma migrate deploy && node dist/index.js"]
