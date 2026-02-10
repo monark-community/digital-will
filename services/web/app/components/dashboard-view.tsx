@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { PrimaryMemberContent } from "./dashboard";
+import { PrimaryMemberContent, WalletProvider } from "./dashboard";
 import type { User } from "@/lib/types";
 
 interface DashboardViewProps {
@@ -22,7 +22,9 @@ export default function DashboardView({ user }: DashboardViewProps) {
           </p>
         </div>
 
-        <PrimaryMemberContent />
+        <WalletProvider>
+          <PrimaryMemberContent />
+        </WalletProvider>
       </div>
     </div>
   );
