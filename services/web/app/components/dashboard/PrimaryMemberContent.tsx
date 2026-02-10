@@ -62,29 +62,49 @@ export default function PrimaryMemberContent() {
             </svg>
           </button>
 
-          {isDropdownOpen && wallets && wallets.length > 1 && (
+          {isDropdownOpen && wallets && wallets.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl shadow-lg z-50 overflow-hidden">
-              {wallets.map((wallet) => (
-                <button
-                  key={wallet.walletId}
-                  onClick={() => handleWalletSelect(wallet)}
-                  className={`w-full p-4 text-left hover:bg-[var(--bg-section)] transition-colors border-b border-[var(--border-section)] last:border-b-0 ${
-                    wallet.walletId === selectedWallet.walletId ? 'bg-[var(--bg-section)]' : ''
-                  }`}
-                >
-                  <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
-                    {wallet.label || `Wallet ${wallet.address.slice(0, 8)}...`}
-                  </h3>
-                  <p className="text-sm text-[var(--text-muted-alt)] font-mono">wallet id : {wallet.address}</p>
-                </button>
-              ))}
+              {wallets.length === 1 ? (
+                <div className="p-4 text-center text-sm text-[var(--text-muted-alt)]">
+                  There are no other wallets available.
+                </div>
+              ) : (
+                wallets.map((wallet) => (
+                  <button
+                    key={wallet.walletId}
+                    onClick={() => handleWalletSelect(wallet)}
+                    className={`w-full p-4 text-left hover:bg-[var(--bg-section)] transition-colors border-b border-[var(--border-section)] last:border-b-0 ${
+                      wallet.walletId === selectedWallet.walletId ? 'bg-[var(--bg-section)]' : ''
+                    }`}
+                  >
+                    <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
+                      {wallet.label || `Wallet ${wallet.address.slice(0, 8)}...`}
+                    </h3>
+                    <p className="text-sm text-[var(--text-muted-alt)] font-mono">wallet id : {wallet.address}</p>
+                  </button>
+                ))
+              )}
             </div>
           )}
         </div>
       ) : (
         <div className="mb-8">
-          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-center">
-            <p className="text-[var(--text-muted-alt)]">No wallets found. Please add a wallet to continue.</p>
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-between">
+            <div className="flex-1 text-left">
+              <h3 className="text-base font-semibold text-[var(--text-muted-alt)] mb-1">
+                No wallet selected
+              </h3>
+              <p className="text-sm text-[var(--text-muted-alt)]">Please add a wallet to continue</p>
+            </div>
+            <svg 
+              className="w-6 h-6 text-[var(--text-muted-alt)]" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth={2} 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
           </div>
         </div>
       )}

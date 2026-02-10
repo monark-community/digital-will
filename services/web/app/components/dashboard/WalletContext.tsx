@@ -18,7 +18,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
 
   useEffect(() => {
-    if (wallets && wallets.length > 0 && !selectedWallet) {
+    if (!wallets || wallets.length === 0) {
+      setSelectedWallet(null);
+      return;
+    }
+    if (!selectedWallet || !wallets.find(w => w.walletId === selectedWallet.walletId)) {
       setSelectedWallet(wallets[0]);
     }
   }, [wallets, selectedWallet]);
