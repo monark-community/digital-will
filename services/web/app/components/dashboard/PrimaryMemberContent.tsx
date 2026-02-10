@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { STUB_METRICS, STUB_WILL, STUB_ASSETS, formatCurrency } from './stub-data';
+import { STUB_METRICS, STUB_WILL, STUB_ASSETS, STUB_WILLS, formatCurrency } from './stub-data';
 import { useWalletContext } from './WalletContext';
 
 export default function PrimaryMemberContent() {
@@ -90,8 +90,69 @@ export default function PrimaryMemberContent() {
       )}
 
       <div className="grid lg:grid-cols-2 gap-8">
-        <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6 flex items-center justify-center min-h-[400px]">
-          <p className="text-[var(--text-muted-alt)] text-lg">List wills published</p>
+        <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-6">Active Wills</h2>
+          <div className="space-y-4">
+            {STUB_WILLS.filter(will => will.status === 'Active').map((will) => (
+              <div key={will.id} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors">
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className="font-semibold text-[var(--text-primary)]">{will.title}</h3>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                    will.status === 'Active' 
+                      ? 'bg-emerald-500/20 text-emerald-500' 
+                      : 'bg-yellow-500/20 text-yellow-500'
+                  }`}>
+                    {will.status === 'Active' && (
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                    )}
+                    {will.status}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <p className="text-xs text-[var(--text-muted-alt)]">Secondary Members</p>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{will.secondaryMembers.length} people</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--text-muted-alt)]">Total Value</p>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{formatCurrency(will.totalValue)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--text-muted-alt)]">Assets</p>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{will.assets.join(', ')}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--text-muted-alt)]">Inactivity Period</p>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{will.inactivityPeriod} days</p>
+                  </div>
+                </div>
+
+                <div className="border-t border-[var(--border-section)] pt-3 mt-3">
+                  <p className="text-xs text-[var(--text-muted-alt)] mb-2">Beneficiaries:</p>
+                  <div className="space-y-1">
+                    {will.secondaryMembers.map((member, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-xs">
+                        <span className="text-[var(--text-primary)]">{member.name}</span>
+                        <span className="text-[var(--text-muted-alt)]">{member.allocation}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-4">
+                  <button className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors">
+                    View Details
+                  </button>
+                  <button className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors">
+                    Edit
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="space-y-8">
