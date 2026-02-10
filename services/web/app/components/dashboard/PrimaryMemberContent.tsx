@@ -213,7 +213,7 @@ export default function PrimaryMemberContent() {
             ) : balances ? (
               <div className="space-y-4">
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-[var(--text-primary)]">{balances.totalCAD.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</p>
+                  <p className="text-4xl font-bold text-[var(--text-primary)]">{balances.totalCAD.toFixed(2)} CAD</p>
                   <p className="text-sm text-[var(--text-muted-alt)] mt-1">Total Balance (All Networks)</p>
                 </div>
               </div>
