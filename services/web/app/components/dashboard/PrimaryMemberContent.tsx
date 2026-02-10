@@ -4,12 +4,24 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { STUB_METRICS, STUB_WILL, STUB_ASSETS, STUB_WILLS, formatCurrency } from './stub-data';
 import { useWalletContext } from './WalletContext';
+import { getMultiNetworkBalances, NETWORKS } from '@/lib/utils/wallet';
+
+interface WalletBalances {
+  sepolia: string;
+  mainnet: string;
+  bnb: string;
+  avax: string;
+  total: number;
+  totalCAD: number;
+}
 
 export default function PrimaryMemberContent() {
   const progressPercent = Math.min(100, (365 - STUB_WILL.inactivityDaysRemaining) / 365 * 100);
   const { selectedWallet, setSelectedWallet, wallets, isLoading } = useWalletContext();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [balances, setBalances] = useState<WalletBalances | null>(null);
+  const [loadingBalances, setLoadingBalances] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -21,6 +33,21 @@ export default function PrimaryMemberContent() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (selectedWallet) {
+      setLoadingBalances(true);
+      getMultiNetworkBalances(selectedWallet.address)
+        .then(setBalances)
+        .catch(err => {
+          console.error('Error fetching balances:', err);
+          setBalances({ sepolia: '0', mainnet: '0', bnb: '0', avax: '0', total: 0, totalCAD: 0 });
+        })
+        .finally(() => setLoadingBalances(false));
+    } else {
+      setBalances(null);
+    }
+  }, [selectedWallet]);
 
   const handleWalletSelect = (wallet: typeof selectedWallet) => {
     setSelectedWallet(wallet);
@@ -176,12 +203,101 @@ export default function PrimaryMemberContent() {
         </div>
 
         <div className="space-y-8">
-          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6 flex items-center justify-center min-h-[180px]">
-            <p className="text-[var(--text-muted-alt)] text-lg">total assets</p>
+          {/* Total Assets */}
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
+            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-6">Total Assets</h2>
+            {loadingBalances ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-[var(--text-muted-alt)]">Loading balances...</div>
+              </div>
+            ) : balances ? (
+              <div className="space-y-4">
+                <div className="text-center">
+                  <p className="text-4xl font-bold text-[var(--text-primary)]">{balances.totalCAD.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</p>
+                  <p className="text-sm text-[var(--text-muted-alt)] mt-1">Total Balance (All Networks)</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-[var(--text-muted-alt)]">No wallet selected</p>
+              </div>
+            )}
           </div>
 
-          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6 flex items-center justify-center min-h-[180px]">
-            <p className="text-[var(--text-muted-alt)] text-lg">assets overview</p>
+          {/* Assets Overview */}
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
+            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-6">Assets Overview</h2>
+            {loadingBalances ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-[var(--text-muted-alt)]">Loading balances...</div>
+              </div>
+            ) : balances ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/30">
+                  <div className="flex items-center gap-3">
+                    <div className={"w-10 h-10 rounded-full bg-gradient-to-br " + NETWORKS.SEPOLIA.iconBg + " flex items-center justify-center text-white font-semibold text-sm"}>
+                      SEP
+                    </div>
+                    <div>
+                      <p className="font-semibold text-[var(--text-primary)]">{NETWORKS.SEPOLIA.name}</p>
+                      <p className="text-xs text-[var(--text-muted-alt)]">Testnet</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-[var(--text-primary)]">{balances.sepolia} {NETWORKS.SEPOLIA.symbol}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/30">
+                  <div className="flex items-center gap-3">
+                    <div className={"w-10 h-10 rounded-full bg-gradient-to-br " + NETWORKS.MAINNET.iconBg + " flex items-center justify-center text-white font-semibold text-sm"}>
+                      ETH
+                    </div>
+                    <div>
+                      <p className="font-semibold text-[var(--text-primary)]">{NETWORKS.MAINNET.name}</p>
+                      <p className="text-xs text-[var(--text-muted-alt)]">Mainnet</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-[var(--text-primary)]">{balances.mainnet} {NETWORKS.MAINNET.symbol}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/30">
+                  <div className="flex items-center gap-3">
+                    <div className={"w-10 h-10 rounded-full bg-gradient-to-br " + NETWORKS.BNB.iconBg + " flex items-center justify-center text-white font-semibold text-sm"}>
+                      BNB
+                    </div>
+                    <div>
+                      <p className="font-semibold text-[var(--text-primary)]">{NETWORKS.BNB.name}</p>
+                      <p className="text-xs text-[var(--text-muted-alt)]">Mainnet</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-[var(--text-primary)]">{balances.bnb} {NETWORKS.BNB.symbol}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/30">
+                  <div className="flex items-center gap-3">
+                    <div className={"w-10 h-10 rounded-full bg-gradient-to-br " + NETWORKS.AVAX.iconBg + " flex items-center justify-center text-white font-semibold text-sm"}>
+                      AVAX
+                    </div>
+                    <div>
+                      <p className="font-semibold text-[var(--text-primary)]">{NETWORKS.AVAX.name}</p>
+                      <p className="text-xs text-[var(--text-muted-alt)]">Mainnet</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-[var(--text-primary)]">{balances.avax} {NETWORKS.AVAX.symbol}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-[var(--text-muted-alt)]">No wallet selected</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -163,3 +163,187 @@ export function onChainChanged(callback: (chainId: string) => void): () => void 
     window.ethereum.removeListener("chainChanged", handleChainChanged);
   };
 }
+
+/**
+ * Get wallet balance in ETH for a specific address and chain
+ */
+export async function getWalletBalance(address: string, chainId?: string): Promise<string> {
+  if (!isMetaMaskInstalled()) {
+    throw new Error("MetaMask is not installed");
+  }
+
+  try {
+    const balance = await window.ethereum.request({
+      method: "eth_getBalance",
+      params: [address, "latest"],
+    });
+
+    const balanceInEth = parseInt(balance, 16) / 1e18;
+    return balanceInEth.toFixed(6);
+  } catch (error: any) {
+    console.error("Error getting wallet balance:", error);
+    return "0";
+  }
+}
+
+/**
+ * Get current network chain ID
+ */
+export async function getCurrentChainId(): Promise<string> {
+  if (!isMetaMaskInstalled()) {
+    throw new Error("MetaMask is not installed");
+  }
+
+  try {
+    const chainId = await window.ethereum.request({
+      method: "eth_chainId",
+    });
+    return chainId;
+  } catch (error: any) {
+    console.error("Error getting chain ID:", error);
+    throw new Error("Failed to get chain ID");
+  }
+}
+
+/**
+ * Network configuration
+ */
+export const NETWORKS = {
+  SEPOLIA: {
+    chainId: "0xaa36a7",
+    name: "Sepolia",
+    symbol: "ETH",
+    rpcUrl: "https://ethereum-sepolia-rpc.publicnode.com",
+    iconBg: "from-purple-500 to-pink-600",
+  },
+  MAINNET: {
+    chainId: "0x1",
+    name: "Ethereum",
+    symbol: "ETH",
+    rpcUrl: "https://eth.llamarpc.com",
+    iconBg: "from-blue-500 to-indigo-600",
+  },
+  BNB: {
+    chainId: "0x38",
+    name: "BNB Smart Chain",
+    symbol: "BNB",
+    rpcUrl: "https://bsc-dataseed.binance.org",
+    iconBg: "from-yellow-500 to-orange-600",
+  },
+  AVAX: {
+    chainId: "0xa86a",
+    name: "Avalanche",
+    symbol: "AVAX",
+    rpcUrl: "https://api.avax.network/ext/bc/C/rpc",
+    iconBg: "from-red-500 to-pink-600",
+  },
+} as const;
+
+/**
+ * Get balance from a specific network using RPC
+ */
+async function getBalanceFromRPC(address: string, rpcUrl: string): Promise<string> {
+  try {
+    const response = await fetch(rpcUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_getBalance",
+        params: [address, "latest"],
+        id: 1,
+      }),
+    });
+
+    const data = await response.json();
+    if (data.result) {
+      const balanceInEth = parseInt(data.result, 16) / 1e18;
+      return balanceInEth.toFixed(6);
+    }
+    return "0";
+  } catch (error) {
+    console.error(`Error fetching balance from ${rpcUrl}:`, error);
+    return "0";
+  }
+}
+
+/**
+ * Get balances for a wallet on multiple networks
+ */
+export async function getMultiNetworkBalances(address: string): Promise<{
+  sepolia: string;
+  mainnet: string;
+  bnb: string;
+  avax: string;
+  total: number;
+  totalCAD: number;
+}> {
+  try {
+    const [sepoliaBalance, mainnetBalance, bnbBalance, avaxBalance, prices] = await Promise.all([
+      getBalanceFromRPC(address, NETWORKS.SEPOLIA.rpcUrl),
+      getBalanceFromRPC(address, NETWORKS.MAINNET.rpcUrl),
+      getBalanceFromRPC(address, NETWORKS.BNB.rpcUrl),
+      getBalanceFromRPC(address, NETWORKS.AVAX.rpcUrl),
+      getCryptoPrices(),
+    ]);
+
+    const total = parseFloat(sepoliaBalance) + parseFloat(mainnetBalance) + parseFloat(bnbBalance) + parseFloat(avaxBalance);
+    // For testing purposes, let's assume that 1 sepolia ETH is worth the same as 1 mainnet ETH, even though in reality it has no value.
+    const ethCAD = (parseFloat(sepoliaBalance) + parseFloat(mainnetBalance)) * prices.ethereum;
+    const bnbCAD = parseFloat(bnbBalance) * prices.binancecoin;
+    const avaxCAD = parseFloat(avaxBalance) * prices.avalanche;
+    const totalCAD = ethCAD + bnbCAD + avaxCAD;
+
+    return {
+      sepolia: sepoliaBalance,
+      mainnet: mainnetBalance,
+      bnb: bnbBalance,
+      avax: avaxBalance,
+      total,
+      totalCAD,
+    };
+  } catch (error: any) {
+    console.error("Error getting multi-network balances:", error);
+    return {
+      sepolia: "0",
+      mainnet: "0",
+      bnb: "0",
+      avax: "0",
+      total: 0,
+      totalCAD: 0,
+    };
+  }
+}
+
+/**
+ * Get current cryptocurrency prices from CoinGecko in CAD
+ */
+async function getCryptoPrices(): Promise<{
+  ethereum: number;
+  binancecoin: number;
+  avalanche: number;
+}> {
+  try {
+    const response = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum,binancecoin,avalanche-2&vs_currencies=cad"
+    );
+    
+    const data = await response.json();
+    
+    return {
+      ethereum: data.ethereum?.cad || 0,
+      binancecoin: data.binancecoin?.cad || 0,
+      avalanche: data["avalanche-2"]?.cad || 0,
+    };
+  } catch (error) {
+    console.error("Error fetching crypto prices:", error);
+    // fallback prices in CAD if API fails
+    return {
+      ethereum: 2800,
+      binancecoin: 855,
+      avalanche: 12,
+    };
+  }
+}
