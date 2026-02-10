@@ -51,8 +51,96 @@ contract Will {
         willState = WillState.INACTIVE;
         totalVotePower = 0;
         cumulatedVotePower = 0;
+        clearSm();
         validatedCount = 0;
         deathDeclarationTimestamp = 0;
+    }
+
+    function declareDeath() external onlySm willActive {
+        if (smMapping[msg.sender].state == SMState.DECLARED_DEATH)
+            revert ERR_SMAlreadyDeclaredDeath();
+
+        if (deathDeclarationTimestamp == 0) {
+            deathDeclarationTimestamp = block.timestamp;
+            emit EVT_DeathDeclared();
+        } else {
+            emit EVT_DeathConfirmed();
+        }
+        cumulatedVotePower += smMapping[msg.sender].votePower;
+        smMapping[msg.sender].state = SMState.DECLARED_DEATH;
+
+        //Accelerer la periode de protection.
+    }
+
+    function validateSm() external onlySm willInactive {
+        if (smMapping[msg.sender].state != SMState.PENDING)
+            revert ERR_SMAlreadyValidated(); // already validated or desisted
+
+        smMapping[msg.sender].state = SMState.VALIDATED;
+        validatedCount += 1;
+        if (validatedCount == smList.length) {
+            willState = WillState.ACTIVE;
+        }
+        emit EVT_SMValidated(msg.sender);
+    }
+
+    function desistSm(
+        address smAddress
+    ) external onlySm willNotCanceled willNotExecuted {
+        SMInfo storage sm = smMapping[smAddress];
+        uint8 idx = sm.index;
+        if (idx == 0) return; // not in array
+
+        uint8 lastIdx = uint8(smList.length);
+        address lastSm = smList[lastIdx - 1];
+
+        // Swap with last element
+        smList[idx - 1] = lastSm;
+        smMapping[lastSm].index = idx;
+
+        // Remove last
+        smList.pop();
+        delete smMapping[smAddress];
+
+        if (smList.length == 0) {
+            willState = WillState.CANCELED;
+            emit EVT_SMDesisted(smAddress);
+            emit EVT_WillCanceled();
+            return;
+        } else {
+            totalVotePower -= sm.votePower;
+        }
+        emit EVT_SMDesisted(smAddress);
+    }
+
+    function replaceAllSm(
+        address[] calldata newSmAddresses,
+        uint8[] calldata votePowers
+    ) private onlyPm {
+        if (newSmAddresses.length != votePowers.length)
+            revert ERR_InvalidSMAndVotePowerLength();
+        if (newSmAddresses.length > 255) revert ERR_TooManySMs();
+
+        clearSm();
+
+        // Add new
+        totalVotePower = 0;
+        for (uint8 i = 0; i < newSmAddresses.length; i++) {
+            smList.push(newSmAddresses[i]);
+            smMapping[newSmAddresses[i]] = SMInfo({
+                state: SMState.PENDING,
+                votePower: votePowers[i],
+                index: i + 1
+            });
+            totalVotePower += votePowers[i];
+        }
+    }
+
+    function clearSm() private {
+        for (uint8 i = 0; i < smList.length; i++) {
+            delete smMapping[smList[i]];
+        }
+        delete smList;
     }
 
     modifier onlyPm() {
