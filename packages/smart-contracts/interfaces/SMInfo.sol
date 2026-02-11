@@ -9,3 +9,8 @@ struct SMInfo {
     uint8 votePower; // Voting Power.
     uint8 index; // Index of SM in SM array. Implicit limit of 255 people.
 }
+
+struct SMPartialInfo {
+    address smAddress; // SM State
+    uint8 votePower; // Voting Power.
+}

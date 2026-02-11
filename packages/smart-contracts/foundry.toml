@@ -5,7 +5,11 @@ script = "scripts"
 out = ".out"
 cache_path = ".cache"
 libs = ["lib"]
-remappings = ["@src/=contracts/", "@interfaces/=interfaces/"]
+remappings = [
+    "@src/=contracts/",
+    "@interfaces/=interfaces/",
+    "@constants/=constants/",
+]
 optimizer = true
 optimizer_runs = 200
 solc_version = "0.8.19"
