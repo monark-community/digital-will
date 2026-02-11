@@ -17,18 +17,25 @@ contract Will is WillEvents {
     /*/////////////////////////////////////////////////////////
                        VARIABLES
     /////////////////////////////////////////////////////////*/
-    address public immutable PM_I;
+    address public immutable PM_I; // Not in storage slot, keep first.
 
-    WillState public willStateS;
+    // Security Period Config. occupies 2 slots bc 2 uint256.
     SecurityPeriodConfig public securityPeriodConfigS;
-    uint16 public totalVotePowerS;
-    uint16 public cumulatedVotePowerS;
-    address[] private smListS;
-    mapping(address smAddress => SMInfo smInfo) private smMappingS;
-    uint8 private validatedCountS;
+
+    // Timestamp storage slots, 1 per variable.
     uint256 public deathDeclarationTimestampS;
     uint256 public executionTimeStampS;
     uint256 public cooldownTimeStampS;
+
+    // 1 storage slot for the following 4 variables.
+    WillState public willStateS;
+    uint16 public totalVotePowerS;
+    uint16 public cumulatedVotePowerS;
+    uint8 private validatedCountS;
+
+    // Dynamic storage slots
+    address[] private smListS;
+    mapping(address smAddress => SMInfo smInfo) private smMappingS;
 
     /* ========= CONSTRUCTOR ========= */
     constructor(
@@ -55,9 +62,9 @@ contract Will is WillEvents {
     }
 
     function createNewWill(
-        SMPartialInfo[] memory newSmList,
-        SecurityPeriodConfig memory securityPeriodConfig
-    ) public onlyPm willCanceled {
+        SMPartialInfo[] calldata newSmList,
+        SecurityPeriodConfig calldata securityPeriodConfig
+    ) external onlyPm willCanceled {
         createWillInternal(newSmList, securityPeriodConfig);
     }
 
@@ -75,7 +82,7 @@ contract Will is WillEvents {
         emit EVT_WillCreated();
     }
 
-    function cancelWill() public onlyPm willNotExecuted willNotCanceled {
+    function cancelWill() external onlyPm willNotExecuted willNotCanceled {
         willStateS = WillState.CANCELED;
         withdrawAllPm();
         emit EVT_WillCanceled();
@@ -95,11 +102,11 @@ contract Will is WillEvents {
     }
 
     function updateWill(
-        SMPartialInfo[] memory updatedSmList,
-        SMPartialInfo[] memory addedSmList,
-        SMPartialInfo[] memory deletedSmList,
-        SecurityPeriodConfig memory securityPeriodConfig
-    ) public onlyPm willNotCanceled willNotExecuted {
+        SMPartialInfo[] calldata updatedSmList,
+        SMPartialInfo[] calldata addedSmList,
+        SMPartialInfo[] calldata deletedSmList,
+        SecurityPeriodConfig calldata securityPeriodConfig
+    ) external onlyPm willNotCanceled willNotExecuted {
         _validateSecurityPeriod(securityPeriodConfig);
         _validateSmUpdate(updatedSmList, addedSmList, deletedSmList);
 
@@ -312,6 +319,7 @@ contract Will is WillEvents {
 
     function deposit() external payable onlyPm interactableAssets {
         if (msg.value == 0) revert Errors.ERR_InvalidDeposit();
+        emit EVT_AssetsDeposited();
     }
 
     function withdraw(uint256 amount) external onlyPm interactableAssets {
@@ -335,7 +343,13 @@ contract Will is WillEvents {
         emit EVT_AssetsWithdrawnAll();
     }
 
-    function switchAssets() public {
+    function switchAssets()
+        external
+        onlySm
+        willActive
+        securityPeriodStarted
+        securityPeriodFinished
+    {
         //TODO : Switch assets to USDC
         willStateS = WillState.EXECUTED;
         emit EVT_AssetsSwitched(msg.sender);
@@ -460,7 +474,7 @@ contract Will is WillEvents {
         _;
     }
 
-    function _onlyPm() internal view {
+    function _onlyPm() private view {
         if (msg.sender != PM_I) revert Errors.ERR_NotPM();
     }
 
@@ -470,7 +484,7 @@ contract Will is WillEvents {
         _;
     }
 
-    function _onlySm() internal view {
+    function _onlySm() private view {
         if (smMappingS[msg.sender].index == 0) revert Errors.ERR_NotSM();
     }
 
@@ -480,7 +494,7 @@ contract Will is WillEvents {
         _;
     }
 
-    function _interactableAssets() internal view {
+    function _interactableAssets() private view {
         if (
             willStateS == WillState.CANCELED || willStateS == WillState.EXECUTED
         ) revert Errors.ERR_AssetsNotInteractable();
@@ -492,7 +506,7 @@ contract Will is WillEvents {
         _;
     }
 
-    function _willCanceled() internal view {
+    function _willCanceled() private view {
         if (willStateS != WillState.CANCELED)
             revert Errors.ERR_WillNotCanceled();
     }
@@ -503,7 +517,7 @@ contract Will is WillEvents {
         _;
     }
 
-    function _willNotCanceled() internal view {
+    function _willNotCanceled() private view {
         if (willStateS == WillState.CANCELED) revert Errors.ERR_WillCanceled();
     }
 
@@ -513,7 +527,7 @@ contract Will is WillEvents {
         _;
     }
 
-    function _willInactive() internal view {
+    function _willInactive() private view {
         if (willStateS != WillState.INACTIVE)
             revert Errors.ERR_WillNotInactive();
     }
@@ -524,7 +538,7 @@ contract Will is WillEvents {
         _;
     }
 
-    function _willActive() internal view {
+    function _willActive() private view {
         if (willStateS != WillState.ACTIVE) revert Errors.ERR_WillNotActive();
     }
 
@@ -534,7 +548,7 @@ contract Will is WillEvents {
         _;
     }
 
-    function _willNotExecuted() internal view {
+    function _willNotExecuted() private view {
         if (willStateS == WillState.EXECUTED) revert Errors.ERR_WillExecuted();
     }
 
@@ -544,7 +558,7 @@ contract Will is WillEvents {
         _;
     }
 
-    function _notOnCooldown() internal view {
+    function _notOnCooldown() private view {
         if (cooldownTimeStampS >= block.timestamp)
             revert Errors.ERR_WillOnCooldown();
     }
@@ -555,7 +569,7 @@ contract Will is WillEvents {
         _;
     }
 
-    function _onCooldown() internal view {
+    function _onCooldown() private view {
         if (cooldownTimeStampS < block.timestamp)
             revert Errors.ERR_WillNotOnCooldown();
     }
@@ -565,8 +579,18 @@ contract Will is WillEvents {
         _;
     }
 
-    function _securityPeriodStarted() internal view {
+    function _securityPeriodStarted() private view {
         if (deathDeclarationTimestampS == 0)
             revert Errors.ERR_SecurityPeriodNotStarted();
+    }
+
+    modifier securityPeriodFinished() {
+        _securityPeriodFinished();
+        _;
+    }
+
+    function _securityPeriodFinished() private view {
+        if (executionTimeStampS > block.timestamp)
+            revert Errors.ERR_SecurityPeriodNotFinished();
     }
 }

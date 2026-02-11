@@ -1,0 +1,69 @@
+# Makefile for Foundry deployment
+
+# RPC URL,deployer and Primary Member private key
+RPC_URL := 127.0.0.1:8545 #anvil default RPC URL
+DEPLOYER := <FILL_HERE : 0x...>			# ID 9 in anvil
+PRIMARY_MEMBER_PK = <FILL_HERE : 0x...> 	# ID 0 in anvil
+
+# Scripts
+FACTORY_SCRIPT := scripts/WillFactoryDeploy.s.sol
+WILL_SCRIPT := scripts/WillDeploy.s.sol
+
+# File to store the deployed factory address
+FACTORY_ADDR_FILE := .temp_factory_address.txt
+WILL_ADDR_FILE := .temp_will_address.txt
+
+
+install:
+	@echo "Installing dependencies..."
+	@forge install foundry-rs/forge-std --no-git
+
+clean:
+	@echo "Cleaning deploy artifacts..."
+	@rm -f $(FACTORY_ADDR_FILE) $(WILL_ADDR_FILE)
+
+full-clean:
+	@echo "Cleaning build artifacts..."
+	@forge clean
+	@rm -rf .lib
+
+build:
+	@echo "Building all directories"
+	@forge build
+
+
+deploy-factory:
+	@echo "Deploying WillFactory..."
+	@FACTORY_OUTPUT=$$(forge script $(FACTORY_SCRIPT) \
+		--broadcast \
+		--rpc-url $(RPC_URL) \
+		--private-key $(DEPLOYER) \
+		); \
+	FACTORY_ADDR=$$(echo "$$FACTORY_OUTPUT" | grep -Eo "0x[0-9a-fA-F]{40}" | tail -n1); \
+	echo "$$FACTORY_ADDR" > $(FACTORY_ADDR_FILE); \
+	echo "Factory deployed at: $$FACTORY_ADDR"
+
+deploy-will:
+	@echo "Deploying Will using factory..."
+	@FACTORY_ADDR=$$(cat $(FACTORY_ADDR_FILE)); \
+	echo "Factory address: $$FACTORY_ADDR"; \
+	\
+	WILL_OUTPUT=$$(forge script $(WILL_SCRIPT) \
+		--broadcast \
+		--rpc-url $(RPC_URL) \
+		--private-key $(PRIMARY_MEMBER_PK) \
+		--sig "run(address)" \
+		$$FACTORY_ADDR \
+	); \
+	WILL_ADDR=$$(echo "$$WILL_OUTPUT" | grep -E -o '0x[a-fA-F0-9]{40}' | tail -n 1); \
+	echo "$$WILL_ADDR" > "$(WILL_ADDR_FILE)"; \
+	echo "Will deployed at: $$WILL_ADDR"
+
+# Example of calling a function on deployed will contract
+# Load the deployed Will address
+WILL_ADDR := $(shell cat $(WILL_ADDR_FILE))
+
+call-get-sm-list:
+	@echo "Fetching SM list..."
+	@RAW=$$(cast call $(WILL_ADDR) "getSmList()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "getSmList()(address[])" $$RAW --json
