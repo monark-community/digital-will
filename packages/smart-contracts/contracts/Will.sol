@@ -85,13 +85,13 @@ contract Will is WillEvents {
         SecurityPeriodConfig memory securityPeriodConfig
     ) private {
         willStateS = WillState.INACTIVE;
+        securityPeriodConfigS = securityPeriodConfig;
         totalVotePowerS = 0;
         cumulatedVotePowerS = 0;
         validatedCountS = 0;
         deathDeclarationTimestampS = 0;
         executionTimeStampS = 0;
         cooldownTimeStampS = 0;
-        securityPeriodConfigS = securityPeriodConfig;
     }
 
     function updateWill(
@@ -115,7 +115,7 @@ contract Will is WillEvents {
         SecurityPeriodConfig memory securityPeriodConfig
     ) private pure {
         if (
-            securityPeriodConfig.minSecurityPeriod >=
+            securityPeriodConfig.minSecurityPeriod >
             securityPeriodConfig.maxSecurityPeriod
         ) revert Errors.ERR_InvalidSecurityPeriods();
     }
@@ -143,8 +143,21 @@ contract Will is WillEvents {
         // Rule 2: all VALIDATED/DECLARED_DEATH → ACTIVE
         else {
             willStateS = WillState.ACTIVE;
-            //TODO : updatePeriod();
+            if (cumulatedVotePowerS > 0) {
+                updatePeriodUntilExecution();
+            }
         }
+    }
+
+    function updatePeriodUntilExecution() private {
+        uint256 voteRatio = (uint256(cumulatedVotePowerS) * 100) /
+            uint256(totalVotePowerS);
+
+        executionTimeStampS =
+            ((securityPeriodConfigS.maxSecurityPeriod -
+                securityPeriodConfigS.minSecurityPeriod) * voteRatio) /
+            100 +
+            deathDeclarationTimestampS;
     }
 
     /////////////////////////////////////////////////////////
@@ -276,10 +289,6 @@ contract Will is WillEvents {
     function replaceAllSm(SMPartialInfo[] memory newSmList) private {
         clearSm();
 
-        totalVotePowerS = 0;
-        validatedCountS = 0;
-        cumulatedVotePowerS = 0;
-
         for (uint8 i = 0; i < newSmList.length; i++) {
             smListS.push(newSmList[i].smAddress);
             smMappingS[newSmList[i].smAddress] = SMInfo({
@@ -328,6 +337,8 @@ contract Will is WillEvents {
 
     function switchAssets() public {
         //TODO : Switch assets to USDC
+        willStateS = WillState.EXECUTED;
+        emit EVT_AssetsSwitched(msg.sender);
     }
 
     /////////////////////////////////////////////////////////
@@ -345,15 +356,14 @@ contract Will is WillEvents {
         emit EVT_SMValidated(msg.sender);
     }
 
-    function desistSm(
-        address smAddress
-    ) external onlySm willNotCanceled willNotExecuted {
-        if (smMappingS[smAddress].state == SMState.PENDING)
-            revert Errors.ERR_SMNotValidated(); //Needs to be
+    function desistSm() external onlySm willNotCanceled willNotExecuted {
+        if (smMappingS[msg.sender].state == SMState.PENDING)
+            revert Errors.ERR_SMNotValidated(); // can't desist if didn't give approval previously.
 
-        SMInfo storage sm = smMappingS[smAddress];
+        // Remove from datasources
+        SMInfo storage sm = smMappingS[msg.sender];
+
         uint8 idx = sm.index;
-        if (idx == 0) return; // not in array
 
         uint8 lastIdx = uint8(smListS.length);
         address lastSm = smListS[lastIdx - 1];
@@ -364,18 +374,20 @@ contract Will is WillEvents {
 
         // Remove last
         smListS.pop();
-        delete smMappingS[smAddress];
+        delete smMappingS[msg.sender];
 
-        // TODO:  DISTRIBUTE POINTS TO OTHERS.
         if (smListS.length == 0) {
             willStateS = WillState.CANCELED;
-            emit EVT_SMDesisted(smAddress);
+            withdrawAllPm();
+            emit EVT_SMDesisted(msg.sender);
             emit EVT_WillCanceled();
             return;
         } else {
-            totalVotePowerS -= sm.votePower;
+            // This updates the vote power too. It is assumed that substracting desisted points from total preserves the same proportions allst whilst adding points to everyone.
+            // In case they ask to distribute points explicitly, change here. TODO
+            checkAndUpdateWillState();
         }
-        emit EVT_SMDesisted(smAddress);
+        emit EVT_SMDesisted(msg.sender);
     }
 
     /////////////////////////////////////////////////////////
@@ -391,19 +403,30 @@ contract Will is WillEvents {
         } else {
             emit EVT_DeathConfirmed();
         }
+
         cumulatedVotePowerS += smMappingS[msg.sender].votePower;
         smMappingS[msg.sender].state = SMState.DECLARED_DEATH;
 
-        //Accelerer la periode de protection.
+        updatePeriodUntilExecution();
     }
 
     function vetoDeath() external onlyPm willActive notOnCooldown {
         cooldownTimeStampS = block.timestamp + C_WILL.COOLDOWN_PERIOD;
         deathDeclarationTimestampS = 0;
-        willStateS = WillState.INACTIVE;
-        // TODO : Set all SM back to validate.
-        // checkAndUpdateState vars.
+        executionTimeStampS = 0;
+
+        resetDeclareSmListState();
+        checkAndUpdateWillState();
+
+        //Starts cooldown by itself through conditions.
+
         emit EVT_VetoExercised();
+    }
+
+    function resetDeclareSmListState() private {
+        for (uint8 i = 0; i < smListS.length; i++) {
+            smMappingS[smListS[i]].state = SMState.VALIDATED;
+        }
     }
 
     /* ========= GETTERS ========= */
@@ -418,6 +441,16 @@ contract Will is WillEvents {
 
     function getState() external view returns (WillState) {
         return willStateS;
+    }
+
+    function getExecutionTimeLeft()
+        external
+        view
+        willActive
+        securityPeriodStarted
+        returns (uint256)
+    {
+        return executionTimeStampS - block.timestamp;
     }
 
     /* ========= MODIFIERS ========= */
@@ -527,13 +560,13 @@ contract Will is WillEvents {
             revert Errors.ERR_WillNotOnCooldown();
     }
 
-    //////////
-    modifier activeDeclaration() {
-        _activeDeclaration();
+    modifier securityPeriodStarted() {
+        _securityPeriodStarted();
         _;
     }
 
-    function _activeDeclaration() internal view {
-        if (validatedCountS == 0) revert Errors.ERR_NoActiveDeclaration();
+    function _securityPeriodStarted() internal view {
+        if (deathDeclarationTimestampS == 0)
+            revert Errors.ERR_SecurityPeriodNotStarted();
     }
 }
