@@ -113,11 +113,21 @@ contract Will is WillEvents {
         SMPartialInfo[] calldata addedSmList,
         address[] calldata deletedSmList,
         SecurityPeriodConfig calldata securityPeriodConfig
-    ) external onlyPm willNotCanceled willNotExecuted executionTimeNotPassed {
+    )
+        external
+        onlyPm
+        willNotCanceled
+        willNotExecuted
+        executionTimeNotPassed
+        securityPeriodNotStarted
+    {
         _validateSecurityPeriod(securityPeriodConfig);
         _validateSmUpdate(updatedSmList, addedSmList, deletedSmList);
 
-        securityPeriodConfigS = securityPeriodConfig;
+        // Case where security period is not to be updated.
+        if (securityPeriodConfig.maxSecurityPeriod != 0) {
+            securityPeriodConfigS = securityPeriodConfig;
+        }
         updateSmList(updatedSmList, addedSmList, deletedSmList);
 
         checkAndUpdateWillState();
@@ -203,15 +213,14 @@ contract Will is WillEvents {
         SMPartialInfo[] memory addedSmList,
         address[] memory deletedSmList
     ) private view {
-        // Trivial case with empty arrays.
-        if (
-            updatedSmList.length == 0 &&
-            addedSmList.length == 0 &&
-            deletedSmList.length == 0
-        ) revert Errors.ERR_EmptySMLists();
+        // All arrays can be empty. It is the case where PM only updates securityPeriodConfig
         // Given order of updates, this is how we do it because the uint8 will overflow.
         if (updatedSmList.length + addedSmList.length > 255)
             revert Errors.ERR_SMListsFinalResultTooManySM();
+        // Prevent underflow explicitly, or 1 SM left.
+        if (deletedSmList.length + 1 >= smListS.length + addedSmList.length) {
+            revert Errors.ERR_SMListsFinalResultIncoherent();
+        }
 
         // No duplicates/overlap in the lists.
         _checkNoSmDuplicates(updatedSmList, addedSmList, deletedSmList);
@@ -235,16 +244,6 @@ contract Will is WillEvents {
             if (smMappingS[addedSmList[i].smAddress].index != 0) {
                 revert Errors.ERR_CreatedSMExistsAlready();
             }
-        }
-
-        // Prevent underflow explicitly
-        if (deletedSmList.length + 1 >= smListS.length + addedSmList.length) {
-            revert Errors.ERR_SMListsFinalResultIncoherent();
-        }
-
-        // Enforce upper bound (fits uint8 index)
-        if (smListS.length + addedSmList.length - deletedSmList.length > 255) {
-            revert Errors.ERR_SMListsFinalResultTooManySM();
         }
     }
 
@@ -684,6 +683,16 @@ contract Will is WillEvents {
     function _securityPeriodStarted() private view {
         if (deathDeclarationTimestampS == 0)
             revert Errors.ERR_SecurityPeriodNotStarted();
+    }
+
+    modifier securityPeriodNotStarted() {
+        _securityPeriodNotStarted();
+        _;
+    }
+
+    function _securityPeriodNotStarted() private view {
+        if (deathDeclarationTimestampS != 0)
+            revert Errors.ERR_SecurityPeriodStarted();
     }
 
     modifier securityPeriodFinished() {

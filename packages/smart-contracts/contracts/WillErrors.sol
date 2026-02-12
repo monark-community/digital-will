@@ -14,7 +14,6 @@ error ERR_NotSM(); // 0x753455fb | Caller is not a secondary member
 error ERR_TooManySMs(); // 0x2c3ebdf7
 error ERR_NotEnoughSMs(); // 0xd3233b0f
 error ERR_DuplicateSM(); // 0x8b97bb50
-error ERR_EmptySMLists(); // 0x139ce78f
 error ERR_SMAlreadyValidated(); // 0x76b04149
 error ERR_SMAlreadyDeclaredDeath(); // 0x3b5f6558
 error ERR_SMNotValidated(); // 0x622bb4a8
@@ -47,4 +46,5 @@ error ERR_FailedWithdrawal(); // 0xa3a0170f
 // Security period / Timing errors
 error ERR_InvalidSecurityPeriods(); // 0xd41db8d9
 error ERR_SecurityPeriodNotStarted(); // 0xfdd9826d
+error ERR_SecurityPeriodStarted(); // 0x15f28e81
 error ERR_SecurityPeriodNotFinished(); // 0xfe8ee237
