@@ -6,6 +6,10 @@ export const config = {
   api: {
     baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000",
   },
+  blockchain: {
+    rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || "http://localhost:8545",
+    willFactoryAddress: process.env.NEXT_PUBLIC_WILL_FACTORY_ADDRESS || "0x5FbDB2315678afecb367f032d93f642f64180aa3",
+  },
   isProduction: process.env.NODE_ENV === "production",
   isDevelopment: process.env.NODE_ENV === "development",
   isLocal: (process.env.NODE_ENV as string) === "local",
