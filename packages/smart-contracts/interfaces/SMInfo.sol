@@ -7,7 +7,7 @@ import {SMState} from "@interfaces/SMState.sol";
 struct SMInfo {
     SMState state; // SM State
     uint8 votePower; // Voting Power.
-    uint8 index; // Index of SM in SM array. Implicit limit of 255 people.
+    uint8 index; // Index of SM in SM array + 1. Implicit limit of 255 people.
 }
 
 struct SMPartialInfo {

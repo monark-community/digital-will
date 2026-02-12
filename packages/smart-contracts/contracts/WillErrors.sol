@@ -33,6 +33,7 @@ error ERR_WillNotActive(); // 0x0f40095d
 error ERR_WillExecuted(); // 0xa4f9e909
 error ERR_WillOnCooldown(); // 0x46032016
 error ERR_WillNotOnCooldown(); // 0xa1b62cab
+error ERR_WillNoDeclaration(); // 0xc58e90d1
 
 // ========================
 // Assets-related errors

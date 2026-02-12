@@ -28,8 +28,8 @@ contract DeployWill is Script {
 
         // Configure the security period
         SecurityPeriodConfig memory config = SecurityPeriodConfig({
-            minSecurityPeriod: 1 days,
-            maxSecurityPeriod: 7 days
+            minSecurityPeriod: 1 minutes,
+            maxSecurityPeriod: 2 minutes
         });
 
         // Deploy a new Will through the factory
