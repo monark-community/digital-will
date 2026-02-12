@@ -1,0 +1,16 @@
+[profile.default]
+src = "contracts"
+test = "tests"
+script = "scripts"
+out = ".out"
+cache_path = ".cache"
+libs = [".lib"]
+remappings = [
+    "@src/=contracts/",
+    "@interfaces/=interfaces/",
+    "@constants/=constants/",
+]
+optimizer = true
+optimizer_runs = 200
+solc_version = "0.8.19"
+auto_detect_solc = false

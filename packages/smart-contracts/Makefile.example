@@ -1,0 +1,254 @@
+# Makefile for Foundry deployment
+
+# RPC URL
+RPC_URL := 127.0.0.1:8545
+
+# Private keys
+PK_0 := 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80	# ID 0 in anvil
+PK_1 := 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d 	# ID 1 in anvil
+PK_2 := 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a  # ID 2 in anvil
+PK_3 := 0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6  # ID 3 in anvil
+PK_4 := 0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a  # ID 4 in anvil
+PK_5 := 0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba  # ID 5 in anvil
+PK_6 := 0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e  # ID 6 in anvil
+PK_7 := 0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356  # ID 7 in anvil
+PK_8 := 0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97  # ID 8 in anvil
+PK_9 := 0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6  # ID 9 in anvil
+
+# Wallet addresses
+ADDR_0 := 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 # addr 0 in anvil
+ADDR_1 := 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 # addr 1 in anvil
+ADDR_2 := 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC # addr 2 in anvil
+ADDR_3 := 0x90F79bf6EB2c4f870365E785982E1f101E93b906 # addr 3 in anvil
+ADDR_4 := 0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65 # addr 4 in anvil
+ADDR_5 := 0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc # addr 5 in anvil
+ADDR_6 := 0x976EA74026E726554dB657fA54763abd0C3a0aa9 # addr 6 in anvil
+ADDR_7 := 0x14dC79964da2C08b23698B3D3cc7Ca32193d9955 # addr 7 in anvil
+ADDR_8 := 0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f # addr 8 in anvil
+ADDR_9 := 0xa0Ee7A142d267C1f36714E4a8F75612F20a79720 # addr 9 in anvil
+
+# -----------------------
+# Helper: pick USER key
+# -----------------------
+USER_KEY := $(if $(USER_ID),$(USER_ID),0)
+# Dynamically set USER_PK based on USER_KEY
+define set_user_pk
+USER_ADDR := $$(ADDR_$(1))
+USER_PK := $$(PK_$(1))
+endef
+$(eval $(call set_user_pk,$(USER_KEY)))
+
+# -----------------------
+# Helper: pick SM key
+# -----------------------
+SM_KEY := $(if $(SM_ID),$(SM_ID),1)
+# Dynamically set USER_PK based on USER_KEY
+define set_sm
+SM_ADDR := $$(ADDR_$(1))
+SM_PK	:= $$(PK_$(1))
+endef
+$(eval $(call set_sm,$(SM_KEY)))
+
+# Scripts
+FACTORY_SCRIPT := scripts/WillFactoryDeploy.s.sol
+WILL_SCRIPT := scripts/WillDeploy.s.sol
+
+# File to store the deployed factory address
+FACTORY_ADDR_FILE := .temp_factory_address.txt
+WILL_ADDR_FILE := .temp_will_address.txt
+
+# -----------------------
+# Helper: get the Will address as a variable
+# -----------------------
+WILL_ADDR := $(shell cat $(WILL_ADDR_FILE))
+
+# -----------------------
+# Testing related-variables
+# -----------------------
+DEPOSIT_AMOUNT = 1000000000000000000  # 1ETH
+WITHDRAW_AMOUNT = 1000000000000000000 # 1ETH
+
+install:
+	@echo "Installing dependencies..."
+	@forge install foundry-rs/forge-std --no-git
+
+clean:
+	@echo "Cleaning deploy artifacts..."
+	@rm -f $(FACTORY_ADDR_FILE) $(WILL_ADDR_FILE)
+
+full-clean:
+	@echo "Cleaning build artifacts..."
+	@forge clean
+	@rm -rf .lib
+
+build:
+	@echo "Building all directories"
+	@forge build
+
+deploy-factory:
+	@echo "Deploying WillFactory... (user $(USER_ID))..."
+	@FACTORY_OUTPUT=$$(forge script $(FACTORY_SCRIPT) \
+		--broadcast \
+		--rpc-url $(RPC_URL) \
+		--private-key $(USER_PK) \
+		); \
+	FACTORY_ADDR=$$(echo "$$FACTORY_OUTPUT" | grep -Eo "0x[0-9a-fA-F]{40}" | tail -n1); \
+	echo "$$FACTORY_ADDR" > $(FACTORY_ADDR_FILE); \
+	echo "Factory deployed at: $$FACTORY_ADDR"
+
+deploy-will:
+	@echo "Deploying Will using factory... (user $(USER_ID))..."
+	@FACTORY_ADDR=$$(cat $(FACTORY_ADDR_FILE)); \
+	echo "Factory address: $$FACTORY_ADDR"; \
+	\
+	WILL_OUTPUT=$$(forge script $(WILL_SCRIPT) \
+		--broadcast \
+		--rpc-url $(RPC_URL) \
+		--private-key $(USER_PK) \
+		--sig "run(address)" \
+		$$FACTORY_ADDR \
+	); \
+	WILL_ADDR=$$(echo "$$WILL_OUTPUT" | grep -E -o '0x[a-fA-F0-9]{40}' | tail -n 1); \
+	echo "$$WILL_ADDR" > "$(WILL_ADDR_FILE)"; \
+	echo "Will deployed at: $$WILL_ADDR"
+
+# Example of calling a function on deployed will contract
+
+# ---------------------------------------------------------------------
+# 							Calling contract functions
+# ---------------------------------------------------------------------
+
+# -----------------
+# 	Getters
+# -----------------
+call-get-sm:
+	@echo "Fetching SM info, called by user $(USER_KEY) for SM $(SM_KEY) @$(SM_ADDR)"
+	@RAW=$$(cast call $(WILL_ADDR) "getDetailedSm(address)" $(SM_ADDR) --rpc-url $(RPC_URL)); \
+	cast decode-abi "getDetailedSm(address)(uint8,uint8,uint8)" $$RAW --json
+
+call-get-sm-list:
+	@echo "Fetching SM list, called by user $(USER_KEY)..."
+	@RAW=$$(cast call $(WILL_ADDR) "getSmList()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "getSmList()(address[])" $$RAW --json
+
+call-get-balance:
+	@echo "Fetching contract balance with user $(USER_KEY)..."
+	@RAW=$$(cast call $(WILL_ADDR) "getBalance()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "getBalance()(uint256)" $$RAW --json
+
+call-get-cooldown-end-time:
+	@echo "Fetching cooldown left with user $(USER_KEY)..."
+	@RAW=$$(cast call $(WILL_ADDR) "getCoodldownEndTimestamp()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "getCoodldownEndTimestamp()(uint256)" $$RAW --json
+
+call-get-security-period-config:
+	@echo "Fetching security period info with user $(USER_KEY)..."
+	@RAW=$$(cast call $(WILL_ADDR) "getSecurityPeriodConfig()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "getSecurityPeriodConfig()(uint256,uint256)" $$RAW --json
+
+call-get-exec-time:
+	@echo "Fetching execution time with user $(USER_KEY)..."
+	@RAW=$$(cast call $(WILL_ADDR) "getExecutionPossibleTimestamp()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "getExecutionPossibleTimestamp()(uint256)" $$RAW --json
+
+call-get-state:
+	@echo "Fetching state with user $(USER_KEY)..."
+	@RAW=$$(cast call $(WILL_ADDR) "getState()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "getState()(uint8)" $$RAW --json
+
+# -----------------
+# 	Involving money-transfer
+# -----------------
+call-deposit:
+	@echo "Calling deposit with user $(USER_KEY), for $(DEPOSIT_AMOUNT) Wei (1ETH)"
+	@cast send $(WILL_ADDR) "deposit()" --value $(DEPOSIT_AMOUNT) --private-key $(USER_PK) --rpc-url $(RPC_URL); \
+	if [ $$? -eq 0 ]; then \
+		echo "Status: Success"; \
+	else \
+		echo "Status: Failed"; \
+	fi
+
+call-withdraw:
+	@echo "Calling withdraw with user $(USER_KEY), of $(WITHDRAW_AMOUNT) Wei (1ETH)"
+	@cast send $(WILL_ADDR) "withdraw(uint256)" $(WITHDRAW_AMOUNT) --private-key $(USER_PK) --rpc-url $(RPC_URL); \
+	if [ $$? -eq 0 ]; then \
+		echo "Status: Success"; \
+	else \
+		echo "Status: Failed"; \
+	fi
+
+
+# -----------------
+# 	SM-participation
+# -----------------
+call-validate:
+	@echo "Validating SM $(SM_KEY)."
+	@cast send $(WILL_ADDR) "validateSm()" --private-key $(SM_PK) --rpc-url $(RPC_URL); \
+	if [ $$? -eq 0 ]; then \
+		echo "Status: Success"; \
+	else \
+		echo "Status: Failed"; \
+	fi
+
+call-desist:
+	@echo "Desisting SM $(SM_KEY)."
+	@cast send $(WILL_ADDR) "desistSm()" --private-key $(SM_PK) --rpc-url $(RPC_URL); \
+	if [ $$? -eq 0 ]; then \
+		echo "Status: Success"; \
+	else \
+		echo "Status: Failed"; \
+	fi
+
+# -----------------
+# 	Declaration-related
+# -----------------
+call-declare:
+	@echo "Declaration of death from SM $(SM_KEY)."
+	@cast send $(WILL_ADDR) "declareDeath()" --private-key $(SM_PK) --rpc-url $(RPC_URL); \
+	if [ $$? -eq 0 ]; then \
+		echo "Status: Success"; \
+	else \
+		echo "Status: Failed"; \
+	fi
+
+call-veto:
+	@echo "Vetoing death coming from $(USER_KEY)."
+	@cast send $(WILL_ADDR) "vetoDeath()" --private-key $(USER_PK) --rpc-url $(RPC_URL); \
+	if [ $$? -eq 0 ]; then \
+		echo "Status: Success"; \
+	else \
+		echo "Status: Failed"; \
+	fi
+
+# -----------------
+# 	Will-management-related
+# -----------------
+call-cancel:
+	@echo "Cancelling will at $(WILL_ADDR) by user $(USER_KEY)."
+	@cast send $(WILL_ADDR) "cancelWill()" --private-key $(USER_PK) --rpc-url $(RPC_URL); \
+	if [ $$? -eq 0 ]; then \
+		echo "Status: Success"; \
+	else \
+		echo "Status: Failed"; \
+	fi
+
+call-switchAssets:
+	@echo "Switching coins by user $(SM_KEY)."
+	@cast send $(WILL_ADDR) "switchAssets()" --private-key $(SM_PK) --rpc-url $(RPC_URL); \
+	if [ $$? -eq 0 ]; then \
+		echo "Status: Success"; \
+	else \
+		echo "Status: Failed"; \
+	fi
+
+call-create-new-will:
+	@echo "Creating new will at $(WILL_ADDR) by user $(USER_KEY)."
+	@cast send $(WILL_ADDR) "createNewWill((address,uint8)[],(uint256,uint256))" \
+	"[(0x70997970C51812dc3A010C7d01b50e0d17dc79C8,1),(0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC,2)]" \
+	"(60,120)" \
+	--private-key $(USER_PK) --rpc-url $(RPC_URL); \
+	if [ $$? -eq 0 ]; then \
+		echo "Status: Success"; \
+	else \
+		echo "Status: Failed"; \
+	fi

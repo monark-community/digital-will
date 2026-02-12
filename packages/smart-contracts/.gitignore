@@ -1,0 +1,8 @@
+# Foundry compiler artifacts.
+.cache
+.out
+Makefile
+.lib
+.temp_factory_address.txt
+.temp_will_address.txt
+broadcast
