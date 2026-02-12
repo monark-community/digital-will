@@ -157,8 +157,16 @@ export default function WalletsPage() {
                         type="text"
                         value={labelValue}
                         onChange={(e) => setLabelValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSaveLabel(wallet.walletId);
+                          } else if (e.key === 'Escape') {
+                            handleCancelEdit();
+                          }
+                        }}
                         className="px-2 py-1 border border-[var(--border-section)] bg-[var(--bg-section)] text-[var(--text-primary)] rounded text-sm"
                         placeholder="Wallet label"
+                        autoFocus
                       />
                     ) : wallet.label ? (
                       <span className="text-sm font-medium text-[var(--text-primary)]">

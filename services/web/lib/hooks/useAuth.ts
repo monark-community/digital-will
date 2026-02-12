@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { authService } from "@/lib/services";
 import type { 
@@ -54,11 +54,13 @@ export function useSignUp() {
  */
 export function useLogout() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: () => authService.logout(),
     onSuccess: () => {
       authService.removeToken();
+      queryClient.clear();
       router.push("/login");
     },
     onError: (error: AxiosError<{ message: string }>) => {
