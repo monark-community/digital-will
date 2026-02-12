@@ -8,7 +8,7 @@ export const config = {
   },
   blockchain: {
     rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || "http://localhost:8545",
-    willFactoryAddress: process.env.NEXT_PUBLIC_WILL_FACTORY_ADDRESS || "0x5FbDB2315678afecb367f032d93f642f64180aa3",
+    willFactoryAddress: process.env.NEXT_PUBLIC_WILL_FACTORY_ADDRESS || "0x5FbDB2315678afecb367f032d93F642f64180aa3",
   },
   isProduction: process.env.NODE_ENV === "production",
   isDevelopment: process.env.NODE_ENV === "development",
