@@ -45,7 +45,7 @@ The following involve money-transfers :
 ```
 make call-deposit USER_ID=X
 make call-withdraw USER_ID=X
-make call-switchAssets SM_ID=X
+make call-swapAssets SM_ID=X
 ```
 
 The following involve SM-participation:

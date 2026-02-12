@@ -176,7 +176,15 @@ call-withdraw:
 	else \
 		echo "Status: Failed"; \
 	fi
-
+	
+call-swapAssets:
+	@echo "Switching coins by user $(SM_KEY)."
+	@cast send $(WILL_ADDR) "swapAssets()" --private-key $(SM_PK) --rpc-url $(RPC_URL); \
+	if [ $$? -eq 0 ]; then \
+		echo "Status: Success"; \
+	else \
+		echo "Status: Failed"; \
+	fi
 
 # -----------------
 # 	SM-participation
@@ -226,15 +234,6 @@ call-veto:
 call-cancel:
 	@echo "Cancelling will at $(WILL_ADDR) by user $(USER_KEY)."
 	@cast send $(WILL_ADDR) "cancelWill()" --private-key $(USER_PK) --rpc-url $(RPC_URL); \
-	if [ $$? -eq 0 ]; then \
-		echo "Status: Success"; \
-	else \
-		echo "Status: Failed"; \
-	fi
-
-call-switchAssets:
-	@echo "Switching coins by user $(SM_KEY)."
-	@cast send $(WILL_ADDR) "switchAssets()" --private-key $(SM_PK) --rpc-url $(RPC_URL); \
 	if [ $$? -eq 0 ]; then \
 		echo "Status: Success"; \
 	else \

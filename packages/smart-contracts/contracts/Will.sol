@@ -388,7 +388,7 @@ contract Will is WillEvents {
         }
     }
 
-    function switchAssets()
+    function swapAssets()
         external
         onlySm
         willActive
@@ -397,7 +397,7 @@ contract Will is WillEvents {
     {
         //TODO : Switch assets to USDC
         willStateS = WillState.EXECUTED;
-        emit EVT_AssetsSwitched(msg.sender);
+        emit EVT_AssetsSwapped(msg.sender);
     }
 
     /////////////////////////////////////////////////////////

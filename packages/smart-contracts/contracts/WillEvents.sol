@@ -11,14 +11,13 @@ abstract contract WillEvents {
     event EVT_WillActivated(); // 0xf6952527
     event EVT_WillModified(); // 0xfe07f774
     event EVT_WillCanceled(); // 0x703be417
-    event EVT_WillNotCanceled(); // 0xd0ff9f07
 
     // ========================
     // Assets-related events
     event EVT_AssetsDeposited(); // 0xf67579e3
     event EVT_AssetsWithdrawn(); // 0x10905724
     event EVT_AssetsWithdrawnAll(); // 0xed373ad6
-    event EVT_AssetsSwitched(address smAddress); // 0xb8d31018
+    event EVT_AssetsSwapped(address smAddress); // 0xb8d31018
 
     // ========================
     // Process / SM / Death-related events
