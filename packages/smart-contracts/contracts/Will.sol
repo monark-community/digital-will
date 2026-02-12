@@ -74,6 +74,12 @@ contract Will is WillEvents {
     ) private {
         if (newSmList.length < 2) revert Errors.ERR_NotEnoughSMs();
         if (newSmList.length > 255) revert Errors.ERR_TooManySMs();
+        if (
+            securityPeriodConfig.minSecurityPeriod == 0 &&
+            securityPeriodConfig.maxSecurityPeriod == 0
+        ) {
+            revert Errors.ERR_InvalidSecurityPeriods();
+        }
         _validateSecurityPeriod(securityPeriodConfig);
         _checkNoSmDuplicates(newSmList);
         // Validate vote power > 0 for each.
