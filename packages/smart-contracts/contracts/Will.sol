@@ -74,8 +74,20 @@ contract Will is WillEvents {
     ) private {
         if (newSmList.length < 2) revert Errors.ERR_NotEnoughSMs();
         if (newSmList.length > 255) revert Errors.ERR_TooManySMs();
+        if (
+            securityPeriodConfig.minSecurityPeriod == 0 &&
+            securityPeriodConfig.maxSecurityPeriod == 0
+        ) {
+            revert Errors.ERR_InvalidSecurityPeriods();
+        }
         _validateSecurityPeriod(securityPeriodConfig);
         _checkNoSmDuplicates(newSmList);
+        // Validate vote power > 0 for each.
+        for (uint256 i = 0; i < newSmList.length; i++) {
+            if (newSmList[i].votePower == 0) {
+                revert Errors.ERR_SMVotePowerInvalid();
+            }
+        }
 
         initializeWill(securityPeriodConfig);
         replaceAllSm(newSmList);
@@ -113,11 +125,21 @@ contract Will is WillEvents {
         SMPartialInfo[] calldata addedSmList,
         address[] calldata deletedSmList,
         SecurityPeriodConfig calldata securityPeriodConfig
-    ) external onlyPm willNotCanceled willNotExecuted executionTimeNotPassed {
+    )
+        external
+        onlyPm
+        willNotCanceled
+        willNotExecuted
+        executionTimeNotPassed
+        securityPeriodNotStarted
+    {
         _validateSecurityPeriod(securityPeriodConfig);
         _validateSmUpdate(updatedSmList, addedSmList, deletedSmList);
 
-        securityPeriodConfigS = securityPeriodConfig;
+        // Case where security period is not to be updated.
+        if (securityPeriodConfig.maxSecurityPeriod != 0) {
+            securityPeriodConfigS = securityPeriodConfig;
+        }
         updateSmList(updatedSmList, addedSmList, deletedSmList);
 
         checkAndUpdateWillState();
@@ -203,23 +225,25 @@ contract Will is WillEvents {
         SMPartialInfo[] memory addedSmList,
         address[] memory deletedSmList
     ) private view {
-        // Trivial case with empty arrays.
-        if (
-            updatedSmList.length == 0 &&
-            addedSmList.length == 0 &&
-            deletedSmList.length == 0
-        ) revert Errors.ERR_EmptySMLists();
+        // All arrays can be empty. It is the case where PM only updates securityPeriodConfig
         // Given order of updates, this is how we do it because the uint8 will overflow.
         if (updatedSmList.length + addedSmList.length > 255)
             revert Errors.ERR_SMListsFinalResultTooManySM();
+        // Prevent underflow explicitly, or 1 SM left.
+        if (deletedSmList.length + 1 >= smListS.length + addedSmList.length) {
+            revert Errors.ERR_SMListsFinalResultIncoherent();
+        }
 
         // No duplicates/overlap in the lists.
         _checkNoSmDuplicates(updatedSmList, addedSmList, deletedSmList);
 
-        // Updated SMs must exist
+        // Updated SMs must exist + valid power
         for (uint256 i = 0; i < updatedSmList.length; i++) {
             if (smMappingS[updatedSmList[i].smAddress].index == 0) {
                 revert Errors.ERR_UpdatedSMDoesNotExist();
+            }
+            if (updatedSmList[i].votePower == 0) {
+                revert Errors.ERR_SMVotePowerInvalid();
             }
         }
 
@@ -230,21 +254,14 @@ contract Will is WillEvents {
             }
         }
 
-        // New SMs must not exist
+        // New SMs must not exist + valid power
         for (uint256 i = 0; i < addedSmList.length; i++) {
             if (smMappingS[addedSmList[i].smAddress].index != 0) {
                 revert Errors.ERR_CreatedSMExistsAlready();
             }
-        }
-
-        // Prevent underflow explicitly
-        if (deletedSmList.length + 1 >= smListS.length + addedSmList.length) {
-            revert Errors.ERR_SMListsFinalResultIncoherent();
-        }
-
-        // Enforce upper bound (fits uint8 index)
-        if (smListS.length + addedSmList.length - deletedSmList.length > 255) {
-            revert Errors.ERR_SMListsFinalResultTooManySM();
+            if (updatedSmList[i].votePower == 0) {
+                revert Errors.ERR_SMVotePowerInvalid();
+            }
         }
     }
 
@@ -389,7 +406,7 @@ contract Will is WillEvents {
         }
     }
 
-    function switchAssets()
+    function swapAssets()
         external
         onlySm
         willActive
@@ -398,7 +415,7 @@ contract Will is WillEvents {
     {
         //TODO : Switch assets to USDC
         willStateS = WillState.EXECUTED;
-        emit EVT_AssetsSwitched(msg.sender);
+        emit EVT_AssetsSwapped(msg.sender);
     }
 
     /////////////////////////////////////////////////////////
@@ -517,6 +534,9 @@ contract Will is WillEvents {
     }
 
     function getDetailedSm(address sm) external view returns (SMInfo memory) {
+        if (smMappingS[sm].index == 0) {
+            revert Errors.ERR_SMDoesNotExist();
+        }
         return smMappingS[sm];
     }
 
@@ -684,6 +704,16 @@ contract Will is WillEvents {
     function _securityPeriodStarted() private view {
         if (deathDeclarationTimestampS == 0)
             revert Errors.ERR_SecurityPeriodNotStarted();
+    }
+
+    modifier securityPeriodNotStarted() {
+        _securityPeriodNotStarted();
+        _;
+    }
+
+    function _securityPeriodNotStarted() private view {
+        if (deathDeclarationTimestampS != 0)
+            revert Errors.ERR_SecurityPeriodStarted();
     }
 
     modifier securityPeriodFinished() {
