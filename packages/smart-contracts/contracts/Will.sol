@@ -76,6 +76,12 @@ contract Will is WillEvents {
         if (newSmList.length > 255) revert Errors.ERR_TooManySMs();
         _validateSecurityPeriod(securityPeriodConfig);
         _checkNoSmDuplicates(newSmList);
+        // Validate vote power > 0 for each.
+        for (uint256 i = 0; i < newSmList.length; i++) {
+            if (newSmList[i].votePower == 0) {
+                revert Errors.ERR_SMVotePowerInvalid();
+            }
+        }
 
         initializeWill(securityPeriodConfig);
         replaceAllSm(newSmList);
@@ -225,10 +231,13 @@ contract Will is WillEvents {
         // No duplicates/overlap in the lists.
         _checkNoSmDuplicates(updatedSmList, addedSmList, deletedSmList);
 
-        // Updated SMs must exist
+        // Updated SMs must exist + valid power
         for (uint256 i = 0; i < updatedSmList.length; i++) {
             if (smMappingS[updatedSmList[i].smAddress].index == 0) {
                 revert Errors.ERR_UpdatedSMDoesNotExist();
+            }
+            if (updatedSmList[i].votePower == 0) {
+                revert Errors.ERR_SMVotePowerInvalid();
             }
         }
 
@@ -239,10 +248,13 @@ contract Will is WillEvents {
             }
         }
 
-        // New SMs must not exist
+        // New SMs must not exist + valid power
         for (uint256 i = 0; i < addedSmList.length; i++) {
             if (smMappingS[addedSmList[i].smAddress].index != 0) {
                 revert Errors.ERR_CreatedSMExistsAlready();
+            }
+            if (updatedSmList[i].votePower == 0) {
+                revert Errors.ERR_SMVotePowerInvalid();
             }
         }
     }
@@ -516,6 +528,9 @@ contract Will is WillEvents {
     }
 
     function getDetailedSm(address sm) external view returns (SMInfo memory) {
+        if (smMappingS[sm].index == 0) {
+            revert Errors.ERR_SMDoesNotExist();
+        }
         return smMappingS[sm];
     }
 

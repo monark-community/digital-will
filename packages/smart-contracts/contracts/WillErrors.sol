@@ -17,11 +17,13 @@ error ERR_DuplicateSM(); // 0x8b97bb50
 error ERR_SMAlreadyValidated(); // 0x76b04149
 error ERR_SMAlreadyDeclaredDeath(); // 0x3b5f6558
 error ERR_SMNotValidated(); // 0x622bb4a8
+error ERR_SMDoesNotExist(); // 0x507ee7d0
 error ERR_UpdatedSMDoesNotExist(); // 0x0c0e2da8
 error ERR_DeletedSMDoesNotExist(); // 0x544a0688
 error ERR_CreatedSMExistsAlready(); // 0x1a24f67c
 error ERR_SMListsFinalResultIncoherent(); // 0xbd1b7294
 error ERR_SMListsFinalResultTooManySM(); // 0x711f1dc1
+error ERR_SMVotePowerInvalid(); // 0xe9594537
 
 // ========================
 // Will lifecycle errors
