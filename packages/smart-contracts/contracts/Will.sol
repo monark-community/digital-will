@@ -92,8 +92,6 @@ contract Will is WillEvents {
 
         initializeWill(securityPeriodConfig);
         replaceAllSm(newSmList);
-
-        emit EVT_WillCreated();
     }
 
     function cancelWill()
@@ -137,15 +135,17 @@ contract Will is WillEvents {
         _validateSecurityPeriod(securityPeriodConfig);
         _validateSmUpdate(updatedSmList, addedSmList, deletedSmList);
 
-        // Case where security period is not to be updated.
+        // Case where security period is to be updated.
         if (securityPeriodConfig.maxSecurityPeriod != 0) {
             securityPeriodConfigS = securityPeriodConfig;
+            emit EVT_SecurityPeriodUpdated(
+                securityPeriodConfig.minSecurityPeriod,
+                securityPeriodConfig.maxSecurityPeriod
+            );
         }
         updateSmList(updatedSmList, addedSmList, deletedSmList);
 
         checkAndUpdateWillState();
-
-        emit EVT_WillModified();
     }
 
     function _validateSecurityPeriod(
@@ -314,6 +314,10 @@ contract Will is WillEvents {
                 updatedSmList[i].smAddress
             ];
             infoUpdatedSm.votePower = updatedSmList[i].votePower;
+            emit EVT_SMUpdated(
+                updatedSmList[i].smAddress,
+                updatedSmList[i].votePower
+            );
         }
     }
 
@@ -326,6 +330,8 @@ contract Will is WillEvents {
                 votePower: newSmList[i].votePower,
                 index: uint8(smListS.length) // 1-based
             });
+
+            emit EVT_SMAdded(newSmList[i].smAddress, newSmList[i].votePower);
         }
     }
 
@@ -344,6 +350,8 @@ contract Will is WillEvents {
 
             smListS.pop();
             delete smMappingS[deletedSmList[i]];
+
+            emit EVT_SMRemoved(deletedSmList[i]);
         }
     }
 
@@ -379,7 +387,7 @@ contract Will is WillEvents {
         executionTimeNotPassed
     {
         if (msg.value == 0) revert Errors.ERR_InvalidDeposit();
-        emit EVT_AssetsDeposited();
+        emit EVT_AssetsDeposited(msg.value);
     }
 
     function withdraw(
@@ -392,7 +400,7 @@ contract Will is WillEvents {
         (bool callSuccess, ) = payable(PM_I).call{value: amount}("");
         if (!callSuccess) revert Errors.ERR_FailedWithdrawal();
 
-        emit EVT_AssetsWithdrawn();
+        emit EVT_AssetsWithdrawn(amount);
     }
 
     function withdrawAllPm() private {
@@ -425,10 +433,11 @@ contract Will is WillEvents {
 
         smMappingS[msg.sender].state = SMState.VALIDATED;
         validatedCountS += 1;
+        emit EVT_SMValidated(msg.sender);
         if (validatedCountS == smListS.length) {
             willStateS = WillState.ACTIVE;
+            emit EVT_WillActivated();
         }
-        emit EVT_SMValidated(msg.sender);
     }
 
     function desistSm()
@@ -486,9 +495,9 @@ contract Will is WillEvents {
 
         if (deathDeclarationTimestampS == 0) {
             deathDeclarationTimestampS = block.timestamp;
-            emit EVT_DeathDeclared();
+            emit EVT_DeathDeclared(msg.sender);
         } else {
-            emit EVT_DeathConfirmed();
+            emit EVT_DeathConfirmed(msg.sender);
         }
 
         cumulatedVotePowerS += smMappingS[msg.sender].votePower;
