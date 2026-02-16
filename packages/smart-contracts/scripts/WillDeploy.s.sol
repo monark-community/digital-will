@@ -33,7 +33,11 @@ contract DeployWill is Script {
         });
 
         // Deploy a new Will through the factory
-        address newWill = factory.createWill(msg.sender, smList, config);
+        address newWill = factory.createWill{value: 1 ether}(
+            msg.sender,
+            smList,
+            config
+        );
         vm.stopBroadcast();
 
         // Optional: log the address

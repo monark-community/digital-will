@@ -16,8 +16,12 @@ contract WillFactory {
         address owner,
         SMPartialInfo[] memory newSmList,
         SecurityPeriodConfig memory securityPeriodConfig
-    ) external returns (address) {
-        Will newWill = new Will(owner, newSmList, securityPeriodConfig);
+    ) external payable returns (address) {
+        Will newWill = new Will{value: msg.value}(
+            owner,
+            newSmList,
+            securityPeriodConfig
+        );
 
         emit EVT_WillCreated(address(newWill), owner);
 

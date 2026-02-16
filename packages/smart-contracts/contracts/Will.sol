@@ -42,7 +42,7 @@ contract Will is WillEvents {
         address pmAddress,
         SMPartialInfo[] memory newSmList,
         SecurityPeriodConfig memory securityPeriodConfig
-    ) {
+    ) payable {
         PM_I = pmAddress;
         createWillInitial(newSmList, securityPeriodConfig);
     }
@@ -64,7 +64,7 @@ contract Will is WillEvents {
     function createNewWill(
         SMPartialInfo[] calldata newSmList,
         SecurityPeriodConfig calldata securityPeriodConfig
-    ) external onlyPm willCanceled {
+    ) external payable onlyPm willCanceled {
         createWillInternal(newSmList, securityPeriodConfig);
     }
 
