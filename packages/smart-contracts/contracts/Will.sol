@@ -80,6 +80,7 @@ contract Will is WillEvents {
         ) {
             revert Errors.ERR_InvalidSecurityPeriods();
         }
+
         _validateSecurityPeriod(securityPeriodConfig);
         _checkNoSmDuplicates(newSmList);
         // Validate vote power > 0 for each.
@@ -102,8 +103,8 @@ contract Will is WillEvents {
         willNotCanceled
         executionTimeNotPassed
     {
-        withdrawAllPm();
         willStateS = WillState.CANCELED;
+        withdrawAllPm();
         emit EVT_WillCanceled();
     }
 
@@ -190,13 +191,10 @@ contract Will is WillEvents {
     }
 
     function updatePeriodUntilExecution() private {
-        uint256 voteRatio = ((uint256(totalVotePowerS) -
-            uint256(cumulatedVotePowerS)) * 100) / uint256(totalVotePowerS);
-
         uint256 newExecutionTimestamp = ((securityPeriodConfigS
             .maxSecurityPeriod - securityPeriodConfigS.minSecurityPeriod) *
-            voteRatio) /
-            100 +
+            (uint256(totalVotePowerS) - uint256(cumulatedVotePowerS))) /
+            uint256(totalVotePowerS) +
             deathDeclarationTimestampS +
             securityPeriodConfigS.minSecurityPeriod;
 
@@ -397,7 +395,7 @@ contract Will is WillEvents {
         emit EVT_AssetsWithdrawn();
     }
 
-    function withdrawAllPm() private interactableAssets {
+    function withdrawAllPm() private {
         uint256 balance = address(this).balance;
         if (balance != 0) {
             (bool callSuccess, ) = payable(PM_I).call{value: balance}("");
@@ -557,7 +555,7 @@ contract Will is WillEvents {
         if (block.timestamp >= cooldownTimeStampS) {
             return 0; // cooldown expired
         } else {
-            return cooldownTimeStampS; // remaining time
+            return cooldownTimeStampS;
         }
     }
 

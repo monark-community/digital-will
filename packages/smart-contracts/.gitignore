@@ -6,3 +6,4 @@ Makefile
 .temp_factory_address.txt
 .temp_will_address.txt
 broadcast
+venv
