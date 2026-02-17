@@ -7,12 +7,24 @@ import {SMPartialInfo} from "@interfaces/SMInfo.sol";
 import {SecurityPeriodConfig} from "@interfaces/SecurityPeriodConfig.sol";
 
 contract WillFactory {
+    event EVT_WillCreated(
+        address indexed willAddress,
+        address indexed mpAddress
+    ); // 0xeff78712
+
     function createWill(
         address owner,
         SMPartialInfo[] memory newSmList,
         SecurityPeriodConfig memory securityPeriodConfig
-    ) external returns (address) {
-        Will newWill = new Will(owner, newSmList, securityPeriodConfig);
+    ) external payable returns (address) {
+        Will newWill = new Will{value: msg.value}(
+            owner,
+            newSmList,
+            securityPeriodConfig
+        );
+
+        emit EVT_WillCreated(address(newWill), owner);
+
         return address(newWill);
     }
 }
