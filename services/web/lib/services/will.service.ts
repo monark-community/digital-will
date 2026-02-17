@@ -54,8 +54,8 @@ class WillService {
       for (const log of receipt.logs) {
         try {
           const parsed = factoryContract.interface.parseLog(log);
-          if (parsed && parsed.name === "WillCreated") {
-            willAddress = parsed.args.will;
+          if (parsed && parsed.name === "EVT_WillCreated") {
+            willAddress = parsed.args.willAddress;
             break;
           }
         } catch (_) {
