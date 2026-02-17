@@ -5,16 +5,16 @@
 export const WILL_FACTORY_ABI = [
   {
     "type": "event",
-    "name": "WillCreated",
+    "name": "EVT_WillCreated",
     "inputs": [
       {
-        "name": "will",
+        "name": "willAddress",
         "type": "address",
         "indexed": true,
         "internalType": "address"
       },
       {
-        "name": "owner",
+        "name": "mpAddress",
         "type": "address",
         "indexed": true,
         "internalType": "address"
@@ -73,6 +73,6 @@ export const WILL_FACTORY_ABI = [
         "internalType": "address"
       }
     ],
-    "stateMutability": "nonpayable"
+    "stateMutability": "payable"
   }
 ] as const;

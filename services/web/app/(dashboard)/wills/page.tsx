@@ -25,6 +25,7 @@ export default function WillsPage() {
   const [factoryAddress, setFactoryAddress] = useState(config.blockchain.willFactoryAddress);
   const [selectedWalletId, setSelectedWalletId] = useState("");
   const [secondaryMembers, setSecondaryMembers] = useState<SecondaryMember[]>([
+    { address: "", power: 1 },
     { address: "", power: 1 }
   ]);
   const [minSecurityPeriod, setMinSecurityPeriod] = useState("");
@@ -64,7 +65,7 @@ export default function WillsPage() {
   };
 
   const removeSecondaryMember = (index: number) => {
-    if (secondaryMembers.length > 1) {
+    if (secondaryMembers.length > 2) {
       setSecondaryMembers(secondaryMembers.filter((_, i) => i !== index));
     }
   };
@@ -104,8 +105,8 @@ export default function WillsPage() {
     }
 
     const validMembers = secondaryMembers.filter(sm => sm.address.trim() !== "");
-    if (validMembers.length === 0) {
-      setErrorMessage("Please add at least one secondary member");
+    if (validMembers.length < 2) {
+      setErrorMessage("Please add at least 2 secondary members (contract requirement)");
       return;
     }
 
@@ -179,7 +180,7 @@ export default function WillsPage() {
   const resetForm = () => {
     setFactoryAddress(config.blockchain.willFactoryAddress);
     setSelectedWalletId("");
-    setSecondaryMembers([{ address: "", power: 1 }]);
+    setSecondaryMembers([{ address: "", power: 1 }, { address: "", power: 1 }]);
     setMinSecurityPeriod("");
     setMaxSecurityPeriod("");
     setShowCreateForm(false);
@@ -315,7 +316,7 @@ export default function WillsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      Secondary Members
+                      Secondary Members (minimum 2 required)
                     </label>
                     <div className="space-y-3">
                       {secondaryMembers.map((member, index) => (
@@ -340,7 +341,7 @@ export default function WillsPage() {
                               className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />
                           </div>
-                          {secondaryMembers.length > 1 && (
+                          {secondaryMembers.length > 2 && (
                             <button
                               onClick={() => removeSecondaryMember(index)}
                               className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
