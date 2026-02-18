@@ -284,7 +284,18 @@ export default function WillsPage() {
         );
       }
     } catch (error: any) {
-      setErrorMessage(error.message || "Failed to create will");
+      console.error("Will creation error:", error);
+      if (
+        error.code === 4001 || 
+        error.code === "ACTION_REJECTED" || 
+        error.reason === "rejected" ||
+        error.message?.includes("user rejected") ||
+        error.message?.includes("User denied")
+      ) {
+        setErrorMessage("Transaction cancelled. You rejected the transaction in MetaMask.");
+      } else {
+        setErrorMessage(error.message || "Failed to create will");
+      }
     } finally {
       setIsCreating(false);
     }

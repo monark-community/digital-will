@@ -104,8 +104,11 @@ class WillService {
     } catch (error: any) {
       console.error("Error creating will:", error);
       
-      if (error.code === 4001) {
-        throw new Error("User rejected the transaction");
+      if (error.code === 4001 || error.code === "ACTION_REJECTED" || error.reason === "rejected") {
+        const rejectionError: any = new Error("User rejected the transaction");
+        rejectionError.code = error.code || "ACTION_REJECTED";
+        rejectionError.reason = "rejected";
+        throw rejectionError;
       }
       
       if (error.code === "CALL_EXCEPTION") {
