@@ -6,7 +6,7 @@ import { validateWalletAddress } from '../utils/crypto';
 const prisma = new PrismaClient();
 
 interface ContactResponse {
-    contactId: number;
+    contactId: string;
     userId: string;
     firstName: string;
     lastName: string;
@@ -24,7 +24,7 @@ export async function getContactsByUser(userId: string): Promise<ContactResponse
         orderBy: { createdAt: 'asc' },
     });
 
-    return contacts.map(contact => ({
+    return contacts.map((contact) => ({
         contactId: contact.contactId,
         userId: contact.userId,
         firstName: contact.firstName,

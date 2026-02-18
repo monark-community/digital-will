@@ -16,6 +16,8 @@ export default function WalletsPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState<string | null>(null);
   const [labelValue, setLabelValue] = useState("");
+  const [walletToDelete, setWalletToDelete] = useState<Wallet | null>(null);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   const handleAddWallet = async () => {
     try {
@@ -42,19 +44,40 @@ export default function WalletsPage() {
     }
   };
 
-  const handleRemoveWallet = (walletId: string) => {
+  const handleRemoveWallet = (wallet: Wallet) => {
     if (wallets && wallets.length === 1) {
       setErrorMessage("Cannot remove the last wallet from your account. You must have at least one wallet.");
       return;
     }
 
-    if (confirm("Are you sure you want to remove this wallet?")) {
-      removeWallet(walletId, {
-        onError: (error: any) => {
-          const msg = error?.response?.data?.message || "Failed to remove wallet";
-          setErrorMessage(msg);
-        },
-      });
+    setWalletToDelete(wallet);
+  };
+
+  const confirmDeleteWallet = () => {
+    if (!walletToDelete) return;
+
+    removeWallet(walletToDelete.walletId, {
+      onSuccess: () => {
+        setWalletToDelete(null);
+      },
+      onError: (error: any) => {
+        const msg = error?.response?.data?.message || "Failed to remove wallet";
+        setErrorMessage(msg);
+      },
+    });
+  };
+
+  const cancelDeleteWallet = () => {
+    setWalletToDelete(null);
+  };
+
+  const copyToClipboard = async (address: string, walletId: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedAddress(walletId);
+      setTimeout(() => setCopiedAddress(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy address:', err);
     }
   };
 
@@ -174,9 +197,27 @@ export default function WalletsPage() {
                       </span>
                     ) : null}
                   </div>
-                  <p className="font-mono text-sm text-[var(--text-muted)] break-all">
-                    {wallet.address}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-mono text-sm text-[var(--text-muted)] break-all">
+                      {wallet.address}
+                    </p>
+                    <div className="relative">
+                      <button
+                        onClick={() => copyToClipboard(wallet.address, wallet.walletId)}
+                        className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                        title="Copy address"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                      {copiedAddress === wallet.walletId && (
+                        <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                          Address copied!
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   <p className="text-xs text-[var(--text-muted)] mt-2">
                     Added {new Date(wallet.createdAt).toLocaleDateString()}
                   </p>
@@ -187,7 +228,7 @@ export default function WalletsPage() {
                     <>
                       <button
                         onClick={() => handleSaveLabel(wallet.walletId)}
-                        className="p-2 text-green-500 hover:bg-[var(--bg-section)] rounded transition-colors"
+                        className="p-2 text-green-500 hover:bg-[var(--bg-section)] rounded transition-colors cursor-pointer"
                         title="Save"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,7 +237,7 @@ export default function WalletsPage() {
                       </button>
                       <button
                         onClick={handleCancelEdit}
-                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--bg-section)] rounded transition-colors"
+                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--bg-section)] rounded transition-colors cursor-pointer"
                         title="Cancel"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,7 +249,7 @@ export default function WalletsPage() {
                     <>
                       <button
                         onClick={() => handleEditLabel(wallet)}
-                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--bg-section)] rounded transition-colors"
+                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--bg-section)] rounded transition-colors cursor-pointer"
                         title="Edit label"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,8 +257,8 @@ export default function WalletsPage() {
                         </svg>
                       </button>
                       <button
-                        onClick={() => handleRemoveWallet(wallet.walletId)}
-                        className="p-2 text-red-400 hover:bg-[var(--bg-section)] rounded transition-colors"
+                        onClick={() => handleRemoveWallet(wallet)}
+                        className="p-2 text-red-400 hover:bg-[var(--bg-section)] rounded transition-colors cursor-pointer"
                         title="Remove wallet"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -231,6 +272,41 @@ export default function WalletsPage() {
             </div>
           ))}
         </div>
+
+        {walletToDelete && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl max-w-md w-full">
+              <div className="p-6">
+                <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">
+                  Remove Wallet
+                </h2>
+                <p className="text-[var(--text-muted)] mb-4">
+                  Are you sure you want to remove this wallet? This action cannot be undone.
+                </p>
+                <div className="bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg p-3 mb-6">
+                  <p className="text-xs text-[var(--text-muted)] mb-1">Wallet Address:</p>
+                  <p className="font-mono text-sm text-[var(--text-primary)] break-all">
+                    {walletToDelete.address}
+                  </p>
+                </div>
+                <div className="flex gap-4">
+                  <button
+                    onClick={confirmDeleteWallet}
+                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
+                  >
+                    Remove
+                  </button>
+                  <button
+                    onClick={cancelDeleteWallet}
+                    className="flex-1 px-4 py-2 bg-[var(--bg-section)] hover:bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] font-semibold rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       </div>
     </>

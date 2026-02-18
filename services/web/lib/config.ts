@@ -31,4 +31,8 @@ export const API_ROUTES = {
     BY_ID: (walletId: string) => `/api/wallets/${walletId}`,
     UPDATE_LABEL: (walletId: string) => `/api/wallets/${walletId}/label`,
   },
+  CONTACTS: {
+    BASE: "/api/contacts",
+    BY_ID: (contactId: string) => `/api/contacts/${contactId}`,
+  },
 } as const;

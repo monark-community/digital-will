@@ -1,11 +1,15 @@
 import { apiClient } from "../api-client";
+import { API_ROUTES } from "../config";
 import type { Contact } from "../types";
 
 /**
  * Get all contacts for the current user
  */
 export async function getContacts(): Promise<Contact[]> {
-  const response = await apiClient.get("/contacts");
+  const response = await apiClient.get<{
+    success: boolean;
+    data: { contacts: Contact[] };
+  }>(API_ROUTES.CONTACTS.BASE);
   return response.data.data.contacts;
 }
 
@@ -19,7 +23,10 @@ export async function addContact(data: {
   phoneNumber?: string;
   walletAddress: string;
 }): Promise<Contact> {
-  const response = await apiClient.post("/contacts", data);
+  const response = await apiClient.post<{
+    success: boolean;
+    data: { contact: Contact };
+  }>(API_ROUTES.CONTACTS.BASE, data);
   return response.data.data.contact;
 }
 
@@ -27,7 +34,7 @@ export async function addContact(data: {
  * Remove a contact
  */
 export async function removeContact(contactId: string): Promise<void> {
-  await apiClient.delete(`/contacts/${contactId}`);
+  await apiClient.delete(API_ROUTES.CONTACTS.BY_ID(contactId));
 }
 
 /**
@@ -43,6 +50,9 @@ export async function updateContact(
     walletAddress?: string;
   }
 ): Promise<Contact> {
-  const response = await apiClient.patch(`/contacts/${contactId}`, data);
+  const response = await apiClient.patch<{
+    success: boolean;
+    data: { contact: Contact };
+  }>(API_ROUTES.CONTACTS.BY_ID(contactId), data);
   return response.data.data.contact;
 }
