@@ -52,10 +52,11 @@ export const handleDeleteContact = asyncHandler(async (req: Request, res: Respon
  * Update contact details
  */
 export const handleUpdateContact = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
     const { contactId } = req.params;
     const { firstName, lastName, email, walletAddress, phoneNumber } = req.body;
 
-    const contact = await contactsService.updateContact({ contactId, firstName, lastName, email, walletAddress, phoneNumber });
+    const contact = await contactsService.updateContact({ userId, contactId, firstName, lastName, email, walletAddress, phoneNumber });
 
     res.status(StatusCodes.OK).json({
         success: true,

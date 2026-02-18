@@ -45,7 +45,7 @@ model Contact {
   lastName      String
   email         String
   phoneNumber   String?
-  walletAddress String   @unique
+  walletAddress String  
 
   createdAt    DateTime @default(now())
 
@@ -65,10 +65,10 @@ model Will {
 
 model SecondaryMember {
   secondaryMemberId String     @id @default(uuid())
-  FirstName         String
-  LastName          String
-  Email             String
-  PhoneNumber       String?
+  firstName         String
+  lastName          String
+  email             String
+  phoneNumber       String?
   walletAddress     String
   willId            String
   will              Will    @relation(fields: [willId], references: [willId])

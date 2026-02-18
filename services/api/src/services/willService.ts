@@ -73,10 +73,10 @@ export const createWill = async (input: CreateWillInput) => {
     // Create secondary members with the willId now available
     await prisma.secondaryMember.createMany({
         data: secondaryMembers.map((member) => ({
-            FirstName: member.firstName,
-            LastName: member.lastName,
-            Email: member.email,
-            PhoneNumber: member.phoneNumber,
+            firstName: member.firstName,
+            lastName: member.lastName,
+            email: member.email,
+            phoneNumber: member.phoneNumber,
             walletAddress: member.walletAddress,
             willId: will.willId,
         })),

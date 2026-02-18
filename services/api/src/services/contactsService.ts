@@ -1,7 +1,22 @@
 import { PrismaClient } from '@prisma/client';
-import { BadRequestError, NotFoundError } from '../utils/errors';
+import { BadRequestError, ConflictError, NotFoundError } from '../utils/errors';
 import { REGEX } from '../utils/constants';
 import { validateWalletAddress } from '../utils/crypto';
+
+/**
+ * Checks if a contact belonging to the same userId and walletAddress exists.
+ * Throws ConflictError if found.
+ */
+async function checkDuplicateContact(userId: string, walletAddress: string, contactId?: string) {
+    const where: any = { userId, walletAddress };
+    if (contactId) {
+        where.NOT = { contactId };
+    }
+    const existingContact = await prisma.contact.findFirst({ where });
+    if (existingContact) {
+        throw new ConflictError('A contact with this wallet address already exists.');
+    }
+}
 
 const prisma = new PrismaClient();
 
@@ -57,6 +72,8 @@ export async function createContact(data: {
 
     validateWalletAddress(data.walletAddress);
 
+    await checkDuplicateContact(data.userId, data.walletAddress);
+
     const contact = await prisma.contact.create({ data });
 
     return {
@@ -74,6 +91,7 @@ export async function createContact(data: {
  * Update an existing contact
  */
 export async function updateContact(data: {
+    userId: string;
     contactId: string;
     firstName?: string;
     lastName?: string;
@@ -91,16 +109,17 @@ export async function updateContact(data: {
 
     // Only include fields that were actually provided
     const updateData: Partial<typeof updateFields> = {};
-    if (updateFields.firstName !== undefined) updateData.firstName = updateFields.firstName;
-    if (updateFields.lastName !== undefined) updateData.lastName = updateFields.lastName;
-    if (updateFields.email !== undefined) {
+    if (updateFields.firstName) updateData.firstName = updateFields.firstName;
+    if (updateFields.lastName) updateData.lastName = updateFields.lastName;
+    if (updateFields.email) {
         if (!REGEX.EMAIL.test(updateFields.email)) {
             throw new BadRequestError("Invalid email format");
         }
         updateData.email = updateFields.email;
     }
-    if (updateFields.walletAddress !== undefined) {
+    if (updateFields.walletAddress) {
         validateWalletAddress(updateFields.walletAddress);
+        await checkDuplicateContact(data.userId, updateFields.walletAddress, contactId);
         updateData.walletAddress = updateFields.walletAddress;
     }
     if (updateFields.phoneNumber !== undefined) {
@@ -111,7 +130,7 @@ export async function updateContact(data: {
     }
 
     const contact = await prisma.contact.update({
-        where: { contactId: contactId },
+        where: { contactId },
         data: updateData,
     });
 
