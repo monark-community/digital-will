@@ -2,9 +2,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { STUB_METRICS, STUB_WILL, STUB_ASSETS, STUB_WILLS, formatCurrency } from './stub-data';
+import { STUB_METRICS, STUB_WILL, STUB_ASSETS, formatCurrency } from './stub-data';
 import { useWalletContext } from './WalletContext';
 import { getMultiNetworkBalances, NETWORKS } from '@/lib/utils/wallet';
+import { willService, type WillFromDB } from '@/lib/services';
 
 interface WalletBalances {
   sepolia: string;
@@ -22,6 +23,8 @@ export default function PrimaryMemberContent() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [balances, setBalances] = useState<WalletBalances | null>(null);
   const [loadingBalances, setLoadingBalances] = useState(false);
+  const [realWills, setRealWills] = useState<WillFromDB[]>([]);
+  const [loadingWills, setLoadingWills] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -44,8 +47,18 @@ export default function PrimaryMemberContent() {
           setBalances({ sepolia: '0', mainnet: '0', bnb: '0', avax: '0', total: 0, totalCAD: 0 });
         })
         .finally(() => setLoadingBalances(false));
+
+      setLoadingWills(true);
+      willService.getWillsByWallet(selectedWallet.address)
+        .then(setRealWills)
+        .catch(err => {
+          console.error('Error fetching wills:', err);
+          setRealWills([]);
+        })
+        .finally(() => setLoadingWills(false));
     } else {
       setBalances(null);
+      setRealWills([]);
     }
   }, [selectedWallet]);
 
@@ -138,64 +151,79 @@ export default function PrimaryMemberContent() {
 
       <div className="grid lg:grid-cols-2 gap-8">
         <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
-          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-6">Active Wills</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">My Wills</h2>
+            <Link
+              href="/wills"
+              className="text-sm text-[var(--accent)] hover:opacity-80 transition-opacity"
+            >
+              View All →
+            </Link>
+          </div>
           <div className="space-y-4">
-            {STUB_WILLS.filter(will => will.status === 'Active').map((will) => (
-              <div key={will.id} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors">
+            {loadingWills ? (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent)]"></div>
+                <p className="text-[var(--text-muted-alt)] mt-4 text-sm">Loading wills...</p>
+              </div>
+            ) : realWills.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-[var(--text-muted-alt)] mb-2">No wills created yet</p>
+                <Link
+                  href="/wills"
+                  className="text-sm text-[var(--accent)] hover:opacity-80 transition-opacity"
+                >
+                  Create your first will →
+                </Link>
+              </div>
+            ) : realWills.map((will) => (
+              <div key={will.willId} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors">
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="font-semibold text-[var(--text-primary)]">{will.title}</h3>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                    will.status === 'Active' 
-                      ? 'bg-emerald-500/20 text-emerald-500' 
-                      : 'bg-yellow-500/20 text-yellow-500'
-                  }`}>
-                    {will.status === 'Active' && (
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                      </svg>
-                    )}
-                    {will.status}
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-[var(--text-primary)] mb-1">Will Contract</h3>
+                    <p className="text-xs text-[var(--text-muted-alt)] font-mono break-all">{will.contractAddressInBlockchain}</p>
+                  </div>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-500 ml-2">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                    Deployed
                   </span>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
-                    <p className="text-xs text-[var(--text-muted-alt)]">Secondary Members</p>
+                    <p className="text-xs text-[var(--text-muted-alt)]">Chain ID</p>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{will.chainId}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--text-muted-alt)]">Beneficiaries</p>
                     <p className="text-sm font-medium text-[var(--text-primary)]">{will.secondaryMembers.length} people</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[var(--text-muted-alt)]">Total Value</p>
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{formatCurrency(will.totalValue)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[var(--text-muted-alt)]">Assets</p>
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{will.assets.join(', ')}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[var(--text-muted-alt)]">Inactivity Period</p>
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{will.inactivityPeriod} days</p>
                   </div>
                 </div>
 
                 <div className="border-t border-[var(--border-section)] pt-3 mt-3">
-                  <p className="text-xs text-[var(--text-muted-alt)] mb-2">Beneficiaries:</p>
-                  <div className="space-y-1">
-                    {will.secondaryMembers.map((member, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-xs">
-                        <span className="text-[var(--text-primary)]">{member.name}</span>
-                        <span className="text-[var(--text-muted-alt)]">{member.allocation}%</span>
+                  <p className="text-xs text-[var(--text-muted-alt)] mb-2">Secondary Members:</p>
+                  <div className="space-y-2">
+                    {will.secondaryMembers.slice(0, 2).map((member: WillFromDB['secondaryMembers'][0]) => (
+                      <div key={member.secondaryMemberId} className="text-xs">
+                        <span className="text-[var(--text-primary)] font-medium">{member.FirstName} {member.LastName}</span>
+                        <p className="text-[var(--text-muted-alt)] font-mono text-[10px]">{member.walletAddress.slice(0, 10)}...{member.walletAddress.slice(-8)}</p>
                       </div>
                     ))}
+                    {will.secondaryMembers.length > 2 && (
+                      <p className="text-[var(--text-muted-alt)] text-[10px]">+{will.secondaryMembers.length - 2} more</p>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-4">
-                  <button className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors">
+                <div className="mt-4">
+                  <Link
+                    href="/wills"
+                    className="block w-full px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors text-center"
+                  >
                     View Details
-                  </button>
-                  <button className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors">
-                    Edit
-                  </button>
+                  </Link>
                 </div>
               </div>
             ))}

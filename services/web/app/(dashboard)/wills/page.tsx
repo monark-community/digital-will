@@ -3,13 +3,23 @@
 import { useState, useEffect, useRef } from "react";
 import { useCurrentUser, useWallets, useContacts } from "@/lib/hooks";
 import Header from "@/app/components/ui/Header";
-import { STUB_WILLS, formatCurrency } from "@/app/components/dashboard/stub-data";
 import { willService, type SecondaryMemberInput, type WillFromDB } from "@/lib/services";
 import type { Contact } from "@/lib/types";
 import { config } from "@/lib/config";
 import { ethers } from "ethers";
 
-type WillStatus = 'Draft' | 'Inactive' | 'Active';
+// Chain ID to name mapping
+const CHAIN_NAMES: Record<number, string> = {
+  1: "Ethereum Mainnet",
+  11155111: "Sepolia Testnet",
+  56: "BNB Smart Chain",
+  43114: "Avalanche C-Chain",
+  31337: "Anvil",
+};
+
+const getChainName = (chainId: number): string => {
+  return CHAIN_NAMES[chainId] || `Chain ${chainId}`;
+};
 
 interface SecondaryMember {
   contactId?: string;
@@ -25,11 +35,13 @@ export default function WillsPage() {
   const { data: user } = useCurrentUser();
   const { data: wallets } = useWallets();
   const { data: contacts } = useContacts();
-  const [filters, setFilters] = useState<Set<WillStatus>>(new Set(['Draft', 'Inactive', 'Active']));
   const [showCreateForm, setShowCreateForm] = useState(false);
   const walletDropdownRef = useRef<HTMLDivElement>(null);
+  const filterWalletDropdownRef = useRef<HTMLDivElement>(null);
   const [realWills, setRealWills] = useState<WillFromDB[]>([]);
   const [isLoadingWills, setIsLoadingWills] = useState(false);
+  const [selectedFilterWalletId, setSelectedFilterWalletId] = useState<string>("all");
+  const [showFilterWalletDropdown, setShowFilterWalletDropdown] = useState(false);
   
   const [factoryAddress, setFactoryAddress] = useState(config.blockchain.willFactoryAddress);
   const [selectedWalletId, setSelectedWalletId] = useState("");
@@ -44,21 +56,25 @@ export default function WillsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (walletDropdownRef.current && !walletDropdownRef.current.contains(event.target as Node)) {
         setShowWalletDropdown(false);
       }
+      if (filterWalletDropdownRef.current && !filterWalletDropdownRef.current.contains(event.target as Node)) {
+        setShowFilterWalletDropdown(false);
+      }
     };
 
-    if (showWalletDropdown) {
+    if (showWalletDropdown || showFilterWalletDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }
-  }, [showWalletDropdown]);
+  }, [showWalletDropdown, showFilterWalletDropdown]);
 
   useEffect(() => {
     const fetchWills = async () => {
@@ -81,16 +97,6 @@ export default function WillsPage() {
 
     fetchWills();
   }, [wallets]);
-
-  const toggleFilter = (status: WillStatus) => {
-    const newFilters = new Set(filters);
-    if (newFilters.has(status)) {
-      newFilters.delete(status);
-    } else {
-      newFilters.add(status);
-    }
-    setFilters(newFilters);
-  };
 
   const addSecondaryMember = () => {
     setSecondaryMembers([...secondaryMembers, { 
@@ -129,7 +135,15 @@ export default function WillsPage() {
     setSecondaryMembers(updated);
     setShowContactDropdown(null);
   };
-
+  const copyToClipboard = async (address: string, identifier: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedAddress(identifier);
+      setTimeout(() => setCopiedAddress(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy address:', err);
+    }
+  };
   const handleCreateWill = async () => {
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -293,26 +307,100 @@ export default function WillsPage() {
   };
 
   const selectedWallet = wallets?.find(w => w.walletId === selectedWalletId);
-
+  const selectedFilterWallet = wallets?.find(w => w.walletId === selectedFilterWalletId);
+  
+  // Filter wills based on selected wallet
+  const displayedWills = selectedFilterWalletId === "all" 
+    ? realWills 
+    : realWills.filter(will => will.walletAddress.toLowerCase() === selectedFilterWallet?.address.toLowerCase());
 
   return (
     <>
       <Header isAuthenticated={true} user={user} />
       <div className="min-h-screen bg-[var(--bg-page)] py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">My Wills</h1>
-              <p className="text-[var(--text-muted)]">
-                Manage your digital inheritance wills
-              </p>
-            </div>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">My Wills</h1>
+            <p className="text-[var(--text-muted)]">
+              Manage your digital inheritance wills
+            </p>
+          </div>
+
+          <div className="mb-6">
             <button
               onClick={() => setShowCreateForm(true)}
-              className="px-6 py-3 bg-[var(--accent)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
+              className="flex items-center space-x-2 bg-[var(--accent)] hover:opacity-90 text-white px-6 py-3 rounded-lg font-semibold transition-opacity"
             >
-              Create Will
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Create Will</span>
             </button>
+          </div>
+
+          <div className="mb-8 relative" ref={filterWalletDropdownRef}>
+            <button
+              onClick={() => setShowFilterWalletDropdown(!showFilterWalletDropdown)}
+              className="w-full bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-between hover:border-[var(--accent)] transition-colors"
+            >
+              <div className="flex-1 text-left">
+                <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
+                  {selectedFilterWalletId === "all" 
+                    ? "All Wallets" 
+                    : selectedFilterWallet?.label || `Wallet ${selectedFilterWallet?.address.slice(0, 8)}...`}
+                </h3>
+                <p className="text-sm text-[var(--text-muted-alt)] font-mono">
+                  {selectedFilterWalletId === "all" 
+                    ? "Showing wills from all wallets" 
+                    : `wallet id : ${selectedFilterWallet?.address}`}
+                </p>
+              </div>
+              <svg 
+                className={`w-6 h-6 text-[var(--text-primary)] transition-transform ${showFilterWalletDropdown ? 'rotate-180' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth={2} 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {showFilterWalletDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl shadow-lg z-50 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedFilterWalletId("all");
+                    setShowFilterWalletDropdown(false);
+                  }}
+                  className={`w-full p-4 text-left hover:bg-[var(--bg-section)] transition-colors border-b border-[var(--border-section)] ${
+                    selectedFilterWalletId === "all" ? "bg-[var(--bg-section)]" : ""
+                  }`}
+                >
+                  <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">All Wallets</h3>
+                  <p className="text-sm text-[var(--text-muted-alt)]">Show wills from all wallets</p>
+                </button>
+                {wallets && wallets.length > 0 && wallets.map((wallet) => (
+                  <button
+                    key={wallet.walletId}
+                    type="button"
+                    onClick={() => {
+                      setSelectedFilterWalletId(wallet.walletId);
+                      setShowFilterWalletDropdown(false);
+                    }}
+                    className={`w-full p-4 text-left hover:bg-[var(--bg-section)] transition-colors border-b border-[var(--border-section)] last:border-b-0 ${
+                      selectedFilterWalletId === wallet.walletId ? "bg-[var(--bg-section)]" : ""
+                    }`}
+                  >
+                    <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
+                      {wallet.label || `Wallet ${wallet.address.slice(0, 8)}...`}
+                    </h3>
+                    <p className="text-sm text-[var(--text-muted-alt)] font-mono">wallet id : {wallet.address}</p>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {showCreateForm && (
@@ -586,75 +674,6 @@ export default function WillsPage() {
             </div>
           )}
 
-          {/* Filters */}
-          <div className="mb-6 flex gap-4 justify-center">
-            <button
-              onClick={() => toggleFilter('Draft')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                filters.has('Draft')
-                  ? 'border-[var(--accent)] bg-[var(--accent)]/10'
-                  : 'border-[var(--border-section)] bg-[var(--bg-card)]'
-              }`}
-            >
-              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                filters.has('Draft')
-                  ? 'border-[var(--accent)] bg-[var(--accent)]'
-                  : 'border-[var(--text-muted-alt)]'
-              }`}>
-                {filters.has('Draft') && (
-                  <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                )}
-              </div>
-              <span className="text-sm font-medium text-[var(--text-primary)]">draft</span>
-            </button>
-
-            <button
-              onClick={() => toggleFilter('Inactive')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                filters.has('Inactive')
-                  ? 'border-[var(--accent)] bg-[var(--accent)]/10'
-                  : 'border-[var(--border-section)] bg-[var(--bg-card)]'
-              }`}
-            >
-              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                filters.has('Inactive')
-                  ? 'border-[var(--accent)] bg-[var(--accent)]'
-                  : 'border-[var(--text-muted-alt)]'
-              }`}>
-                {filters.has('Inactive') && (
-                  <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                )}
-              </div>
-              <span className="text-sm font-medium text-[var(--text-primary)]">inactive</span>
-            </button>
-
-            <button
-              onClick={() => toggleFilter('Active')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                filters.has('Active')
-                  ? 'border-[var(--accent)] bg-[var(--accent)]/10'
-                  : 'border-[var(--border-section)] bg-[var(--bg-card)]'
-              }`}
-            >
-              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                filters.has('Active')
-                  ? 'border-[var(--accent)] bg-[var(--accent)]'
-                  : 'border-[var(--text-muted-alt)]'
-              }`}>
-                {filters.has('Active') && (
-                  <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                )}
-              </div>
-              <span className="text-sm font-medium text-[var(--text-primary)]">active</span>
-            </button>
-          </div>
-
           {/* Wills List */}
           <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
             <div className="space-y-4">
@@ -663,13 +682,21 @@ export default function WillsPage() {
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent)]"></div>
                   <p className="text-[var(--text-muted-alt)] mt-4">Loading wills...</p>
                 </div>
-              ) : realWills.length === 0 ? (
+              ) : displayedWills.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-[var(--text-muted-alt)]">No wills created yet</p>
-                  <p className="text-[var(--text-muted-alt)] text-sm mt-2">Create your first will to get started</p>
+                  <p className="text-[var(--text-muted-alt)]">
+                    {selectedFilterWalletId === "all" 
+                      ? "No wills created yet" 
+                      : "No wills found for this wallet"}
+                  </p>
+                  <p className="text-[var(--text-muted-alt)] text-sm mt-2">
+                    {selectedFilterWalletId === "all" 
+                      ? "Create your first will to get started" 
+                      : "Try selecting a different wallet or create a new will"}
+                  </p>
                 </div>
               ) : (
-                realWills.map((will) => (
+                displayedWills.map((will) => (
                   <div key={will.willId} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors">
                     <div className="flex items-start justify-between mb-3">
                       <div>
@@ -684,18 +711,38 @@ export default function WillsPage() {
                       </span>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="grid grid-cols-1 gap-3 mb-3">
                       <div>
-                        <p className="text-xs text-[var(--text-muted-alt)]">Wallet</p>
-                        <p className="text-sm font-medium text-[var(--text-primary)] font-mono truncate">{will.walletAddress.slice(0, 10)}...{will.walletAddress.slice(-8)}</p>
+                        <p className="text-xs text-[var(--text-muted-alt)]">Wallet Address</p>
+                        <div className="flex items-start gap-2">
+                          <p className="text-sm font-medium text-[var(--text-primary)] font-mono break-all">{will.walletAddress}</p>
+                          <div className="relative flex-shrink-0">
+                            <button
+                              onClick={() => copyToClipboard(will.walletAddress, `will-wallet-${will.willId}`)}
+                              className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                              title="Copy address"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                            {copiedAddress === `will-wallet-${will.willId}` && (
+                              <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                                Address copied!
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-[var(--text-muted-alt)]">Chain ID</p>
-                        <p className="text-sm font-medium text-[var(--text-primary)]">{will.chainId}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[var(--text-muted-alt)]">Secondary Members</p>
-                        <p className="text-sm font-medium text-[var(--text-primary)]">{will.secondaryMembers.length} people</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-[var(--text-muted-alt)]">Network</p>
+                          <p className="text-sm font-medium text-[var(--text-primary)]">{getChainName(will.chainId)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[var(--text-muted-alt)]">Secondary Members</p>
+                          <p className="text-sm font-medium text-[var(--text-primary)]">{will.secondaryMembers.length} people</p>
+                        </div>
                       </div>
                     </div>
 
@@ -724,8 +771,26 @@ export default function WillsPage() {
                                   {member.PhoneNumber}
                                 </div>
                               )}
-                              <div className="font-mono">
-                                {member.walletAddress.slice(0, 10)}...{member.walletAddress.slice(-8)}
+                              <div className="flex items-start gap-2">
+                                <div className="font-mono break-all">
+                                  {member.walletAddress}
+                                </div>
+                                <div className="relative flex-shrink-0">
+                                  <button
+                                    onClick={() => copyToClipboard(member.walletAddress, `beneficiary-${member.secondaryMemberId}`)}
+                                    className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                                    title="Copy address"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                  </button>
+                                  {copiedAddress === `beneficiary-${member.secondaryMemberId}` && (
+                                    <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                                      Address copied!
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
