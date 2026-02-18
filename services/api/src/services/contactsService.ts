@@ -104,10 +104,10 @@ export async function updateContact(data: {
         updateData.walletAddress = updateFields.walletAddress;
     }
     if (updateFields.phoneNumber !== undefined) {
-        if (!REGEX.PHONE.test(updateFields.phoneNumber)) {
+        if (updateFields.phoneNumber && !REGEX.PHONE.test(updateFields.phoneNumber)) {
             throw new BadRequestError("Invalid phone number format");
         }
-        updateData.phoneNumber = updateFields.phoneNumber;
+        updateData.phoneNumber = updateFields.phoneNumber || null;
     }
 
     const contact = await prisma.contact.update({

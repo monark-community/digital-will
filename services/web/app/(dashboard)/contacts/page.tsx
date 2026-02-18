@@ -76,7 +76,7 @@ export default function ContactsPage() {
       lastName: formData.lastName,
       email: formData.email,
       walletAddress: formData.walletAddress,
-      ...(formData.phoneNumber && { phoneNumber: formData.phoneNumber }),
+      phoneNumber: formData.phoneNumber || null,
     };
 
     if (editingContact) {
