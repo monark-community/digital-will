@@ -19,7 +19,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   wallets      Wallet[]
-
+  contacts     Contact[]
   @@map("users")
 }
 
@@ -34,4 +34,19 @@ model Wallet {
 
   @@index([userId])
   @@map("wallets")
+}
+
+model Contact {
+  contactId     String   @id @default(uuid())
+  userId        String
+  user          User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  firstName     String
+  lastName      String
+  email         String
+  phoneNumber   String?
+  walletAddress String   @unique
+
+  createdAt    DateTime @default(now())
+
+  @@map("contacts")
 }

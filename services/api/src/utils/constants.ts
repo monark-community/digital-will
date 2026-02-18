@@ -39,4 +39,7 @@ export const ROUTES = {
     BY_ID: "/wallets/:walletId",
     UPDATE_LABEL: "/wallets/:walletId/label",
   },
+  CONTACTS: {
+    BASE: "/contacts",
+  },
 } as const;
