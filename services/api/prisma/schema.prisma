@@ -54,7 +54,7 @@ model Contact {
 
 model Will {
   willId                       String            @id @default(uuid())
-  walletAddress                String            
+  walletAddress                String                
   contractAddressInBlockchain  String
   chainId                      Int
   wallet                       Wallet            @relation(fields: [walletAddress], references: [address])
@@ -73,6 +73,6 @@ model SecondaryMember {
   willId            String
   will              Will    @relation(fields: [willId], references: [willId])
 
-  @@map("secondaryMembers")
+  @@map("secondarymembers")
 }
 

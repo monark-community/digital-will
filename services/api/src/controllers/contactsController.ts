@@ -22,7 +22,7 @@ export const handleAddContact = asyncHandler(async (req: Request, res: Response)
     const userId = req.user?.userId;
     const { firstName, lastName, email, walletAddress, phoneNumber } = req.body;
 
-    const contact = await contactsService.createContact({ userId, firstName, lastName, email, walletAddress, phoneNumber });
+    const contact = await contactsService.createContact({ userId, firstName, lastName, email, walletAddress: walletAddress?.toLowerCase(), phoneNumber });
 
     res.status(StatusCodes.CREATED).json({
         success: true,
@@ -56,7 +56,7 @@ export const handleUpdateContact = asyncHandler(async (req: Request, res: Respon
     const { contactId } = req.params;
     const { firstName, lastName, email, walletAddress, phoneNumber } = req.body;
 
-    const contact = await contactsService.updateContact({ userId, contactId, firstName, lastName, email, walletAddress, phoneNumber });
+    const contact = await contactsService.updateContact({ userId, contactId, firstName, lastName, email, walletAddress: walletAddress?.toLowerCase(), phoneNumber });
 
     res.status(StatusCodes.OK).json({
         success: true,

@@ -7,7 +7,8 @@ import { validateWalletAddress } from '../utils/crypto';
  * Checks if a contact belonging to the same userId and walletAddress exists.
  * Throws ConflictError if found.
  */
-async function checkDuplicateContact(userId: string, walletAddress: string, contactId?: string) {
+async function checkWalletConflict(userId: string, walletAddress: string, contactId?: string) {
+    // Check if the wallet address is already used by another contact for this user
     const where: any = { userId, walletAddress };
     if (contactId) {
         where.NOT = { contactId };
@@ -15,6 +16,16 @@ async function checkDuplicateContact(userId: string, walletAddress: string, cont
     const existingContact = await prisma.contact.findFirst({ where });
     if (existingContact) {
         throw new ConflictError('A contact with this wallet address already exists.');
+    }
+    // Check if the wallet address belongs to one of the user's own wallets
+    const userWallet = await prisma.wallet.findFirst({
+        where: {
+            userId,
+            address: walletAddress,
+        },
+    });
+    if (userWallet) {
+        throw new ConflictError('You cannot add your own wallet address as a contact.');
     }
 }
 
@@ -72,7 +83,7 @@ export async function createContact(data: {
 
     validateWalletAddress(data.walletAddress);
 
-    await checkDuplicateContact(data.userId, data.walletAddress);
+    await checkWalletConflict(data.userId, data.walletAddress);
 
     const contact = await prisma.contact.create({ data });
 
@@ -119,7 +130,7 @@ export async function updateContact(data: {
     }
     if (updateFields.walletAddress) {
         validateWalletAddress(updateFields.walletAddress);
-        await checkDuplicateContact(data.userId, updateFields.walletAddress, contactId);
+        await checkWalletConflict(data.userId, updateFields.walletAddress, contactId);
         updateData.walletAddress = updateFields.walletAddress;
     }
     if (updateFields.phoneNumber !== undefined) {
