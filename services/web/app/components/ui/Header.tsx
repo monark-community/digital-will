@@ -135,7 +135,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
                   Sign In
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/login"
                   className="bg-[var(--accent)] hover:opacity-90 text-white px-6 py-2 rounded-lg text-sm font-semibold transition-colors"
                 >
                   Get Started

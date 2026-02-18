@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSignUp } from "@/lib/hooks";
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -16,6 +18,10 @@ export default function SignUpPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { mutate: signUp, isPending, error, reset } = useSignUp();
+
+  useEffect(() => {
+    router.push("/login");
+  }, [router]);
 
   // Update local error state when mutation error changes
   useEffect(() => {
