@@ -3,10 +3,41 @@
  */
 
 import { ethers } from "ethers";
-import { config } from "@/lib/config";
+import { config, API_ROUTES } from "@/lib/config";
+import { apiClient } from "@/lib/api-client";
 import { WILL_FACTORY_ABI } from "@/lib/contracts/WillFactoryABI";
 import { getSigner, daysToSeconds, waitForTransaction } from "@/lib/utils/blockchain";
 import type { CreateWillParams, CreateWillResult, SMPartialInfo, SecurityPeriodConfig } from "@/lib/types/contracts";
+
+export interface SecondaryMemberInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  walletAddress: string;
+}
+
+export interface SaveWillToDBParams {
+  walletAddress: string;
+  contractAddressInBlockchain: string;
+  chainId: number;
+  secondaryMembers: SecondaryMemberInput[];
+}
+
+export interface WillFromDB {
+  willId: string;
+  walletAddress: string;
+  contractAddressInBlockchain: string;
+  chainId: number;
+  secondaryMembers: Array<{
+    secondaryMemberId: string;
+    FirstName: string;
+    LastName: string;
+    Email: string;
+    PhoneNumber?: string | null;
+    walletAddress: string;
+  }>;
+}
 
 class WillService {
   /**
@@ -107,6 +138,39 @@ class WillService {
         maxSecurityPeriod: daysToSeconds(maxSecurityPeriodDays),
       },
     };
+  }
+
+  async saveWillToDB(params: SaveWillToDBParams): Promise<WillFromDB> {
+    try {
+      const response = await apiClient.post<{
+        success: boolean;
+        data: WillFromDB;
+      }>(API_ROUTES.WILLS.BASE, {
+        will: {
+          walletAddress: params.walletAddress,
+          contractAddressInBlockchain: params.contractAddressInBlockchain,
+          chainId: params.chainId,
+        },
+        secondaryMembers: params.secondaryMembers,
+      });
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error saving will to database:", error);
+      throw new Error("Failed to save will to database: " + (error.response?.data?.message || error.message));
+    }
+  }
+
+  async getWillsByWallet(walletAddress: string): Promise<WillFromDB[]> {
+    try {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: WillFromDB[];
+      }>(API_ROUTES.WILLS.BY_WALLET(walletAddress));
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error fetching wills:", error);
+      throw new Error("Failed to fetch wills: " + (error.response?.data?.message || error.message));
+    }
   }
 }
 

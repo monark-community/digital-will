@@ -1,16 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useCurrentUser, useWallets } from "@/lib/hooks";
+import { useCurrentUser, useWallets, useContacts } from "@/lib/hooks";
 import Header from "@/app/components/ui/Header";
 import { STUB_WILLS, formatCurrency } from "@/app/components/dashboard/stub-data";
-import { willService } from "@/lib/services";
+import { willService, type SecondaryMemberInput, type WillFromDB } from "@/lib/services";
+import type { Contact } from "@/lib/types";
 import { config } from "@/lib/config";
 import { ethers } from "ethers";
 
 type WillStatus = 'Draft' | 'Inactive' | 'Active';
 
 interface SecondaryMember {
+  contactId?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
   address: string;
   power: number;
 }
@@ -18,19 +24,23 @@ interface SecondaryMember {
 export default function WillsPage() {
   const { data: user } = useCurrentUser();
   const { data: wallets } = useWallets();
+  const { data: contacts } = useContacts();
   const [filters, setFilters] = useState<Set<WillStatus>>(new Set(['Draft', 'Inactive', 'Active']));
   const [showCreateForm, setShowCreateForm] = useState(false);
   const walletDropdownRef = useRef<HTMLDivElement>(null);
+  const [realWills, setRealWills] = useState<WillFromDB[]>([]);
+  const [isLoadingWills, setIsLoadingWills] = useState(false);
   
   const [factoryAddress, setFactoryAddress] = useState(config.blockchain.willFactoryAddress);
   const [selectedWalletId, setSelectedWalletId] = useState("");
   const [secondaryMembers, setSecondaryMembers] = useState<SecondaryMember[]>([
-    { address: "", power: 1 },
-    { address: "", power: 1 }
+    { firstName: "", lastName: "", email: "", phoneNumber: "", address: "", power: 1 },
+    { firstName: "", lastName: "", email: "", phoneNumber: "", address: "", power: 1 }
   ]);
   const [minSecurityPeriod, setMinSecurityPeriod] = useState("");
   const [maxSecurityPeriod, setMaxSecurityPeriod] = useState("");
   const [showWalletDropdown, setShowWalletDropdown] = useState(false);
+  const [showContactDropdown, setShowContactDropdown] = useState<number | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -50,6 +60,28 @@ export default function WillsPage() {
     }
   }, [showWalletDropdown]);
 
+  useEffect(() => {
+    const fetchWills = async () => {
+      if (!wallets || wallets.length === 0) return;
+
+      setIsLoadingWills(true);
+      try {
+        const allWillsPromises = wallets.map(wallet => 
+          willService.getWillsByWallet(wallet.address)
+        );
+        const willsArrays = await Promise.all(allWillsPromises);
+        const allWills = willsArrays.flat();
+        setRealWills(allWills);
+      } catch (error) {
+        console.error("Error fetching wills:", error);
+      } finally {
+        setIsLoadingWills(false);
+      }
+    };
+
+    fetchWills();
+  }, [wallets]);
+
   const toggleFilter = (status: WillStatus) => {
     const newFilters = new Set(filters);
     if (newFilters.has(status)) {
@@ -61,7 +93,14 @@ export default function WillsPage() {
   };
 
   const addSecondaryMember = () => {
-    setSecondaryMembers([...secondaryMembers, { address: "", power: 1 }]);
+    setSecondaryMembers([...secondaryMembers, { 
+      firstName: "", 
+      lastName: "", 
+      email: "", 
+      phoneNumber: "", 
+      address: "", 
+      power: 1 
+    }]);
   };
 
   const removeSecondaryMember = (index: number) => {
@@ -74,6 +113,21 @@ export default function WillsPage() {
     const updated = [...secondaryMembers];
     updated[index] = { ...updated[index], [field]: value };
     setSecondaryMembers(updated);
+  };
+
+  const selectContactForMember = (index: number, contact: Contact) => {
+    const updated = [...secondaryMembers];
+    updated[index] = {
+      contactId: contact.contactId,
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      email: contact.email,
+      phoneNumber: contact.phoneNumber || "",
+      address: contact.walletAddress,
+      power: updated[index].power,
+    };
+    setSecondaryMembers(updated);
+    setShowContactDropdown(null);
   };
 
   const handleCreateWill = async () => {
@@ -108,6 +162,27 @@ export default function WillsPage() {
     if (validMembers.length < 2) {
       setErrorMessage("Please add at least 2 secondary members (contract requirement)");
       return;
+    }
+
+    for (const member of validMembers) {
+      if (!member.firstName.trim()) {
+        setErrorMessage("Please provide first name for all secondary members");
+        return;
+      }
+      if (!member.lastName.trim()) {
+        setErrorMessage("Please provide last name for all secondary members");
+        return;
+      }
+      if (!member.email.trim()) {
+        setErrorMessage("Please provide email for all secondary members");
+        return;
+      }
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(member.email)) {
+        setErrorMessage(`Invalid email format: ${member.email}`);
+        return;
+      }
     }
 
     for (const member of validMembers) {
@@ -156,20 +231,44 @@ export default function WillsPage() {
       const params = willService.prepareCreateWillParams(
         trimmedFactoryAddress,
         selectedWallet.address,
-        validMembers,
+        validMembers.map(m => ({ address: m.address, power: m.power })),
         minPeriod,
         maxPeriod
       );
 
-      const result = await willService.createWill(params);
+      const blockchainResult = await willService.createWill(params);
 
-      setSuccessMessage(
-        `Will created successfully! Will Address: ${result.willAddress}`
-      );
+      try {
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const network = await provider.getNetwork();
+        
+        await willService.saveWillToDB({
+          walletAddress: selectedWallet.address,
+          contractAddressInBlockchain: blockchainResult.willAddress,
+          chainId: Number(network.chainId),
+          secondaryMembers: validMembers.map(m => ({
+            firstName: m.firstName,
+            lastName: m.lastName,
+            email: m.email,
+            phoneNumber: m.phoneNumber,
+            walletAddress: m.address,
+          })),
+        });
 
-      setTimeout(() => {
-        resetForm();
-      }, 3000);
+        setSuccessMessage(
+          `Will created successfully! Will Address: ${blockchainResult.willAddress}`
+        );
+
+        setTimeout(() => {
+          resetForm();
+          window.location.reload(); // Refresh to show new will
+        }, 2000);
+      } catch (dbError: any) {
+        console.error("Database save error:", dbError);
+        setErrorMessage(
+          `Will created on blockchain (${blockchainResult.willAddress}) but failed to save to database. Please contact support.`
+        );
+      }
     } catch (error: any) {
       setErrorMessage(error.message || "Failed to create will");
     } finally {
@@ -180,18 +279,21 @@ export default function WillsPage() {
   const resetForm = () => {
     setFactoryAddress(config.blockchain.willFactoryAddress);
     setSelectedWalletId("");
-    setSecondaryMembers([{ address: "", power: 1 }, { address: "", power: 1 }]);
+    setSecondaryMembers([
+      { firstName: "", lastName: "", email: "", phoneNumber: "", address: "", power: 1 },
+      { firstName: "", lastName: "", email: "", phoneNumber: "", address: "", power: 1 }
+    ]);
     setMinSecurityPeriod("");
     setMaxSecurityPeriod("");
     setShowCreateForm(false);
     setShowWalletDropdown(false);
+    setShowContactDropdown(null);
     setErrorMessage(null);
     setSuccessMessage(null);
   };
 
   const selectedWallet = wallets?.find(w => w.walletId === selectedWalletId);
 
-  const filteredWills = STUB_WILLS.filter(will => filters.has(will.status));
 
   return (
     <>
@@ -318,19 +420,92 @@ export default function WillsPage() {
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                       Secondary Members (minimum 2 required)
                     </label>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {secondaryMembers.map((member, index) => (
-                        <div key={index} className="flex gap-3 items-start">
-                          <div className="flex-1">
+                        <div key={index} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm font-medium text-[var(--text-primary)]">Member {index + 1}</span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setShowContactDropdown(showContactDropdown === index ? null : index)}
+                                className="px-3 py-1 text-xs font-medium text-[var(--accent)] border border-[var(--accent)] rounded hover:bg-[var(--accent)]/10 transition-colors"
+                              >
+                                Select Contact
+                              </button>
+                              {secondaryMembers.length > 2 && (
+                                <button
+                                  onClick={() => removeSecondaryMember(index)}
+                                  className="p-1 text-red-500 hover:bg-red-500/10 rounded transition-colors"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {showContactDropdown === index && contacts && contacts.length > 0 && (
+                            <div className="mb-3 max-h-40 overflow-y-auto border border-[var(--border-section)] rounded-lg bg-[var(--bg-card)]">
+                              {contacts.map((contact) => (
+                                <button
+                                  key={contact.contactId}
+                                  type="button"
+                                  onClick={() => selectContactForMember(index, contact)}
+                                  className="w-full px-3 py-2 text-left hover:bg-[var(--bg-section)] transition-colors border-b border-[var(--border-section)] last:border-b-0"
+                                >
+                                  <div className="text-sm font-medium text-[var(--text-primary)]">
+                                    {contact.firstName} {contact.lastName}
+                                  </div>
+                                  <div className="text-xs text-[var(--text-muted-alt)] font-mono">{contact.walletAddress}</div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            <input
+                              type="text"
+                              value={member.firstName}
+                              onChange={(e) => updateSecondaryMember(index, "firstName", e.target.value)}
+                              placeholder="First Name *"
+                              className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                            />
+                            <input
+                              type="text"
+                              value={member.lastName}
+                              onChange={(e) => updateSecondaryMember(index, "lastName", e.target.value)}
+                              placeholder="Last Name *"
+                              className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            <input
+                              type="email"
+                              value={member.email}
+                              onChange={(e) => updateSecondaryMember(index, "email", e.target.value)}
+                              placeholder="Email *"
+                              className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                            />
+                            <input
+                              type="tel"
+                              value={member.phoneNumber}
+                              onChange={(e) => updateSecondaryMember(index, "phoneNumber", e.target.value)}
+                              placeholder="Phone (optional)"
+                              className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-[1fr_auto] gap-3">
                             <input
                               type="text"
                               value={member.address}
                               onChange={(e) => updateSecondaryMember(index, "address", e.target.value)}
-                              placeholder="0x... Member Address"
-                              className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                              placeholder="0x... Wallet Address *"
+                              className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm font-mono placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />
-                          </div>
-                          <div className="w-32">
                             <input
                               type="number"
                               min="1"
@@ -338,29 +513,19 @@ export default function WillsPage() {
                               value={member.power}
                               onChange={(e) => updateSecondaryMember(index, "power", parseInt(e.target.value) || 1)}
                               placeholder="Power"
-                              className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                              className="w-24 px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm text-center placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />
                           </div>
-                          {secondaryMembers.length > 2 && (
-                            <button
-                              onClick={() => removeSecondaryMember(index)}
-                              className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          )}
                         </div>
                       ))}
                       <button
                         onClick={addSecondaryMember}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--accent)] border border-[var(--accent)] rounded-lg hover:bg-[var(--accent)]/10 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--accent)] border border-[var(--accent)] rounded-lg hover:bg-[var(--accent)]/10 transition-colors w-full justify-center"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
-                        Add Member
+                        Add Another Member
                       </button>
                     </div>
                   </div>
@@ -493,57 +658,76 @@ export default function WillsPage() {
           {/* Wills List */}
           <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
             <div className="space-y-4">
-              {filteredWills.length === 0 ? (
+              {isLoadingWills ? (
                 <div className="text-center py-12">
-                  <p className="text-[var(--text-muted-alt)]">No wills match the selected filters</p>
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent)]"></div>
+                  <p className="text-[var(--text-muted-alt)] mt-4">Loading wills...</p>
+                </div>
+              ) : realWills.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-[var(--text-muted-alt)]">No wills created yet</p>
+                  <p className="text-[var(--text-muted-alt)] text-sm mt-2">Create your first will to get started</p>
                 </div>
               ) : (
-                filteredWills.map((will) => (
-                  <div key={will.id} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors">
+                realWills.map((will) => (
+                  <div key={will.willId} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors">
                     <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-semibold text-[var(--text-primary)]">{will.title}</h3>
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                        will.status === 'Active' 
-                          ? 'bg-emerald-500/20 text-emerald-500' 
-                          : will.status === 'Draft'
-                          ? 'bg-yellow-500/20 text-yellow-500'
-                          : 'bg-gray-500/20 text-gray-500'
-                      }`}>
-                        {will.status === 'Active' && (
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                          </svg>
-                        )}
-                        {will.status}
+                      <div>
+                        <h3 className="font-semibold text-[var(--text-primary)] mb-1">Will Contract</h3>
+                        <p className="text-xs text-[var(--text-muted-alt)] font-mono">{will.contractAddressInBlockchain}</p>
+                      </div>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-500">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                        Deployed
                       </span>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-3 mb-3">
                       <div>
+                        <p className="text-xs text-[var(--text-muted-alt)]">Wallet</p>
+                        <p className="text-sm font-medium text-[var(--text-primary)] font-mono truncate">{will.walletAddress.slice(0, 10)}...{will.walletAddress.slice(-8)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-[var(--text-muted-alt)]">Chain ID</p>
+                        <p className="text-sm font-medium text-[var(--text-primary)]">{will.chainId}</p>
+                      </div>
+                      <div>
                         <p className="text-xs text-[var(--text-muted-alt)]">Secondary Members</p>
                         <p className="text-sm font-medium text-[var(--text-primary)]">{will.secondaryMembers.length} people</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[var(--text-muted-alt)]">Total Value</p>
-                        <p className="text-sm font-medium text-[var(--text-primary)]">{formatCurrency(will.totalValue)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[var(--text-muted-alt)]">Assets</p>
-                        <p className="text-sm font-medium text-[var(--text-primary)]">{will.assets.join(', ')}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[var(--text-muted-alt)]">Inactivity Period</p>
-                        <p className="text-sm font-medium text-[var(--text-primary)]">{will.inactivityPeriod} days</p>
                       </div>
                     </div>
 
                     <div className="border-t border-[var(--border-section)] pt-3 mt-3">
                       <p className="text-xs text-[var(--text-muted-alt)] mb-2">Beneficiaries:</p>
-                      <div className="space-y-1">
-                        {will.secondaryMembers.map((member, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-xs">
-                            <span className="text-[var(--text-primary)]">{member.name}</span>
-                            <span className="text-[var(--text-muted-alt)]">{member.allocation}%</span>
+                      <div className="space-y-2">
+                        {will.secondaryMembers.map((member: WillFromDB['secondaryMembers'][0]) => (
+                          <div key={member.secondaryMemberId} className="bg-[var(--bg-card)] rounded p-2">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium text-[var(--text-primary)]">
+                                {member.FirstName} {member.LastName}
+                              </span>
+                            </div>
+                            <div className="text-xs text-[var(--text-muted-alt)] space-y-1">
+                              <div className="flex items-center gap-1">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                                {member.Email}
+                              </div>
+                              {member.PhoneNumber && (
+                                <div className="flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                  </svg>
+                                  {member.PhoneNumber}
+                                </div>
+                              )}
+                              <div className="font-mono">
+                                {member.walletAddress.slice(0, 10)}...{member.walletAddress.slice(-8)}
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -554,7 +738,7 @@ export default function WillsPage() {
                         View Details
                       </button>
                       <button className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors">
-                        Edit
+                        Manage
                       </button>
                     </div>
                   </div>
