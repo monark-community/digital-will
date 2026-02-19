@@ -81,6 +81,9 @@ contract Will is WillEvents {
             revert Errors.ERR_InvalidSecurityPeriods();
         }
 
+        if (checkIfAddressInArray(PM_I, newSmList)) {
+            revert Errors.ERR_PMIsSM();
+        }
         _validateSecurityPeriod(securityPeriodConfig);
         _checkNoSmDuplicates(newSmList);
         // Validate vote power > 0 for each.
@@ -92,6 +95,18 @@ contract Will is WillEvents {
 
         initializeWill(securityPeriodConfig);
         replaceAllSm(newSmList);
+    }
+
+    function checkIfAddressInArray(
+        address addressToCheck,
+        SMPartialInfo[] memory array
+    ) private pure returns (bool) {
+        for (uint256 i = 0; i < array.length; i++) {
+            if (array[i].smAddress == addressToCheck) {
+                return true;
+            }
+        }
+        return false;
     }
 
     function cancelWill()
@@ -252,12 +267,15 @@ contract Will is WillEvents {
             }
         }
 
-        // New SMs must not exist + valid power
+        // New SMs must not exist + valid power + not PM
         for (uint256 i = 0; i < addedSmList.length; i++) {
             if (smMappingS[addedSmList[i].smAddress].index != 0) {
                 revert Errors.ERR_CreatedSMExistsAlready();
             }
-            if (updatedSmList[i].votePower == 0) {
+            if (addedSmList[i].smAddress == PM_I) {
+                revert Errors.ERR_PMIsSM();
+            }
+            if (addedSmList[i].votePower == 0) {
                 revert Errors.ERR_SMVotePowerInvalid();
             }
         }

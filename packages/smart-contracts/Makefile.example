@@ -245,6 +245,7 @@ call-create-new-will:
 	@cast send $(WILL_ADDR) "createNewWill((address,uint8)[],(uint256,uint256))" \
 	"[($(ADDR_1),1),($(ADDR_2),2)]" \
 	"(60,120)" \
+	--value $(DEPOSIT_AMOUNT) \
 	--private-key $(USER_PK) --rpc-url $(RPC_URL); \
 	if [ $$? -eq 0 ]; then \
 		echo "Status: Success"; \
