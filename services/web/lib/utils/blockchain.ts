@@ -1,0 +1,48 @@
+/**
+ * Blockchain utilities for interacting with smart contracts
+ */
+
+import { ethers } from "ethers";
+import { config } from "@/lib/config";
+
+/**
+ * Get the JSON-RPC provider for the blockchain
+ */
+export function getProvider(): ethers.JsonRpcProvider {
+  return new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
+}
+
+/**
+ * Get a signer from MetaMask
+ */
+export async function getSigner(): Promise<ethers.Signer> {
+  if (typeof window === "undefined" || !window.ethereum) {
+    throw new Error("MetaMask is not installed");
+  }
+
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  const signer = await provider.getSigner();
+  return signer;
+}
+
+/**
+ * Convert days to seconds (for blockchain timestamps)
+ */
+export function daysToSeconds(days: number): bigint {
+  return BigInt(days * 24 * 60 * 60);
+}
+
+/**
+ * Convert seconds to days
+ */
+export function secondsToDays(seconds: bigint): number {
+  return Number(seconds) / (24 * 60 * 60);
+}
+
+/**
+ * Wait for a transaction to be mined
+ */
+export async function waitForTransaction(hash: string): Promise<ethers.TransactionReceipt | null> {
+  const provider = getProvider();
+  return await provider.waitForTransaction(hash);
+}
