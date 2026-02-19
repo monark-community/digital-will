@@ -31,10 +31,10 @@ export interface WillFromDB {
   chainId: number;
   secondaryMembers: Array<{
     secondaryMemberId: string;
-    FirstName: string;
-    LastName: string;
-    Email: string;
-    PhoneNumber?: string | null;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber?: string | null;
     walletAddress: string;
   }>;
 }
