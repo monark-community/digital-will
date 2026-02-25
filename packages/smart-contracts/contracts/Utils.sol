@@ -16,7 +16,7 @@ library Utils {
         }
     }
 
-    function checkNoSmDuplicates(address[] memory a) private pure {
+    function checkNoSmDuplicates(address[] memory a) internal pure {
         for (uint256 i = 0; i < a.length; i++) {
             for (uint256 j = i + 1; j < a.length; j++) {
                 if (a[i] == a[j]) revert Errors.ERR_DuplicateSM();
