@@ -3,6 +3,7 @@
 pragma solidity 0.8.19;
 
 import {WillEvents} from "@src/WillEvents.sol";
+import {Utils} from "@src/Utils.sol";
 
 import {WillState} from "@interfaces/WillState.sol";
 import {SMInfo, SMPartialInfo} from "@interfaces/SMInfo.sol";
@@ -81,11 +82,11 @@ contract Will is WillEvents {
             revert Errors.ERR_InvalidSecurityPeriods();
         }
 
-        if (checkIfAddressInArray(PM_I, newSmList)) {
+        if (Utils.checkIfAddressInArray(PM_I, newSmList)) {
             revert Errors.ERR_PMIsSM();
         }
         _validateSecurityPeriod(securityPeriodConfig);
-        _checkNoSmDuplicates(newSmList);
+        Utils.checkNoSmDuplicates(newSmList);
         // Validate vote power > 0 for each.
         for (uint256 i = 0; i < newSmList.length; i++) {
             if (newSmList[i].votePower == 0) {
@@ -95,18 +96,6 @@ contract Will is WillEvents {
 
         initializeWill(securityPeriodConfig);
         replaceAllSm(newSmList);
-    }
-
-    function checkIfAddressInArray(
-        address addressToCheck,
-        SMPartialInfo[] memory array
-    ) private pure returns (bool) {
-        for (uint256 i = 0; i < array.length; i++) {
-            if (array[i].smAddress == addressToCheck) {
-                return true;
-            }
-        }
-        return false;
     }
 
     function cancelWill()
@@ -248,7 +237,7 @@ contract Will is WillEvents {
         }
 
         // No duplicates/overlap in the lists.
-        _checkNoSmDuplicates(updatedSmList, addedSmList, deletedSmList);
+        Utils.checkNoSmDuplicates(updatedSmList, addedSmList, deletedSmList);
 
         // Updated SMs must exist + valid power
         for (uint256 i = 0; i < updatedSmList.length; i++) {
@@ -277,49 +266,6 @@ contract Will is WillEvents {
             }
             if (addedSmList[i].votePower == 0) {
                 revert Errors.ERR_SMVotePowerInvalid();
-            }
-        }
-    }
-
-    function _checkNoSmDuplicates(SMPartialInfo[] memory a) private pure {
-        for (uint256 i = 0; i < a.length; i++) {
-            for (uint256 j = i + 1; j < a.length; j++) {
-                if (a[i].smAddress == a[j].smAddress)
-                    revert Errors.ERR_DuplicateSM();
-            }
-        }
-    }
-
-    function _checkNoSmDuplicates(address[] memory a) private pure {
-        for (uint256 i = 0; i < a.length; i++) {
-            for (uint256 j = i + 1; j < a.length; j++) {
-                if (a[i] == a[j]) revert Errors.ERR_DuplicateSM();
-            }
-        }
-    }
-
-    function _checkNoSmDuplicates(
-        SMPartialInfo[] memory a,
-        SMPartialInfo[] memory b,
-        address[] memory c
-    ) private pure {
-        _checkNoSmDuplicates(a);
-        _checkNoSmDuplicates(b);
-        _checkNoSmDuplicates(c);
-
-        for (uint256 i = 0; i < a.length; i++) {
-            for (uint256 j = 0; j < b.length; j++) {
-                if (a[i].smAddress == b[j].smAddress)
-                    revert Errors.ERR_DuplicateSM();
-            }
-            for (uint256 j = 0; j < c.length; j++) {
-                if (a[i].smAddress == c[j]) revert Errors.ERR_DuplicateSM();
-            }
-        }
-
-        for (uint256 i = 0; i < b.length; i++) {
-            for (uint256 j = 0; j < c.length; j++) {
-                if (b[i].smAddress == c[j]) revert Errors.ERR_DuplicateSM();
             }
         }
     }
@@ -721,6 +667,7 @@ contract Will is WillEvents {
             revert Errors.ERR_WillNotOnCooldown();
     }
 
+    //////////
     modifier securityPeriodStarted() {
         _securityPeriodStarted();
         _;
@@ -731,6 +678,7 @@ contract Will is WillEvents {
             revert Errors.ERR_SecurityPeriodNotStarted();
     }
 
+    //////////
     modifier securityPeriodNotStarted() {
         _securityPeriodNotStarted();
         _;
@@ -741,6 +689,7 @@ contract Will is WillEvents {
             revert Errors.ERR_SecurityPeriodStarted();
     }
 
+    //////////
     modifier securityPeriodFinished() {
         _securityPeriodFinished();
         _;
