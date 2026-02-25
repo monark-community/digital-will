@@ -8,8 +8,10 @@ import "@src/WillErrors.sol" as Errors;
 
 library Utils {
     function checkNoSmDuplicates(SMPartialInfo[] memory a) internal pure {
-        for (uint256 i = 0; i < a.length; i++) {
-            for (uint256 j = i + 1; j < a.length; j++) {
+        uint256 aLength = a.length;
+
+        for (uint256 i = 0; i < aLength; i++) {
+            for (uint256 j = i + 1; j < aLength; j++) {
                 if (a[i].smAddress == a[j].smAddress)
                     revert Errors.ERR_DuplicateSM();
             }
@@ -17,8 +19,10 @@ library Utils {
     }
 
     function checkNoSmDuplicates(address[] memory a) internal pure {
-        for (uint256 i = 0; i < a.length; i++) {
-            for (uint256 j = i + 1; j < a.length; j++) {
+        uint256 aLength = a.length;
+
+        for (uint256 i = 0; i < aLength; i++) {
+            for (uint256 j = i + 1; j < aLength; j++) {
                 if (a[i] == a[j]) revert Errors.ERR_DuplicateSM();
             }
         }
@@ -33,18 +37,22 @@ library Utils {
         checkNoSmDuplicates(b);
         checkNoSmDuplicates(c);
 
-        for (uint256 i = 0; i < a.length; i++) {
-            for (uint256 j = 0; j < b.length; j++) {
+        uint256 aLength = a.length;
+        uint256 bLength = b.length;
+        uint256 cLength = c.length;
+
+        for (uint256 i = 0; i < aLength; i++) {
+            for (uint256 j = 0; j < bLength; j++) {
                 if (a[i].smAddress == b[j].smAddress)
                     revert Errors.ERR_DuplicateSM();
             }
-            for (uint256 j = 0; j < c.length; j++) {
+            for (uint256 j = 0; j < cLength; j++) {
                 if (a[i].smAddress == c[j]) revert Errors.ERR_DuplicateSM();
             }
         }
 
-        for (uint256 i = 0; i < b.length; i++) {
-            for (uint256 j = 0; j < c.length; j++) {
+        for (uint256 i = 0; i < bLength; i++) {
+            for (uint256 j = 0; j < cLength; j++) {
                 if (b[i].smAddress == c[j]) revert Errors.ERR_DuplicateSM();
             }
         }
