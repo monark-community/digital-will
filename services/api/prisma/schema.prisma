@@ -19,7 +19,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   wallets      Wallet[]
-
+  contacts     Contact[]
   @@map("users")
 }
 
@@ -31,7 +31,48 @@ model Wallet {
   user          User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  wills         Will[] 
 
   @@index([userId])
   @@map("wallets")
 }
+
+model Contact {
+  contactId     String   @id @default(uuid())
+  userId        String
+  user          User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  firstName     String
+  lastName      String
+  email         String
+  phoneNumber   String?
+  walletAddress String  
+
+  createdAt    DateTime @default(now())
+
+  @@map("contacts")
+}
+
+model Will {
+  willId                       String            @id @default(uuid())
+  walletAddress                String                
+  contractAddressInBlockchain  String
+  chainId                      Int
+  wallet                       Wallet            @relation(fields: [walletAddress], references: [address])
+  secondaryMembers             SecondaryMember[]
+
+  @@map("wills")
+}
+
+model SecondaryMember {
+  secondaryMemberId String     @id @default(uuid())
+  firstName         String
+  lastName          String
+  email             String
+  phoneNumber       String?
+  walletAddress     String
+  willId            String
+  will              Will    @relation(fields: [willId], references: [willId])
+
+  @@map("secondarymembers")
+}
+

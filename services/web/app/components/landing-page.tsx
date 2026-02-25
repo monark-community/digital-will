@@ -24,12 +24,12 @@ const LandingPage = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/signup"
+                href="/login"
                 className="bg-[var(--accent)] hover:opacity-90 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-colors shadow-lg text-center"
               >
-                Create Your Digital Will
+                Get Started
               </Link>
-              <button className="border-2 border-[var(--border-section)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] px-8 py-4 rounded-lg text-lg font-semibold transition-colors">
+              <button className="border-2 border-[var(--border-section)] text-[var(--text-muted)] px-8 py-4 rounded-lg text-lg font-semibold cursor-default opacity-50">
                 Learn More
               </button>
             </div>
@@ -192,7 +192,7 @@ const LandingPage = () => {
             assets and ensure their wishes are honored.
           </p>
           <Link
-            href="/signup"
+            href="/login"
             className="inline-block bg-white text-[var(--cta-bg)] px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg"
           >
             Get Started Today

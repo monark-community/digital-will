@@ -115,7 +115,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
                     Wallets
                   </a>
                   <a
-                    href="/beneficiaries"
+                    href="/contacts"
                     className="text-[var(--text-muted)] hover:text-[var(--accent)] px-3 py-2 text-sm font-medium transition-colors"
                   >
                     Contacts
@@ -135,7 +135,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
                   Sign In
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/login"
                   className="bg-[var(--accent)] hover:opacity-90 text-white px-6 py-2 rounded-lg text-sm font-semibold transition-colors"
                 >
                   Get Started
