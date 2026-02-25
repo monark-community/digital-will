@@ -9,70 +9,114 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum WillState {
+  DRAFT
+  CANCELED
+  INACTIVE
+  ACTIVE
+  EXECUTED
+}
+
+enum SMState {
+  PENDING
+  VALIDATED
+  DECLARED_DEATH
+}
+
 model User {
-  userId       String   @id @default(uuid())
-  firstName    String
-  lastName     String
-  email        String   @unique
-  phoneNo      String?
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  wallets      Wallet[]
-  contacts     Contact[]
+  userId        String          @id @default(uuid())
+  firstName     String
+  lastName      String
+  email         String          @unique
+  phoneNo       String?
+  passwordHash  String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  wallets       Wallet[]
+  contacts      Contact[]
+  notifications Notifications[]
+
   @@map("users")
 }
 
 model Wallet {
-  walletId      String   @id @default(uuid())
-  address       String   @unique
-  label         String?
-  userId        String
-  user          User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  wills         Will[] 
+  walletId         String            @id @default(uuid())
+  address          String            @unique
+  label            String?
+  userId           String
+  user             User              @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  wills            Will[]
+  secondaryMembers SecondaryMember[]
 
   @@index([userId])
   @@map("wallets")
 }
 
 model Contact {
-  contactId     String   @id @default(uuid())
+  contactId     String  @id @default(uuid())
   userId        String
-  user          User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  user          User    @relation(fields: [userId], references: [userId], onDelete: Cascade) // the user who owns the contact
   firstName     String
   lastName      String
   email         String
   phoneNumber   String?
-  walletAddress String  
+  walletAddress String
 
-  createdAt    DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@map("contacts")
 }
 
 model Will {
-  willId                       String            @id @default(uuid())
-  walletAddress                String                
-  contractAddressInBlockchain  String
-  chainId                      Int
-  wallet                       Wallet            @relation(fields: [walletAddress], references: [address])
-  secondaryMembers             SecondaryMember[]
+  willId                      String            @id @default(uuid())
+  walletAddress               String
+  contractAddressInBlockchain String
+  chainId                     Int
+  minSecurityPeriod           Int
+  maxSecurityPeriod           Int
+  state                       WillState
+  wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
+  secondaryMembers            SecondaryMember[]
+  notifications               Notifications[]
 
   @@map("wills")
 }
 
 model SecondaryMember {
-  secondaryMemberId String     @id @default(uuid())
+  secondaryMemberId String  @id @default(uuid())
   firstName         String
   lastName          String
   email             String
   phoneNumber       String?
-  walletAddress     String
+  votingPower       Int
+  state             SMState
+  tempWalletAddress String? // this is the address used before the SM creates a WillChain account
+  walletAddress     String? // this is the address used when the SM has a WillChain account  
   willId            String
-  will              Will    @relation(fields: [willId], references: [willId])
+  will              Will    @relation(fields: [willId], references: [willId], onDelete: Cascade)
+  wallet            Wallet? @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
 
   @@map("secondarymembers")
 }
 
+model WillFactory {
+  willFactoryId               String @id @default(uuid())
+  contractAddressInBlockchain String
+  chainId                     Int
+
+  @@map("willfactories")
+}
+
+model Notifications {
+  notifId    String  @id @default(uuid())
+  content    String
+  willId     String
+  userId     String
+  readStatus Boolean
+  will       Will    @relation(fields: [willId], references: [willId], onDelete: Cascade)
+  user       User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("notifications")
+}
