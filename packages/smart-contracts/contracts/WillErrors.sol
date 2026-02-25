@@ -24,6 +24,7 @@ error ERR_CreatedSMExistsAlready(); // 0x1a24f67c
 error ERR_SMListsFinalResultIncoherent(); // 0xbd1b7294
 error ERR_SMListsFinalResultTooManySM(); // 0x711f1dc1
 error ERR_SMVotePowerInvalid(); // 0xe9594537
+error ERR_PMIsSM(); // 0x9e8f1ac8
 
 // ========================
 // Will lifecycle errors

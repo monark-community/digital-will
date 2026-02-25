@@ -5,7 +5,7 @@
 export const WILL_FACTORY_ABI = [
   {
     "type": "event",
-    "name": "EVT_WillCreated",
+    "name": "EVT_WillChain_WillCreated",
     "inputs": [
       {
         "name": "willAddress",
