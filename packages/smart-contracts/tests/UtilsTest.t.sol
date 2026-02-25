@@ -48,6 +48,23 @@ contract UtilsTest is Test {
     }
 
     //////////////////////////////////////////////////////////
+    // checkIfAddressInArray(
+    //     address addr,
+    //     SMPartialInfo[] memory a
+    // )
+    //////////////////////////////////////////////////////////
+    function test_CheckIfFunctionInArray() public {
+        SMPartialInfo[] memory arr = new SMPartialInfo[](2);
+
+        arr[0] = SMPartialInfo({smAddress: alice, votePower: 1});
+        arr[1] = SMPartialInfo({smAddress: bob, votePower: 2});
+
+        assertTrue(wrapper.exposedCheckIfAddressInArray(alice, arr));
+        assertTrue(wrapper.exposedCheckIfAddressInArray(bob, arr));
+        assertFalse(wrapper.exposedCheckIfAddressInArray(charlie, arr));
+    }
+
+    //////////////////////////////////////////////////////////
     // checkNoSmDuplicates(SMPartialInfo[] memory a)
     //////////////////////////////////////////////////////////
     function test_CheckNoSmDuplicates_SingleArray_SMPartialInfo_NoDuplicates()

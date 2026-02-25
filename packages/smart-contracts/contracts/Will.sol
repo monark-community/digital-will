@@ -155,9 +155,13 @@ contract Will is WillEvents {
     function _validateSecurityPeriod(
         SecurityPeriodConfig memory securityPeriodConfig
     ) private pure {
+        // Can't have non-existent security period. If both 0, it's for update, so it's good.
         if (
             securityPeriodConfig.minSecurityPeriod >
-            securityPeriodConfig.maxSecurityPeriod
+            securityPeriodConfig.maxSecurityPeriod ||
+            (securityPeriodConfig.maxSecurityPeriod ==
+                securityPeriodConfig.minSecurityPeriod &&
+                securityPeriodConfig.maxSecurityPeriod != 0)
         ) revert Errors.ERR_InvalidSecurityPeriods();
     }
 
