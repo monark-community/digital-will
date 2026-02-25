@@ -233,7 +233,7 @@ contract Will is WillEvents {
     ) private view {
         // All arrays can be empty. It is the case where PM only updates securityPeriodConfig
         // Given order of updates, this is how we do it because the uint8 will overflow.
-        if (updatedSmList.length + addedSmList.length > 255)
+        if (smListS.length + addedSmList.length > 255)
             revert Errors.ERR_SMListsFinalResultTooManySM();
         // Prevent underflow explicitly, or 1 SM left.
         if (deletedSmList.length + 1 >= smListS.length + addedSmList.length) {
