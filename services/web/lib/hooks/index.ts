@@ -14,3 +14,10 @@ export {
   useRemoveWallet,
   useUpdateWalletLabel,
 } from "./useWallets";
+
+export {
+  useContacts,
+  useAddContact,
+  useRemoveContact,
+  useUpdateContact,
+} from "./useContacts";

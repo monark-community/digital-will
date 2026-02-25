@@ -17,6 +17,16 @@ export interface Wallet {
   createdAt: string;
 }
 
+export interface Contact {
+  contactId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string | null;
+  walletAddress: string;
+  createdAt: string;
+}
+
 export interface SignUpRequest {
   firstName: string;
   lastName: string;
