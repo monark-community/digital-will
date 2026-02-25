@@ -107,7 +107,7 @@ contract Will is WillEvents {
     {
         willStateS = WillState.CANCELED;
         withdrawAllPm();
-        emit EVT_WillCanceled();
+        emit EVT_WillChain_WillCanceled();
     }
 
     function initializeWill(
@@ -142,7 +142,7 @@ contract Will is WillEvents {
         // Case where security period is to be updated.
         if (securityPeriodConfig.maxSecurityPeriod != 0) {
             securityPeriodConfigS = securityPeriodConfig;
-            emit EVT_SecurityPeriodUpdated(
+            emit EVT_WillChain_SecurityPeriodUpdated(
                 securityPeriodConfig.minSecurityPeriod,
                 securityPeriodConfig.maxSecurityPeriod
             );
@@ -278,7 +278,7 @@ contract Will is WillEvents {
                 updatedSmList[i].smAddress
             ];
             infoUpdatedSm.votePower = updatedSmList[i].votePower;
-            emit EVT_SMUpdated(
+            emit EVT_WillChain_SMUpdated(
                 updatedSmList[i].smAddress,
                 updatedSmList[i].votePower
             );
@@ -295,7 +295,10 @@ contract Will is WillEvents {
                 index: uint8(smListS.length) // 1-based
             });
 
-            emit EVT_SMAdded(newSmList[i].smAddress, newSmList[i].votePower);
+            emit EVT_WillChain_SMAdded(
+                newSmList[i].smAddress,
+                newSmList[i].votePower
+            );
         }
     }
 
@@ -315,7 +318,7 @@ contract Will is WillEvents {
             smListS.pop();
             delete smMappingS[deletedSmList[i]];
 
-            emit EVT_SMRemoved(deletedSmList[i]);
+            emit EVT_WillChain_SMRemoved(deletedSmList[i]);
         }
     }
 
@@ -351,7 +354,7 @@ contract Will is WillEvents {
         executionTimeNotPassed
     {
         if (msg.value == 0) revert Errors.ERR_InvalidDeposit();
-        emit EVT_AssetsDeposited(msg.value);
+        emit EVT_WillChain_AssetsDeposited(msg.value);
     }
 
     function withdraw(
@@ -364,7 +367,7 @@ contract Will is WillEvents {
         (bool callSuccess, ) = payable(PM_I).call{value: amount}("");
         if (!callSuccess) revert Errors.ERR_FailedWithdrawal();
 
-        emit EVT_AssetsWithdrawn(amount);
+        emit EVT_WillChain_AssetsWithdrawn(amount);
     }
 
     function withdrawAllPm() private {
@@ -372,7 +375,7 @@ contract Will is WillEvents {
         if (balance != 0) {
             (bool callSuccess, ) = payable(PM_I).call{value: balance}("");
             if (!callSuccess) revert Errors.ERR_FailedWithdrawal();
-            emit EVT_AssetsWithdrawnAll();
+            emit EVT_WillChain_AssetsWithdrawnAll();
         }
     }
 
@@ -385,7 +388,7 @@ contract Will is WillEvents {
     {
         //TODO : Switch assets to USDC
         willStateS = WillState.EXECUTED;
-        emit EVT_AssetsSwapped(msg.sender);
+        emit EVT_WillChain_AssetsSwapped(msg.sender);
     }
 
     /////////////////////////////////////////////////////////
@@ -397,10 +400,10 @@ contract Will is WillEvents {
 
         smMappingS[msg.sender].state = SMState.VALIDATED;
         validatedCountS += 1;
-        emit EVT_SMValidated(msg.sender);
+        emit EVT_WillChain_SMValidated(msg.sender);
         if (validatedCountS == smListS.length) {
             willStateS = WillState.ACTIVE;
-            emit EVT_WillActivated();
+            emit EVT_WillChain_WillActivated();
         }
     }
 
@@ -433,15 +436,15 @@ contract Will is WillEvents {
         if (smListS.length == 0) {
             willStateS = WillState.CANCELED;
             withdrawAllPm();
-            emit EVT_SMDesisted(msg.sender);
-            emit EVT_WillCanceled();
+            emit EVT_WillChain_SMDesisted(msg.sender);
+            emit EVT_WillChain_WillCanceled();
             return;
         } else {
             // This updates the vote power too. It is assumed that substracting desisted points from total preserves the same proportions allst whilst adding points to everyone.
             // In case they ask to distribute points explicitly, change here. TODO
             checkAndUpdateWillState();
         }
-        emit EVT_SMDesisted(msg.sender);
+        emit EVT_WillChain_SMDesisted(msg.sender);
     }
 
     /////////////////////////////////////////////////////////
@@ -459,9 +462,9 @@ contract Will is WillEvents {
 
         if (deathDeclarationTimestampS == 0) {
             deathDeclarationTimestampS = block.timestamp;
-            emit EVT_DeathDeclared(msg.sender);
+            emit EVT_WillChain_DeathDeclared(msg.sender);
         } else {
-            emit EVT_DeathConfirmed(msg.sender);
+            emit EVT_WillChain_DeathConfirmed(msg.sender);
         }
 
         cumulatedVotePowerS += smMappingS[msg.sender].votePower;
@@ -488,7 +491,7 @@ contract Will is WillEvents {
 
         //Starts cooldown by itself through conditions.
 
-        emit EVT_VetoExercised();
+        emit EVT_WillChain_VetoExercised();
     }
 
     function resetDeclareSmListState() private {

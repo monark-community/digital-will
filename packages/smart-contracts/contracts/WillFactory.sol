@@ -7,7 +7,7 @@ import {SMPartialInfo} from "@interfaces/SMInfo.sol";
 import {SecurityPeriodConfig} from "@interfaces/SecurityPeriodConfig.sol";
 
 contract WillFactory {
-    event EVT_WillCreated(
+    event EVT_WillChain_WillCreated(
         address indexed willAddress,
         address indexed mpAddress
     ); // 0xeff78712
@@ -23,7 +23,7 @@ contract WillFactory {
             securityPeriodConfig
         );
 
-        emit EVT_WillCreated(address(newWill), owner);
+        emit EVT_WillChain_WillCreated(address(newWill), owner);
 
         return address(newWill);
     }
