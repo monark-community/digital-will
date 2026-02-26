@@ -41,7 +41,7 @@ contract WillTestCreate is Test {
     }
 
     /* ========= Creation validation ========= */
-    function test_ConstructorSetsPmAndConfig() public view {
+    function test_CreateWill_ConstructorSetsPmAndConfig() public view {
         assertEq(will.PM_I(), pm);
 
         (uint256 minSp, uint256 maxSp) = will.securityPeriodConfigS();
@@ -58,7 +58,7 @@ contract WillTestCreate is Test {
         assertEq(address(will).balance, 1 ether);
     }
 
-    function test_ConstructorSetsSmCorrectly() public view {
+    function test_CreateWill_ConstructorSetsSmCorrectly() public view {
         address[] memory smAddresses = will.getSmList();
         assertEq(smAddresses.length, 2);
         assertEq(smAddresses[0], sm1);
@@ -75,12 +75,12 @@ contract WillTestCreate is Test {
         assertEq(smInfo2.index, 2);
     }
 
-    function test_GetterNonExistentSm_Error() public {
+    function test_CreateWill_GetterNonExistentSm_Error() public {
         vm.expectRevert(Errors.ERR_SMDoesNotExist.selector);
         will.getDetailedSm(attacker);
     }
 
-    function test_NewWillSetsParamsCorrectly() public {
+    function test_CreateWill_NewWillSetsParamsCorrectly() public {
         SMPartialInfo[] memory sms = new SMPartialInfo[](2);
         sms[0] = SMPartialInfo({smAddress: sm3, votePower: 3});
         sms[1] = SMPartialInfo({smAddress: sm4, votePower: 4});
@@ -138,7 +138,7 @@ contract WillTestInvalidCreate is Test {
 
     address attacker = makeAddr("attacker");
 
-    function test_NotEnoughSM() public {
+    function test_CreateWill_NotEnoughSM() public {
         SMPartialInfo[] memory sms = new SMPartialInfo[](1);
         sms[0] = SMPartialInfo({smAddress: sm1, votePower: 1});
         SecurityPeriodConfig
@@ -153,7 +153,7 @@ contract WillTestInvalidCreate is Test {
         will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
     }
 
-    function test_TooMuchSM() public {
+    function test_CreateWill_TooMuchSM() public {
         SMPartialInfo[] memory smList = new SMPartialInfo[](300);
 
         for (uint256 i = 0; i < 300; i++) {
@@ -174,7 +174,7 @@ contract WillTestInvalidCreate is Test {
         will = new Will{value: 1 ether}(pm, smList, securityPeriodConfig);
     }
 
-    function test_ImproperSecurityPeriod() public {
+    function test_CreateWill_ImproperSecurityPeriod() public {
         SMPartialInfo[] memory sms = new SMPartialInfo[](2);
         sms[0] = SMPartialInfo({smAddress: sm1, votePower: 1});
         sms[1] = SMPartialInfo({smAddress: sm2, votePower: 1});
@@ -198,9 +198,19 @@ contract WillTestInvalidCreate is Test {
         vm.prank(pm);
         vm.expectRevert(Errors.ERR_InvalidSecurityPeriods.selector);
         will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
+
+        securityPeriodConfig = SecurityPeriodConfig({
+            minSecurityPeriod: 0 days,
+            maxSecurityPeriod: 0 days
+        });
+
+        vm.deal(pm, 2 ether);
+        vm.prank(pm);
+        vm.expectRevert(Errors.ERR_InvalidSecurityPeriods.selector);
+        will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
     }
 
-    function test_PmIsSm() public {
+    function test_CreateWill_PmIsSm() public {
         SMPartialInfo[] memory sms = new SMPartialInfo[](2);
         sms[0] = SMPartialInfo({smAddress: sm1, votePower: 1});
         sms[1] = SMPartialInfo({smAddress: pm, votePower: 1});
@@ -216,7 +226,7 @@ contract WillTestInvalidCreate is Test {
         will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
     }
 
-    function test_SmDuplicates() public {
+    function test_CreateWill_SmDuplicates() public {
         SMPartialInfo[] memory sms = new SMPartialInfo[](2);
         sms[0] = SMPartialInfo({smAddress: sm1, votePower: 1});
         sms[1] = SMPartialInfo({smAddress: sm1, votePower: 1});
@@ -232,7 +242,7 @@ contract WillTestInvalidCreate is Test {
         will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
     }
 
-    function test_InvalidVotePower() public {
+    function test_CreateWill_InvalidVotePower() public {
         SMPartialInfo[] memory sms = new SMPartialInfo[](2);
         sms[0] = SMPartialInfo({smAddress: sm1, votePower: 0});
         sms[1] = SMPartialInfo({smAddress: sm2, votePower: 1});
@@ -264,7 +274,7 @@ contract WillTestInvalidCreate is Test {
         will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
     }
 
-    function test_CantCreateNewIfCanceled() public {
+    function test_CreateWill_CantCreateNewIfCanceled() public {
         SMPartialInfo[] memory sms = new SMPartialInfo[](2);
         sms[0] = SMPartialInfo({smAddress: sm1, votePower: 1});
         sms[1] = SMPartialInfo({smAddress: sm2, votePower: 1});

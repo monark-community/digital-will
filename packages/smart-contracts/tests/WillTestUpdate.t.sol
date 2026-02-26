@@ -23,8 +23,6 @@ contract WillTestUpdate is Test {
     address sm4 = makeAddr("sm4");
     address sm5 = makeAddr("sm5");
 
-    address attacker = makeAddr("attacker");
-
     function setUp() public {
         SMPartialInfo[] memory sms = new SMPartialInfo[](4);
         sms[0] = SMPartialInfo({smAddress: sm1, votePower: 1});
@@ -43,7 +41,7 @@ contract WillTestUpdate is Test {
     }
 
     // Updating SM info, state maintained INACTIVE.
-    function test_UpdateSMInfo_StateMaintainedInactive() public {
+    function test_UpdateWill_UpdateSMInfo_StateMaintainedInactive() public {
         SMPartialInfo[] memory smUpdated = new SMPartialInfo[](1);
         smUpdated[0] = SMPartialInfo({smAddress: sm1, votePower: 2});
         vm.prank(pm);
@@ -62,7 +60,7 @@ contract WillTestUpdate is Test {
     }
 
     // Updating SM info, state maintained ACTIVE.
-    function test_UpdateSMInfo_StateMaintainedActive() public {
+    function test_UpdateWill_UpdateSMInfo_StateMaintainedActive() public {
         SMPartialInfo[] memory smUpdated = new SMPartialInfo[](1);
         smUpdated[0] = SMPartialInfo({smAddress: sm1, votePower: 2});
 
@@ -92,7 +90,7 @@ contract WillTestUpdate is Test {
     }
 
     // Adding SM, state maintained INACTIVE.
-    function test_AddSM_StateMaintainedInactive() public {
+    function test_UpdateWill_AddSM_StateMaintainedInactive() public {
         SMPartialInfo[] memory smAdded = new SMPartialInfo[](1);
         smAdded[0] = SMPartialInfo({smAddress: sm5, votePower: 1});
         vm.prank(pm);
@@ -111,7 +109,7 @@ contract WillTestUpdate is Test {
     }
 
     // Adding SM, state becomes INACTIVE.
-    function test_AddSM_StateBecomesInactive() public {
+    function test_UpdateWill_AddSM_StateBecomesInactive() public {
         SMPartialInfo[] memory smAdded = new SMPartialInfo[](1);
         smAdded[0] = SMPartialInfo({smAddress: sm5, votePower: 1});
 
@@ -141,7 +139,7 @@ contract WillTestUpdate is Test {
     }
 
     // Deleting SM, state INACTIVE.
-    function test_DeleteSM_StateMaintainedInactive() public {
+    function test_UpdateWill_DeleteSM_StateMaintainedInactive() public {
         address[] memory smDeleted = new address[](1);
         smDeleted[0] = sm4;
         vm.prank(pm);
@@ -159,7 +157,7 @@ contract WillTestUpdate is Test {
     }
 
     // Deleting SM, state ACTIVE.
-    function test_DeleteSM_StateMaintainedActive() public {
+    function test_UpdateWill_DeleteSM_StateMaintainedActive() public {
         address[] memory smDeleted = new address[](1);
         smDeleted[0] = sm4;
 
@@ -188,7 +186,7 @@ contract WillTestUpdate is Test {
     }
 
     // Update security period + state maintained.
-    function test_UpdateSecurityPeriod_StateMaintained() public {
+    function test_UpdateWill_UpdateSecurityPeriod_StateMaintained() public {
         SecurityPeriodConfig
             memory newSecurityPeriodConfig = SecurityPeriodConfig({
                 minSecurityPeriod: 2 days,
@@ -210,7 +208,7 @@ contract WillTestUpdate is Test {
         assertEq(uint8(will.getState()), uint8(WillState.INACTIVE));
     }
     // Update + Add + Delete + Security Period, state INACTIVE.
-    function test_UpdateAddDeleteSMAndSecurityPeriod_StateMaintainedInactive()
+    function test_UpdateWill_UpdateAddDeleteSMAndSecurityPeriod_StateMaintainedInactive()
         public
     {
         SMPartialInfo[] memory smUpdated = new SMPartialInfo[](1);
@@ -256,7 +254,7 @@ contract WillTestUpdate is Test {
     }
 
     // Update + Delete + Security Period, state ACTIVE.
-    function test_UpdateDeleteSMAndSecurityPeriod_StateMaintainedActive()
+    function test_UpdateWill_UpdateDeleteSMAndSecurityPeriod_StateMaintainedActive()
         public
     {
         SMPartialInfo[] memory smUpdated = new SMPartialInfo[](1);
@@ -318,8 +316,6 @@ contract WillTestInvalidUpdate is Test {
     address sm3 = makeAddr("sm3");
     address sm4 = makeAddr("sm4");
     address sm5 = makeAddr("sm5");
-
-    address attacker = makeAddr("attacker");
 
     // Not PM.
     function setUp() public {
@@ -464,6 +460,8 @@ contract WillTestInvalidUpdate is Test {
         SMPartialInfo[] memory smAdded = new SMPartialInfo[](252);
         for (uint256 i = 0; i < 252; i++) {
             smAdded[i] = SMPartialInfo({
+                // casting to 'uint160' is safe because never more than 253, far from uint160 limit.
+                // forge-lint: disable-next-line(unsafe-typecast)
                 smAddress: address(uint160(i + 1)),
                 votePower: 1
             });

@@ -181,19 +181,22 @@ contract Will is WillEvents {
             totalVotePowerS += smMappingS[smListS[i]].votePower;
         }
 
-        // Rule 1: if at least one PENDING → INACTIVE
-        if (validatedCountS != smListS.length) {
+        // Rule 1: if at least one PENDING → INACTIVE AND no declaration in progress.
+        if (
+            validatedCountS != smListS.length && deathDeclarationTimestampS == 0
+        ) {
             willStateS = WillState.INACTIVE;
         }
-        // Rule 2: all VALIDATED/DECLARED_DEATH → ACTIVE
+        // Rule 2: all VALIDATED/DECLARED_DEATH → ACTIVE OR declaration in progress
         else {
             willStateS = WillState.ACTIVE;
             if (cumulatedVotePowerS > 0) {
                 updatePeriodUntilExecution();
             } else {
+                // if person who declared desisted, maintain executionTimeStamp as is.
                 //TODO: Ask if when the last person who declared leaves
                 // executionTimeStampS = 0; //This covers for when all who declared have now left.
-                // deathDeclarationTimeStampS = 0;
+                // deathDeclarationTimestampS = 0;
             }
         }
     }
@@ -390,7 +393,7 @@ contract Will is WillEvents {
         securityPeriodStarted
         securityPeriodFinished
     {
-        //TODO : Switch assets to USDC
+        //TODO : Switch assets to USDC, verify what if no assets.
         willStateS = WillState.EXECUTED;
         emit EVT_WillChain_AssetsSwapped(msg.sender);
     }
@@ -484,7 +487,9 @@ contract Will is WillEvents {
         notOnCooldown
         executionTimeNotPassed
     {
-        if (cumulatedVotePowerS == 0) revert Errors.ERR_WillNoDeclaration();
+        // If no declaration, can't veto.
+        if (cumulatedVotePowerS == 0 && deathDeclarationTimestampS == 0)
+            revert Errors.ERR_WillNoDeclaration();
 
         cooldownTimeStampS = block.timestamp + C_WILL.COOLDOWN_PERIOD;
         deathDeclarationTimestampS = 0;
@@ -526,17 +531,13 @@ contract Will is WillEvents {
         return securityPeriodConfigS;
     }
 
-    function getCoodldownEndTimestamp()
+    function getCooldownEndTimestamp()
         external
         view
         onCooldown
         returns (uint256)
     {
-        if (block.timestamp >= cooldownTimeStampS) {
-            return 0; // cooldown expired
-        } else {
-            return cooldownTimeStampS;
-        }
+        return cooldownTimeStampS;
     }
 
     function getState() external view returns (WillState) {
