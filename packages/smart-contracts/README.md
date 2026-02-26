@@ -26,12 +26,12 @@ By default, ```USER_ID = 0``` and ```SM_ID = 0```.
 By default, ```wallet 0``` is the PM, and ```wallets 1``` and ```2``` are SM in the will deployed by default. See code in ```WillDeploy.s.sol```.
 
 The following is for building and deploying:
-```make
+```bash
 make build && make deploy-factory && make deploy-will
 ```
 
 The following are getters, no user mentioned because this info is publicly available, not restricted to people involved :
-```
+```bash
 make call-get-sm SM_ID=X
 make call-get-sm-list
 make call-get-balance
@@ -42,30 +42,45 @@ make call-state
 ```
 
 The following involve money-transfers :
-```
+```bash
 make call-deposit USER_ID=X
 make call-withdraw USER_ID=X
 make call-swapAssets SM_ID=X
 ```
 
 The following involve SM-participation:
-```
+```bash
 make call-validate SM_ID=X
 make call-desist SM_ID=X
 ```
 
 The following involve declaration related actions :
-```
+```bash
 make call-declare SM_ID=X
 make call-veto USER_ID=X
 ```
 The following are will-management related. Please check inside code of functions to check what params to update.
-```c
+```bash
 make call-cancel USER_ID=X
-// Update related, see code in Makefile to adjust what params are sent.
+# Update related, see code in Makefile to adjust what params are sent.
 make call-create-new-will USER_ID=X
 make call-update-sm-upd USER_ID=X
 make call-update-sm-add USER_ID=X
 make call-update-sm-del USER_ID=X
 make call-update-sec-upd USER_ID=X
+```
+## 4. Testing
+
+Following commands help with testing. See description to understand what they do. 
+
+```bash
+forge test # Runs all tests
+
+forge test --mp tests/WillTestDeclaration.t.sol # Specify file to run tests of
+
+forge coverage # Shows coverage in terminal
+
+forge coverage --report lcov # (needs sudo apt install lcov)
+
+genhtml lcov.info --output-directory coverage-report # generates a html doc with all covered lines.
 ```

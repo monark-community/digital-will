@@ -155,9 +155,13 @@ contract Will is WillEvents {
     function _validateSecurityPeriod(
         SecurityPeriodConfig memory securityPeriodConfig
     ) private pure {
+        // Can't have non-existent security period. If both 0, it's for update, so it's good.
         if (
             securityPeriodConfig.minSecurityPeriod >
-            securityPeriodConfig.maxSecurityPeriod
+            securityPeriodConfig.maxSecurityPeriod ||
+            (securityPeriodConfig.maxSecurityPeriod ==
+                securityPeriodConfig.minSecurityPeriod &&
+                securityPeriodConfig.maxSecurityPeriod != 0)
         ) revert Errors.ERR_InvalidSecurityPeriods();
     }
 
@@ -165,8 +169,9 @@ contract Will is WillEvents {
         totalVotePowerS = 0;
         cumulatedVotePowerS = 0;
         validatedCountS = 0;
+        uint256 length = smListS.length;
 
-        for (uint256 i = 0; i < smListS.length; i++) {
+        for (uint256 i = 0; i < length; i++) {
             if (smMappingS[smListS[i]].state != SMState.PENDING) {
                 // VALIDATED or DECLARED_DEATH
                 validatedCountS += 1;
@@ -177,19 +182,22 @@ contract Will is WillEvents {
             totalVotePowerS += smMappingS[smListS[i]].votePower;
         }
 
-        // Rule 1: if at least one PENDING → INACTIVE
-        if (validatedCountS != smListS.length) {
+        // Rule 1: if at least one PENDING → INACTIVE AND no declaration in progress.
+        if (
+            validatedCountS != smListS.length && deathDeclarationTimestampS == 0
+        ) {
             willStateS = WillState.INACTIVE;
         }
-        // Rule 2: all VALIDATED/DECLARED_DEATH → ACTIVE
+        // Rule 2: all VALIDATED/DECLARED_DEATH → ACTIVE OR declaration in progress
         else {
             willStateS = WillState.ACTIVE;
             if (cumulatedVotePowerS > 0) {
                 updatePeriodUntilExecution();
             } else {
+                // if person who declared desisted, maintain executionTimeStamp as is.
                 //TODO: Ask if when the last person who declared leaves
                 // executionTimeStampS = 0; //This covers for when all who declared have now left.
-                // deathDeclarationTimeStampS = 0;
+                // deathDeclarationTimestampS = 0;
             }
         }
     }
@@ -229,7 +237,7 @@ contract Will is WillEvents {
     ) private view {
         // All arrays can be empty. It is the case where PM only updates securityPeriodConfig
         // Given order of updates, this is how we do it because the uint8 will overflow.
-        if (updatedSmList.length + addedSmList.length > 255)
+        if (smListS.length + addedSmList.length > 255)
             revert Errors.ERR_SMListsFinalResultTooManySM();
         // Prevent underflow explicitly, or 1 SM left.
         if (deletedSmList.length + 1 >= smListS.length + addedSmList.length) {
@@ -337,7 +345,8 @@ contract Will is WillEvents {
     }
 
     function clearSm() private {
-        for (uint8 i = 0; i < smListS.length; i++) {
+        uint256 length = smListS.length;
+        for (uint8 i = 0; i < length; i++) {
             delete smMappingS[smListS[i]];
         }
         delete smListS;
@@ -386,7 +395,7 @@ contract Will is WillEvents {
         securityPeriodStarted
         securityPeriodFinished
     {
-        //TODO : Switch assets to USDC
+        //TODO : Switch assets to USDC, verify what if no assets.
         willStateS = WillState.EXECUTED;
         emit EVT_WillChain_AssetsSwapped(msg.sender);
     }
@@ -480,7 +489,9 @@ contract Will is WillEvents {
         notOnCooldown
         executionTimeNotPassed
     {
-        if (cumulatedVotePowerS == 0) revert Errors.ERR_WillNoDeclaration();
+        // If no declaration, can't veto.
+        if (cumulatedVotePowerS == 0 && deathDeclarationTimestampS == 0)
+            revert Errors.ERR_WillNoDeclaration();
 
         cooldownTimeStampS = block.timestamp + C_WILL.COOLDOWN_PERIOD;
         deathDeclarationTimestampS = 0;
@@ -495,7 +506,8 @@ contract Will is WillEvents {
     }
 
     function resetDeclareSmListState() private {
-        for (uint8 i = 0; i < smListS.length; i++) {
+        uint256 length = smListS.length;
+        for (uint8 i = 0; i < length; i++) {
             if (smMappingS[smListS[i]].state == SMState.DECLARED_DEATH)
                 smMappingS[smListS[i]].state = SMState.VALIDATED;
         }
@@ -522,17 +534,13 @@ contract Will is WillEvents {
         return securityPeriodConfigS;
     }
 
-    function getCoodldownEndTimestamp()
+    function getCooldownEndTimestamp()
         external
         view
         onCooldown
         returns (uint256)
     {
-        if (block.timestamp >= cooldownTimeStampS) {
-            return 0; // cooldown expired
-        } else {
-            return cooldownTimeStampS;
-        }
+        return cooldownTimeStampS;
     }
 
     function getState() external view returns (WillState) {

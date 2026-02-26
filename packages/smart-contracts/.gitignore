@@ -7,3 +7,5 @@ Makefile
 .temp_will_address.txt
 broadcast
 venv
+coverage-report
+lcov.info

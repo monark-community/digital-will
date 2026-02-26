@@ -138,8 +138,8 @@ call-get-balance:
 
 call-get-cooldown-end-time:
 	@echo "Fetching cooldown left with user $(USER_KEY)..."
-	@RAW=$$(cast call $(WILL_ADDR) "getCoodldownEndTimestamp()" --rpc-url $(RPC_URL)); \
-	cast decode-abi "getCoodldownEndTimestamp()(uint256)" $$RAW --json
+	@RAW=$$(cast call $(WILL_ADDR) "getCooldownEndTimestamp()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "getCooldownEndTimestamp()(uint256)" $$RAW --json
 
 call-get-security-period-config:
 	@echo "Fetching security period info with user $(USER_KEY)..."

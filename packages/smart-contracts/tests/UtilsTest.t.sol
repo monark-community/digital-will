@@ -48,6 +48,23 @@ contract UtilsTest is Test {
     }
 
     //////////////////////////////////////////////////////////
+    // checkIfAddressInArray(
+    //     address addr,
+    //     SMPartialInfo[] memory a
+    // )
+    //////////////////////////////////////////////////////////
+    function test_CheckIfFunctionInArray() public view {
+        SMPartialInfo[] memory arr = new SMPartialInfo[](2);
+
+        arr[0] = SMPartialInfo({smAddress: alice, votePower: 1});
+        arr[1] = SMPartialInfo({smAddress: bob, votePower: 2});
+
+        assertTrue(wrapper.exposedCheckIfAddressInArray(alice, arr));
+        assertTrue(wrapper.exposedCheckIfAddressInArray(bob, arr));
+        assertFalse(wrapper.exposedCheckIfAddressInArray(charlie, arr));
+    }
+
+    //////////////////////////////////////////////////////////
     // checkNoSmDuplicates(SMPartialInfo[] memory a)
     //////////////////////////////////////////////////////////
     function test_CheckNoSmDuplicates_SingleArray_SMPartialInfo_NoDuplicates()
@@ -126,7 +143,7 @@ contract UtilsTest is Test {
     //    address[] memory c
     // )
     //////////////////////////////////////////////////////////
-    function testcheckNoSmDuplicates_TripleArrays_DuplicateA() public {
+    function test_CheckNoSmDuplicates_TripleArrays_DuplicateA() public {
         SMPartialInfo[] memory a = new SMPartialInfo[](2);
         SMPartialInfo[] memory b = new SMPartialInfo[](0);
         address[] memory c = new address[](0);
@@ -138,7 +155,7 @@ contract UtilsTest is Test {
         wrapper.exposedCheckNoSmDuplicates3(a, b, c);
     }
 
-    function testcheckNoSmDuplicates_TripleArrays_DuplicateB() public {
+    function test_CheckNoSmDuplicates_TripleArrays_DuplicateB() public {
         SMPartialInfo[] memory a = new SMPartialInfo[](0);
         SMPartialInfo[] memory b = new SMPartialInfo[](2);
         address[] memory c = new address[](0);
@@ -150,7 +167,7 @@ contract UtilsTest is Test {
         wrapper.exposedCheckNoSmDuplicates3(a, b, c);
     }
 
-    function testcheckNoSmDuplicates_TripleArrays_DuplicateC() public {
+    function test_CheckNoSmDuplicates_TripleArrays_DuplicateC() public {
         SMPartialInfo[] memory a = new SMPartialInfo[](0);
         SMPartialInfo[] memory b = new SMPartialInfo[](0);
         address[] memory c = new address[](2);
@@ -162,7 +179,7 @@ contract UtilsTest is Test {
         wrapper.exposedCheckNoSmDuplicates3(a, b, c);
     }
 
-    function testcheckNoSmDuplicates_TripleArrays_DuplicateAB() public {
+    function test_CheckNoSmDuplicates_TripleArrays_DuplicateAB() public {
         SMPartialInfo[] memory a = new SMPartialInfo[](1);
         SMPartialInfo[] memory b = new SMPartialInfo[](1);
         address[] memory c = new address[](0);
@@ -174,7 +191,7 @@ contract UtilsTest is Test {
         wrapper.exposedCheckNoSmDuplicates3(a, b, c);
     }
 
-    function testcheckNoSmDuplicates_TripleArrays_DuplicateAC() public {
+    function test_CheckNoSmDuplicates_TripleArrays_DuplicateAC() public {
         SMPartialInfo[] memory a = new SMPartialInfo[](1);
         SMPartialInfo[] memory b = new SMPartialInfo[](0);
         address[] memory c = new address[](1);
@@ -186,7 +203,7 @@ contract UtilsTest is Test {
         wrapper.exposedCheckNoSmDuplicates3(a, b, c);
     }
 
-    function testcheckNoSmDuplicates_TripleArrays_DuplicateBC() public {
+    function test_CheckNoSmDuplicates_TripleArrays_DuplicateBC() public {
         SMPartialInfo[] memory a = new SMPartialInfo[](0);
         SMPartialInfo[] memory b = new SMPartialInfo[](1);
         address[] memory c = new address[](1);
@@ -198,7 +215,7 @@ contract UtilsTest is Test {
         wrapper.exposedCheckNoSmDuplicates3(a, b, c);
     }
 
-    function testcheckNoSmDuplicates_TripleArrays_DuplicateABC() public {
+    function test_CheckNoSmDuplicates_TripleArrays_DuplicateABC() public {
         SMPartialInfo[] memory a = new SMPartialInfo[](1);
         SMPartialInfo[] memory b = new SMPartialInfo[](1);
         address[] memory c = new address[](1);
@@ -211,7 +228,7 @@ contract UtilsTest is Test {
         wrapper.exposedCheckNoSmDuplicates3(a, b, c);
     }
 
-    function testcheckNoSmDuplicates_TripleArrays_NoDuplicateA() public view {
+    function test_CheckNoSmDuplicates_TripleArrays_NoDuplicateA() public view {
         SMPartialInfo[] memory a = new SMPartialInfo[](2);
         SMPartialInfo[] memory b = new SMPartialInfo[](0);
         address[] memory c = new address[](0);
@@ -222,7 +239,7 @@ contract UtilsTest is Test {
         wrapper.exposedCheckNoSmDuplicates3(a, b, c);
     }
 
-    function testcheckNoSmDuplicates_TripleArrays_NoDuplicateB() public view {
+    function test_CheckNoSmDuplicates_TripleArrays_NoDuplicateB() public view {
         SMPartialInfo[] memory a = new SMPartialInfo[](0);
         SMPartialInfo[] memory b = new SMPartialInfo[](2);
         address[] memory c = new address[](0);
@@ -233,7 +250,7 @@ contract UtilsTest is Test {
         wrapper.exposedCheckNoSmDuplicates3(a, b, c);
     }
 
-    function testcheckNoSmDuplicates_TripleArrays_NoDuplicateC() public view {
+    function test_CheckNoSmDuplicates_TripleArrays_NoDuplicateC() public view {
         SMPartialInfo[] memory a = new SMPartialInfo[](0);
         SMPartialInfo[] memory b = new SMPartialInfo[](0);
         address[] memory c = new address[](2);
@@ -244,7 +261,7 @@ contract UtilsTest is Test {
         wrapper.exposedCheckNoSmDuplicates3(a, b, c);
     }
 
-    function testcheckNoSmDuplicates_TripleArrays_NoDuplicateAB() public view {
+    function test_CheckNoSmDuplicates_TripleArrays_NoDuplicateAB() public view {
         SMPartialInfo[] memory a = new SMPartialInfo[](2);
         SMPartialInfo[] memory b = new SMPartialInfo[](2);
         address[] memory c = new address[](0);
@@ -257,7 +274,7 @@ contract UtilsTest is Test {
         wrapper.exposedCheckNoSmDuplicates3(a, b, c);
     }
 
-    function testcheckNoSmDuplicates_TripleArrays_NoDuplicateAC() public view {
+    function test_CheckNoSmDuplicates_TripleArrays_NoDuplicateAC() public view {
         SMPartialInfo[] memory a = new SMPartialInfo[](2);
         SMPartialInfo[] memory b = new SMPartialInfo[](0);
         address[] memory c = new address[](2);
@@ -270,7 +287,7 @@ contract UtilsTest is Test {
         wrapper.exposedCheckNoSmDuplicates3(a, b, c);
     }
 
-    function testcheckNoSmDuplicates_TripleArrays_NoDuplicateBC() public view {
+    function test_CheckNoSmDuplicates_TripleArrays_NoDuplicateBC() public view {
         SMPartialInfo[] memory a = new SMPartialInfo[](0);
         SMPartialInfo[] memory b = new SMPartialInfo[](2);
         address[] memory c = new address[](2);
@@ -283,7 +300,10 @@ contract UtilsTest is Test {
         wrapper.exposedCheckNoSmDuplicates3(a, b, c);
     }
 
-    function testcheckNoSmDuplicates_TripleArrays_NoDuplicateABC() public view {
+    function test_CheckNoSmDuplicates_TripleArrays_NoDuplicateABC()
+        public
+        view
+    {
         SMPartialInfo[] memory a = new SMPartialInfo[](1);
         SMPartialInfo[] memory b = new SMPartialInfo[](1);
         address[] memory c = new address[](2);
@@ -296,7 +316,7 @@ contract UtilsTest is Test {
         wrapper.exposedCheckNoSmDuplicates3(a, b, c);
     }
 
-    function testcheckNoSmDuplicates_TripleArrays_Empty() public view {
+    function test_CheckNoSmDuplicates_TripleArrays_Empty() public view {
         SMPartialInfo[] memory a = new SMPartialInfo[](0);
         SMPartialInfo[] memory b = new SMPartialInfo[](0);
         address[] memory c = new address[](0);
