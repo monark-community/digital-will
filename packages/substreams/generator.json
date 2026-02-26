@@ -1,0 +1,904 @@
+{
+  "generator": "evm-events-calls",
+  "state": {
+    "name": "willchain_events",
+    "chainName": "sepolia",
+    "substreamsSinkChoice": "source_only",
+    "contracts": [
+      {
+        "name": "willfactory",
+        "trackEvents": true,
+        "trackCalls": true,
+        "rawAbi": [
+          {
+            "type": "function",
+            "name": "createWill",
+            "inputs": [
+              {
+                "name": "owner",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "newSmList",
+                "type": "tuple[]",
+                "internalType": "struct SMPartialInfo[]",
+                "components": [
+                  {
+                    "name": "smAddress",
+                    "type": "address",
+                    "internalType": "address"
+                  },
+                  {
+                    "name": "votePower",
+                    "type": "uint8",
+                    "internalType": "uint8"
+                  }
+                ]
+              },
+              {
+                "name": "securityPeriodConfig",
+                "type": "tuple",
+                "internalType": "struct SecurityPeriodConfig",
+                "components": [
+                  {
+                    "name": "minSecurityPeriod",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  },
+                  {
+                    "name": "maxSecurityPeriod",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  }
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+              }
+            ],
+            "stateMutability": "payable"
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_WillCreated",
+            "inputs": [
+              {
+                "name": "willAddress",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+              },
+              {
+                "name": "mpAddress",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+              }
+            ],
+            "anonymous": false
+          }
+        ],
+        "address": "0x6cbd60e8222f5f07d32c773ef15fd01a43ec8328",
+        "initialBlock": 10338130,
+        "trackFactory": true,
+        "factoryCreationEvent": "29d4e80ae450e75960cecdd4590bedb67875629d9428844280e728aecbee3cfe",
+        "factoryCreationEventFieldIdx": 0
+      }
+    ],
+    "dynamic_contracts": [
+      {
+        "name": "will",
+        "trackEvents": true,
+        "trackCalls": true,
+        "rawAbi": [
+          {
+            "type": "constructor",
+            "inputs": [
+              {
+                "name": "pmAddress",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "newSmList",
+                "type": "tuple[]",
+                "internalType": "struct SMPartialInfo[]",
+                "components": [
+                  {
+                    "name": "smAddress",
+                    "type": "address",
+                    "internalType": "address"
+                  },
+                  {
+                    "name": "votePower",
+                    "type": "uint8",
+                    "internalType": "uint8"
+                  }
+                ]
+              },
+              {
+                "name": "securityPeriodConfig",
+                "type": "tuple",
+                "internalType": "struct SecurityPeriodConfig",
+                "components": [
+                  {
+                    "name": "minSecurityPeriod",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  },
+                  {
+                    "name": "maxSecurityPeriod",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "payable"
+          },
+          {
+            "type": "function",
+            "name": "PM_I",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "cancelWill",
+            "inputs": [],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "cooldownTimeStampS",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "createNewWill",
+            "inputs": [
+              {
+                "name": "newSmList",
+                "type": "tuple[]",
+                "internalType": "struct SMPartialInfo[]",
+                "components": [
+                  {
+                    "name": "smAddress",
+                    "type": "address",
+                    "internalType": "address"
+                  },
+                  {
+                    "name": "votePower",
+                    "type": "uint8",
+                    "internalType": "uint8"
+                  }
+                ]
+              },
+              {
+                "name": "securityPeriodConfig",
+                "type": "tuple",
+                "internalType": "struct SecurityPeriodConfig",
+                "components": [
+                  {
+                    "name": "minSecurityPeriod",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  },
+                  {
+                    "name": "maxSecurityPeriod",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  }
+                ]
+              }
+            ],
+            "outputs": [],
+            "stateMutability": "payable"
+          },
+          {
+            "type": "function",
+            "name": "cumulatedVotePowerS",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint16",
+                "internalType": "uint16"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "deathDeclarationTimestampS",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "declareDeath",
+            "inputs": [],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "deposit",
+            "inputs": [],
+            "outputs": [],
+            "stateMutability": "payable"
+          },
+          {
+            "type": "function",
+            "name": "desistSm",
+            "inputs": [],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "executionTimeStampS",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getBalance",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getCoodldownEndTimestamp",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getDetailedSm",
+            "inputs": [
+              {
+                "name": "sm",
+                "type": "address",
+                "internalType": "address"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "internalType": "struct SMInfo",
+                "components": [
+                  {
+                    "name": "state",
+                    "type": "uint8",
+                    "internalType": "enum SMState"
+                  },
+                  {
+                    "name": "votePower",
+                    "type": "uint8",
+                    "internalType": "uint8"
+                  },
+                  {
+                    "name": "index",
+                    "type": "uint8",
+                    "internalType": "uint8"
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getExecutionPossibleTimestamp",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getSecurityPeriodConfig",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "internalType": "struct SecurityPeriodConfig",
+                "components": [
+                  {
+                    "name": "minSecurityPeriod",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  },
+                  {
+                    "name": "maxSecurityPeriod",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getSmList",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "address[]",
+                "internalType": "address[]"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getState",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint8",
+                "internalType": "enum WillState"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "securityPeriodConfigS",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "minSecurityPeriod",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "maxSecurityPeriod",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "swapAssets",
+            "inputs": [],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "totalVotePowerS",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint16",
+                "internalType": "uint16"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "updateWill",
+            "inputs": [
+              {
+                "name": "updatedSmList",
+                "type": "tuple[]",
+                "internalType": "struct SMPartialInfo[]",
+                "components": [
+                  {
+                    "name": "smAddress",
+                    "type": "address",
+                    "internalType": "address"
+                  },
+                  {
+                    "name": "votePower",
+                    "type": "uint8",
+                    "internalType": "uint8"
+                  }
+                ]
+              },
+              {
+                "name": "addedSmList",
+                "type": "tuple[]",
+                "internalType": "struct SMPartialInfo[]",
+                "components": [
+                  {
+                    "name": "smAddress",
+                    "type": "address",
+                    "internalType": "address"
+                  },
+                  {
+                    "name": "votePower",
+                    "type": "uint8",
+                    "internalType": "uint8"
+                  }
+                ]
+              },
+              {
+                "name": "deletedSmList",
+                "type": "address[]",
+                "internalType": "address[]"
+              },
+              {
+                "name": "securityPeriodConfig",
+                "type": "tuple",
+                "internalType": "struct SecurityPeriodConfig",
+                "components": [
+                  {
+                    "name": "minSecurityPeriod",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  },
+                  {
+                    "name": "maxSecurityPeriod",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  }
+                ]
+              }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "validateSm",
+            "inputs": [],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "vetoDeath",
+            "inputs": [],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "willStateS",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint8",
+                "internalType": "enum WillState"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "withdraw",
+            "inputs": [
+              {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_AssetsDeposited",
+            "inputs": [
+              {
+                "name": "amount",
+                "type": "uint256",
+                "indexed": true,
+                "internalType": "uint256"
+              }
+            ],
+            "anonymous": false
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_AssetsSwapped",
+            "inputs": [
+              {
+                "name": "smAddress",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+              }
+            ],
+            "anonymous": false
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_AssetsWithdrawn",
+            "inputs": [
+              {
+                "name": "amount",
+                "type": "uint256",
+                "indexed": true,
+                "internalType": "uint256"
+              }
+            ],
+            "anonymous": false
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_AssetsWithdrawnAll",
+            "inputs": [],
+            "anonymous": false
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_DeathConfirmed",
+            "inputs": [
+              {
+                "name": "smAddress",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+              }
+            ],
+            "anonymous": false
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_DeathDeclared",
+            "inputs": [
+              {
+                "name": "smAddress",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+              }
+            ],
+            "anonymous": false
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_SMAdded",
+            "inputs": [
+              {
+                "name": "smAddress",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+              },
+              {
+                "name": "votePower",
+                "type": "uint8",
+                "indexed": true,
+                "internalType": "uint8"
+              }
+            ],
+            "anonymous": false
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_SMDesisted",
+            "inputs": [
+              {
+                "name": "smAddress",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+              }
+            ],
+            "anonymous": false
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_SMRemoved",
+            "inputs": [
+              {
+                "name": "smAddress",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+              }
+            ],
+            "anonymous": false
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_SMUpdated",
+            "inputs": [
+              {
+                "name": "smAddress",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+              },
+              {
+                "name": "votePower",
+                "type": "uint8",
+                "indexed": true,
+                "internalType": "uint8"
+              }
+            ],
+            "anonymous": false
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_SMValidated",
+            "inputs": [
+              {
+                "name": "smAddress",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+              }
+            ],
+            "anonymous": false
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_SecurityPeriodUpdated",
+            "inputs": [
+              {
+                "name": "minSecurityPeriod",
+                "type": "uint256",
+                "indexed": true,
+                "internalType": "uint256"
+              },
+              {
+                "name": "maxSecurityPeriod",
+                "type": "uint256",
+                "indexed": true,
+                "internalType": "uint256"
+              }
+            ],
+            "anonymous": false
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_VetoExercised",
+            "inputs": [],
+            "anonymous": false
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_WillActivated",
+            "inputs": [],
+            "anonymous": false
+          },
+          {
+            "type": "event",
+            "name": "EVT_WillChain_WillCanceled",
+            "inputs": [],
+            "anonymous": false
+          },
+          {
+            "type": "error",
+            "name": "ERR_AssetsNotInteractable",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_CreatedSMExistsAlready",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_DeletedSMDoesNotExist",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_DuplicateSM",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_FailedWithdrawal",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_InsufficientBalance",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_InvalidDeposit",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_InvalidSecurityPeriods",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_InvalidWithdrawal",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_NotEnoughSMs",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_NotPM",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_NotSM",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_PMIsSM",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_SMAlreadyDeclaredDeath",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_SMAlreadyValidated",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_SMDoesNotExist",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_SMListsFinalResultIncoherent",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_SMListsFinalResultTooManySM",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_SMNotValidated",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_SMVotePowerInvalid",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_SecurityPeriodNotFinished",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_SecurityPeriodNotStarted",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_SecurityPeriodStarted",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_TooManySMs",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_UpdatedSMDoesNotExist",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_WillCanceled",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_WillExecuted",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_WillNoDeclaration",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_WillNotActive",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_WillNotCanceled",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_WillNotInactive",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_WillNotOnCooldown",
+            "inputs": []
+          },
+          {
+            "type": "error",
+            "name": "ERR_WillOnCooldown",
+            "inputs": []
+          }
+        ],
+        "parentContractName": "willfactory",
+        "referenceContractAddress": "0x36d1c596cf21aaf1ecf74538bbcf550b1462325c"
+      }
+    ],
+    "confirm_enough_contracts": true
+  }
+}

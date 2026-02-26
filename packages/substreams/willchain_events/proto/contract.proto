@@ -1,0 +1,284 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package contract.v1;
+message Events {
+    repeated Willfactory_EvtWillChainWillCreated willfactory_evt_will_chain_will_createds = 1;
+    repeated Will_EvtWillChainAssetsDeposited will_evt_will_chain_assets_depositeds = 2;
+    repeated Will_EvtWillChainAssetsSwapped will_evt_will_chain_assets_swappeds = 3;
+    repeated Will_EvtWillChainAssetsWithdrawn will_evt_will_chain_assets_withdrawns = 4;
+    repeated Will_EvtWillChainAssetsWithdrawnAll will_evt_will_chain_assets_withdrawn_alls = 5;
+    repeated Will_EvtWillChainDeathConfirmed will_evt_will_chain_death_confirmeds = 6;
+    repeated Will_EvtWillChainDeathDeclared will_evt_will_chain_death_declareds = 7;
+    repeated Will_EvtWillChainSmAdded will_evt_will_chain_sm_addeds = 8;
+    repeated Will_EvtWillChainSmDesisted will_evt_will_chain_sm_desisteds = 9;
+    repeated Will_EvtWillChainSmRemoved will_evt_will_chain_sm_removeds = 10;
+    repeated Will_EvtWillChainSmUpdated will_evt_will_chain_sm_updateds = 11;
+    repeated Will_EvtWillChainSmValidated will_evt_will_chain_sm_validateds = 12;
+    repeated Will_EvtWillChainSecurityPeriodUpdated will_evt_will_chain_security_period_updateds = 13;
+    repeated Will_EvtWillChainVetoExercised will_evt_will_chain_veto_exerciseds = 14;
+    repeated Will_EvtWillChainWillActivated will_evt_will_chain_will_activateds = 15;
+    repeated Will_EvtWillChainWillCanceled will_evt_will_chain_will_canceleds = 16;
+}
+message Calls {
+    repeated Willfactory_CreateWillCall willfactory_call_create_wills = 1;
+    repeated Will_CancelWillCall will_call_cancel_wills = 2;
+    repeated Will_CreateNewWillCall will_call_create_new_wills = 3;
+    repeated Will_DeclareDeathCall will_call_declare_deaths = 4;
+    repeated Will_DepositCall will_call_deposits = 5;
+    repeated Will_DesistSmCall will_call_desist_sms = 6;
+    repeated Will_SwapAssetsCall will_call_swap_assets = 7;
+    repeated Will_UpdateWillCall will_call_update_wills = 8;
+    repeated Will_ValidateSmCall will_call_validate_sms = 9;
+    repeated Will_VetoDeathCall will_call_veto_deaths = 10;
+    repeated Will_WithdrawCall will_call_withdraws = 11;
+}
+message EventsCalls {
+    Events events = 1;
+    Calls calls = 2;
+}
+message Willfactory_EvtWillChainWillCreated {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    bytes will_address = 5;
+    bytes mp_address = 6;
+}
+  
+message Willfactory_CreateWillCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    bytes owner = 6;
+    bytes output_param0 = 7;
+}
+    
+message Will_EvtWillChainAssetsDeposited {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+    string amount = 6;
+}
+    
+message Will_EvtWillChainAssetsSwapped {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+    bytes sm_address = 6;
+}
+    
+message Will_EvtWillChainAssetsWithdrawn {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+    string amount = 6;
+}
+    
+message Will_EvtWillChainAssetsWithdrawnAll {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+}
+    
+message Will_EvtWillChainDeathConfirmed {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+    bytes sm_address = 6;
+}
+    
+message Will_EvtWillChainDeathDeclared {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+    bytes sm_address = 6;
+}
+    
+message Will_EvtWillChainSmAdded {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+    bytes sm_address = 6;
+    uint64 vote_power = 7;
+}
+    
+message Will_EvtWillChainSmDesisted {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+    bytes sm_address = 6;
+}
+    
+message Will_EvtWillChainSmRemoved {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+    bytes sm_address = 6;
+}
+    
+message Will_EvtWillChainSmUpdated {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+    bytes sm_address = 6;
+    uint64 vote_power = 7;
+}
+    
+message Will_EvtWillChainSmValidated {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+    bytes sm_address = 6;
+}
+    
+message Will_EvtWillChainSecurityPeriodUpdated {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+    string min_security_period = 6;
+    string max_security_period = 7;
+}
+    
+message Will_EvtWillChainVetoExercised {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+}
+    
+message Will_EvtWillChainWillActivated {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+}
+    
+message Will_EvtWillChainWillCanceled {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string evt_address = 5;
+}
+    
+message Will_CancelWillCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    string call_address = 6;
+}
+    
+message Will_CreateNewWillCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    string call_address = 6;
+}
+    
+message Will_DeclareDeathCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    string call_address = 6;
+}
+    
+message Will_DepositCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    string call_address = 6;
+}
+    
+message Will_DesistSmCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    string call_address = 6;
+}
+    
+message Will_SwapAssetsCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    string call_address = 6;
+}
+    
+message Will_UpdateWillCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    string call_address = 6;
+    repeated bytes deleted_sm_list = 7;
+}
+    
+message Will_ValidateSmCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    string call_address = 6;
+}
+    
+message Will_VetoDeathCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    string call_address = 6;
+}
+    
+message Will_WithdrawCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    string call_address = 6;
+    string amount = 7;
+}
