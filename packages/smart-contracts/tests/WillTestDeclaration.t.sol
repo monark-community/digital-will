@@ -6,7 +6,6 @@ import {Test} from "forge-std/Test.sol";
 
 import {Will} from "@src/Will.sol";
 
-import {WillState} from "@interfaces/WillState.sol";
 import {SMInfo, SMPartialInfo} from "@interfaces/SMInfo.sol";
 import {SMState} from "@interfaces/SMState.sol";
 import {SecurityPeriodConfig} from "@interfaces/SecurityPeriodConfig.sol";
@@ -50,6 +49,8 @@ contract WillTestDeclaration is Test {
         vm.prank(sm1);
         will.declareDeath();
 
+        SMInfo memory smInfo1 = will.getDetailedSm(sm1);
+        assertEq(uint8(smInfo1.state), uint8(SMState.DECLARED_DEATH));
         assertEq(will.deathDeclarationTimestampS(), block.timestamp);
         assertLt(will.executionTimeStampS(), block.timestamp + 2 days);
         assertEq(will.cumulatedVotePowerS(), 1);

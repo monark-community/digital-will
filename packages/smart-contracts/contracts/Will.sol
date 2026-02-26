@@ -169,8 +169,9 @@ contract Will is WillEvents {
         totalVotePowerS = 0;
         cumulatedVotePowerS = 0;
         validatedCountS = 0;
+        uint256 length = smListS.length;
 
-        for (uint256 i = 0; i < smListS.length; i++) {
+        for (uint256 i = 0; i < length; i++) {
             if (smMappingS[smListS[i]].state != SMState.PENDING) {
                 // VALIDATED or DECLARED_DEATH
                 validatedCountS += 1;
@@ -344,7 +345,8 @@ contract Will is WillEvents {
     }
 
     function clearSm() private {
-        for (uint8 i = 0; i < smListS.length; i++) {
+        uint256 length = smListS.length;
+        for (uint8 i = 0; i < length; i++) {
             delete smMappingS[smListS[i]];
         }
         delete smListS;
@@ -504,7 +506,8 @@ contract Will is WillEvents {
     }
 
     function resetDeclareSmListState() private {
-        for (uint8 i = 0; i < smListS.length; i++) {
+        uint256 length = smListS.length;
+        for (uint8 i = 0; i < length; i++) {
             if (smMappingS[smListS[i]].state == SMState.DECLARED_DEATH)
                 smMappingS[smListS[i]].state = SMState.VALIDATED;
         }

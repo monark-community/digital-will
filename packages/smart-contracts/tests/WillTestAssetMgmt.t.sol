@@ -7,8 +7,7 @@ import {Test} from "forge-std/Test.sol";
 import {Will} from "@src/Will.sol";
 
 import {WillState} from "@interfaces/WillState.sol";
-import {SMInfo, SMPartialInfo} from "@interfaces/SMInfo.sol";
-import {SMState} from "@interfaces/SMState.sol";
+import {SMPartialInfo} from "@interfaces/SMInfo.sol";
 import {SecurityPeriodConfig} from "@interfaces/SecurityPeriodConfig.sol";
 
 import "@src/WillErrors.sol" as Errors;
