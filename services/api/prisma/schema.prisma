@@ -72,14 +72,13 @@ model Contact {
 model Will {
   willId                      String            @id @default(uuid())
   walletAddress               String
-  contractAddressInBlockchain String
-  chainId                     Int
+  contractAddressInBlockchain String?
+  chainId                     Int?
   minSecurityPeriod           Int
   maxSecurityPeriod           Int
   state                       WillState
   wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
   secondaryMembers            SecondaryMember[]
-  notifications               Notifications[]
 
   @@map("wills")
 }
