@@ -42,7 +42,8 @@ export default function WillsPage() {
   const [isLoadingWills, setIsLoadingWills] = useState(false);
   const [selectedFilterWalletId, setSelectedFilterWalletId] = useState<string>("all");
   const [showFilterWalletDropdown, setShowFilterWalletDropdown] = useState(false);
-  
+  const [editingWillId, setEditingWillId] = useState<string | null>(null); // Pour la modification
+  const [deployingWillId, setDeployingWillId] = useState<string | null>(null); // Pour le déploiement
   const [factoryAddress, setFactoryAddress] = useState(config.blockchain.willFactoryAddress);
   const [selectedWalletId, setSelectedWalletId] = useState("");
   const [secondaryMembers, setSecondaryMembers] = useState<SecondaryMember[]>([
@@ -53,10 +54,11 @@ export default function WillsPage() {
   const [maxSecurityPeriod, setMaxSecurityPeriod] = useState("");
   const [showWalletDropdown, setShowWalletDropdown] = useState(false);
   const [showContactDropdown, setShowContactDropdown] = useState<number | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<string[]>([]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -97,6 +99,34 @@ export default function WillsPage() {
 
     fetchWills();
   }, [wallets]);
+
+useEffect(() => {
+  const { errors } = validateDraftForm();
+  setFormErrors(errors);
+}, [selectedWalletId, secondaryMembers, minSecurityPeriod, maxSecurityPeriod]);
+// Quand le min change, ajuster le max si nécessaire
+useEffect(() => {
+  const min = parseInt(minSecurityPeriod);
+  const max = parseInt(maxSecurityPeriod);
+  
+  if (!isNaN(min) && !isNaN(max) && min > max) {
+    setMaxSecurityPeriod(min.toString());
+  }
+}, [minSecurityPeriod]);
+
+// Quand le max change, juste vérifier qu'il reste valide
+useEffect(() => {
+  const min = parseInt(minSecurityPeriod);
+  const max = parseInt(maxSecurityPeriod);
+  
+  if (!isNaN(min) && !isNaN(max) && max < min) {
+    // Option 1: Ajuster automatiquement
+    // setMinSecurityPeriod(max.toString());
+    
+    // Option 2: Laisser l'erreur être gérée par la validation
+    // (c'est ce qu'on fait déjà)
+  }
+}, [maxSecurityPeriod]);
 
   const addSecondaryMember = () => {
     setSecondaryMembers([...secondaryMembers, { 
@@ -144,11 +174,13 @@ export default function WillsPage() {
       console.error('Failed to copy address:', err);
     }
   };
-  const handleCreateWill = async () => {
+  const handleCreateDraft = async () => {
+    const { isValid } = validateDraftForm();
+    if (!isValid) return;
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const trimmedFactoryAddress = factoryAddress.trim();
+    /* const trimmedFactoryAddress = factoryAddress.trim();
     if (!trimmedFactoryAddress) {
       setErrorMessage("Please enter a factory contract address");
       return;
@@ -159,9 +191,9 @@ export default function WillsPage() {
     } catch (error) {
       setErrorMessage("Invalid factory contract address format");
       return;
-    }
+    } */
 
-    if (!selectedWalletId) {
+    /* if (!selectedWalletId) {
       setErrorMessage("Please select a wallet");
       return;
     }
@@ -170,14 +202,62 @@ export default function WillsPage() {
     if (!selectedWallet) {
       setErrorMessage("Selected wallet not found");
       return;
-    }
+    } */
 
-    const validMembers = secondaryMembers.filter(sm => sm.address.trim() !== "");
-    if (validMembers.length < 2) {
+    const validMembers = secondaryMembers.filter(m => m.firstName.trim() || m.lastName.trim() || m.email.trim() || m.address.trim());
+    /*if (validMembers.length < 2) {
       setErrorMessage("Please add at least 2 secondary members (contract requirement)");
       return;
-    }
+    } */
 
+    setIsSavingDraft(true);
+    try{
+      if (editingWillId) {
+            // Mode édition : mettre à jour un draft existant
+            await willService.updateDraftWill(editingWillId, {
+              secondaryMembers: validMembers.map(m => ({
+                firstName: m.firstName,
+                lastName: m.lastName,
+                email: m.email,
+                phoneNumber: m.phoneNumber,
+                tempWalletAddress: m.address, // Utilisé comme tempWalletAddress en draft
+                votingPower: m.power,
+              })),
+              minSecurityPeriod: parseInt(minSecurityPeriod) || 0,
+              maxSecurityPeriod: parseInt(maxSecurityPeriod) || 0,
+            });
+            setSuccessMessage("Draft will updated successfully!");
+          } else {
+            // Mode création : nouveau draft
+            await willService.createDraftWill({
+              walletAddress: selectedWallet.address,
+              secondaryMembers: validMembers.map(m => ({
+                firstName: m.firstName,
+                lastName: m.lastName,
+                email: m.email,
+                phoneNumber: m.phoneNumber,
+                tempWalletAddress: m.address,
+                votingPower: m.power,
+              })),
+              minSecurityPeriod: parseInt(minSecurityPeriod) || 0,
+              maxSecurityPeriod: parseInt(maxSecurityPeriod) || 0,
+            });
+            setSuccessMessage("Draft will saved successfully!");
+          }
+
+          setTimeout(() => {
+            resetForm();
+            window.location.reload(); // Refresh to show new/updated will
+          }, 2000);
+        } catch (error: any) {
+          setErrorMessage(error.message);
+        } finally {
+          setIsSavingDraft(false);
+        }
+      };
+
+
+    /* }
     for (const member of validMembers) {
       if (!member.firstName.trim()) {
         setErrorMessage("Please provide first name for all secondary members");
@@ -250,7 +330,7 @@ export default function WillsPage() {
         maxPeriod
       );
 
-      const blockchainResult = await willService.createWill(params);
+      const blockchainResult = await willService.createWillOnBlockchain(params);
 
       try {
         const provider = new ethers.BrowserProvider((window as any).ethereum);
@@ -299,7 +379,251 @@ export default function WillsPage() {
     } finally {
       setIsCreating(false);
     }
+  }; */
+
+const validateDraftForm = (): { isValid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+
+  // Vérifier qu'un wallet est sélectionné
+  if (!selectedWalletId) {
+    errors.push("Please select a wallet");
+  }
+
+  // Filtrer les membres qui ont au moins un champ rempli
+  const membersWithData = secondaryMembers.filter(m => 
+    m.firstName.trim() || m.lastName.trim() || m.email.trim() || m.address.trim()
+  );
+
+  for (let i = 0; i < secondaryMembers.length; i++) {
+  const member = secondaryMembers[i];
+  
+  // Vérifier si AU MOINS UN champ est rempli (sauf power qui a une valeur par défaut)
+  const hasAnyField = member.firstName.trim() || member.lastName.trim() || 
+                      member.email.trim() || member.address.trim() || 
+                      member.phoneNumber?.trim();
+
+  if (hasAnyField) {
+    // Validation prénom
+    if (!member.firstName.trim()) {
+      errors.push(`Member ${i + 1}: First name is required`);
+      break;
+    }
+    
+    // Validation nom
+    if (!member.lastName.trim()) {
+      errors.push(`Member ${i + 1}: Last name is required`);
+      break;
+    }
+    
+    // Validation email
+    if (!member.email.trim()) {
+      errors.push(`Member ${i + 1}: Email is required`);
+      break;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(member.email)) {
+      errors.push(`Member ${i + 1}: Invalid email format`);
+      break;
+    }
+    
+    // ✅ Validation adresse wallet - OBLIGATOIRE et VALIDE
+    console.log("Vérification adresse pour membre", i + 1, ":", member.address);
+    if (!member.address.trim()) {
+      errors.push(`Member ${i + 1}: Wallet address is required`);
+      break;
+    } else {
+      try {
+        ethers.getAddress(member.address.trim());
+        console.log("✅ Adresse valide:", member.address);
+      } catch (error) {
+        errors.push(`Member ${i + 1}: Invalid wallet address format`);
+        break;
+      }
+    }
+    
+    // Validation power
+    if (member.power < 1 || member.power > 255) {
+      errors.push(`Member ${i + 1}: Power must be between 1 and 255`);
+      break;
+    }
+  }
+}
+
+  // Validation des périodes (si fournies)
+  const minPeriod = parseInt(minSecurityPeriod);
+  const maxPeriod = parseInt(maxSecurityPeriod);
+
+  // Vérifier que les deux sont remplis
+if (!minSecurityPeriod.trim()) {
+  errors.push("Minimum security period is required");
+} else if (isNaN(minPeriod) || minPeriod < 0) {
+  errors.push("Minimum security period must be a valid positive number");
+}
+
+if (!maxSecurityPeriod.trim()) {
+  errors.push("Maximum security period is required");
+} else if (isNaN(maxPeriod) || maxPeriod < 0) {
+  errors.push("Maximum security period must be a valid positive number");
+}
+if (minSecurityPeriod.trim() && maxSecurityPeriod.trim() && 
+    !isNaN(minPeriod) && !isNaN(maxPeriod) && 
+    minPeriod >= 0 && maxPeriod >= 0) {
+  
+  if (minPeriod > maxPeriod) {
+    errors.push("Minimum security period cannot be greater than maximum");
+  }
+  
+  // Optionnel : vérifier des plages spécifiques
+  if (minPeriod < 28) {
+    errors.push("Minimum security period must be at least 28 days (4 weeks)");
+  }
+  
+  if (maxPeriod > 154) {
+    errors.push("Maximum security period cannot exceed 154 days (22 weeks)");
+  }
+}
+
+
+  // Vérifier les adresses en double (seulement pour celles qui sont remplies)
+  const addresses = membersWithData
+    .map(m => m.address.trim().toLowerCase())
+    .filter(addr => addr !== '');
+  const uniqueAddresses = new Set(addresses);
+  if (addresses.length !== uniqueAddresses.size) {
+    errors.push("Duplicate secondary member addresses are not allowed");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
   };
+};
+
+const handleDeployWill = async (will: WillFromDB) => {
+  if (!window.confirm("Are you sure you want to deploy this will to the blockchain?")) {
+    return;
+  }
+
+  setErrorMessage(null);
+  setSuccessMessage(null);
+  setDeployingWillId(will.willId);
+
+  try {
+    // Préparer les membres pour la blockchain
+    const blockchainMembers = will.secondaryMembers.map(m => ({
+      address: m.walletAddress || m.tempWalletAddress || "",
+      power: m.votingPower
+    }));
+
+    // Vérifier que tous les membres ont une adresse
+    if (blockchainMembers.some(m => !m.address)) {
+      throw new Error("All secondary members must have a wallet address before deployment");
+    }
+
+    // Vérifier que les adresses sont valides
+    for (const member of blockchainMembers) {
+      ethers.getAddress(member.address); // Vérifie le format
+    }
+
+    // Vérifier les adresses uniques
+    const addresses = blockchainMembers.map(m => m.address.toLowerCase());
+    const uniqueAddresses = new Set(addresses);
+    if (addresses.length !== uniqueAddresses.size) {
+      throw new Error("Duplicate secondary member addresses are not allowed");
+    }
+
+    // Vérifier les périodes
+    if (will.minSecurityPeriod < 0 || will.maxSecurityPeriod < 0) {
+      throw new Error("Security periods must be positive");
+    }
+    if (will.minSecurityPeriod > will.maxSecurityPeriod) {
+      throw new Error("Minimum security period cannot be greater than maximum");
+    }
+
+     // Vérifier les power (1-255)
+    const invalidPower = blockchainMembers.find(m => m.power < 1 || m.power > 255);
+    if (invalidPower) {
+      throw new Error("Power values must be between 1 and 255");
+    }
+
+    const deployedWill = await willService.deployWill(will.willId, {
+      factoryAddress: config.blockchain.willFactoryAddress,
+      ownerAddress: will.walletAddress,
+      secondaryMembers: blockchainMembers,
+      minSecurityPeriodDays: will.minSecurityPeriod,
+      maxSecurityPeriodDays: will.maxSecurityPeriod,
+    });
+
+    setSuccessMessage(
+      `Will deployed successfully! Contract: ${deployedWill.contractAddressInBlockchain}`
+    );
+
+    setTimeout(() => {
+      window.location.reload();
+    }, 2000);
+  } catch (error: any) {
+    console.error("Deployment error:", error);
+    
+    // Gestion des erreurs MetaMask
+    if (
+      error.code === 4001 || 
+      error.code === "ACTION_REJECTED" || 
+      error.reason === "rejected" ||
+      error.message?.includes("user rejected") ||
+      error.message?.includes("User denied")
+    ) {
+      setErrorMessage("Transaction cancelled. You rejected the transaction in MetaMask.");
+    } else {
+      setErrorMessage(error.message || "Failed to deploy will");
+    }
+  } finally {
+    setDeployingWillId(null);
+  }
+};
+
+const handleEditDraft = (will: WillFromDB) => {
+  // Pré-remplir le formulaire avec les données du will
+  setSelectedWalletId(wallets?.find(w => w.address === will.walletAddress)?.walletId || "");
+  setSecondaryMembers(will.secondaryMembers.map(m => ({
+    firstName: m.firstName,
+    lastName: m.lastName,
+    email: m.email,
+    phoneNumber: m.phoneNumber || "",
+    address: m.walletAddress || m.tempWalletAddress || "",
+    power: m.votingPower,
+  })));
+
+  if (will.secondaryMembers.length < 2) {
+    setSecondaryMembers(prev => {
+      const newMembers = [...prev];
+      while (newMembers.length < 2) {
+        newMembers.push({ firstName: "", lastName: "", email: "", phoneNumber: "", address: "", power: 1 });
+      }
+      return newMembers;
+    });
+  }
+  setMinSecurityPeriod(will.minSecurityPeriod.toString());
+  setMaxSecurityPeriod(will.maxSecurityPeriod.toString());
+  
+  // Stocker l'ID du will en cours d'édition
+  setEditingWillId(will.willId);
+  
+  // Ouvrir le formulaire
+  setShowCreateForm(true);
+};
+const handleDeleteDraft = async (willId: string) => {
+  if (!window.confirm("Are you sure you want to delete this draft will?")) {
+    return;
+  }
+
+  try {
+    await willService.deleteDraftWill(willId);
+    setSuccessMessage("Draft will deleted successfully");
+    setTimeout(() => window.location.reload(), 2000);
+  } catch (error: any) {
+    setErrorMessage(error.message);
+  }
+};
 
   const resetForm = () => {
     setFactoryAddress(config.blockchain.willFactoryAddress);
@@ -315,6 +639,7 @@ export default function WillsPage() {
     setShowContactDropdown(null);
     setErrorMessage(null);
     setSuccessMessage(null);
+    setEditingWillId(null);
   };
 
   const selectedWallet = wallets?.find(w => w.walletId === selectedWalletId);
@@ -418,7 +743,7 @@ export default function WillsPage() {
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
               <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="sticky top-0 bg-[var(--bg-card)] border-b border-[var(--border-section)] px-6 py-4 flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)]">Create New Will</h2>
+                  <h2 className="text-2xl font-bold text-[var(--text-primary)]"> {editingWillId ? "Edit Draft Will" : "Create New Will"}</h2>
                   <button
                     onClick={resetForm}
                     className="text-[var(--text-muted-alt)] hover:text-[var(--text-primary)] transition-colors"
@@ -439,6 +764,17 @@ export default function WillsPage() {
                   {successMessage && (
                     <div className="px-4 py-3 bg-green-500/10 border border-green-500/50 rounded-lg text-green-500 text-sm">
                       {successMessage}
+                    </div>
+                  )}
+
+                  {formErrors.length > 0 && (
+                    <div className="px-4 py-3 bg-yellow-500/10 border border-yellow-500/50 rounded-lg">
+                      <p className="text-yellow-500 text-sm font-medium mb-1">Please fix the following:</p>
+                      <ul className="list-disc list-inside text-yellow-500/80 text-xs space-y-1">
+                        {formErrors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
 
@@ -659,10 +995,28 @@ export default function WillsPage() {
                       </label>
                       <input
                         type="number"
-                        min="0"
+                        min="28"
+                        max="154"
                         value={minSecurityPeriod}
-                        onChange={(e) => setMinSecurityPeriod(e.target.value)}
-                        placeholder="e.g., 7"
+                        onChange={(e) => {
+      const value = e.target.value;
+      // Permettre à l'utilisateur d'effacer (chaîne vide)
+      if (value === '') {
+        setMinSecurityPeriod('');
+        return;
+      }
+      // Sinon, garder la valeur numérique
+      setMinSecurityPeriod(value);
+    }}
+    onBlur={(e) => {
+      // Quand l'utilisateur quitte le champ, forcer les limites
+      const value = parseInt(e.target.value);
+      if (!isNaN(value)) {
+        if (value < 28) setMinSecurityPeriod('28');
+        else if (value > 154) setMinSecurityPeriod('154');
+      }
+    }}
+                        placeholder="e.g., 28"
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                       />
                     </div>
@@ -672,10 +1026,25 @@ export default function WillsPage() {
                       </label>
                       <input
                         type="number"
-                        min="0"
+                        min="28"
+                        max="154"
                         value={maxSecurityPeriod}
-                        onChange={(e) => setMaxSecurityPeriod(e.target.value)}
-                        placeholder="e.g., 365"
+                        onChange={(e) => {
+      const value = e.target.value;
+      if (value === '') {
+        setMaxSecurityPeriod('');
+        return;
+      }
+      setMaxSecurityPeriod(value);
+    }}
+    onBlur={(e) => {
+      const value = parseInt(e.target.value);
+      if (!isNaN(value)) {
+        if (value < 28) setMaxSecurityPeriod('28');
+        else if (value > 154) setMaxSecurityPeriod('154');
+      }
+    }}
+                        placeholder="e.g., 154"
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                       />
                     </div>
@@ -684,23 +1053,26 @@ export default function WillsPage() {
                   <div className="flex gap-3 pt-4">
                     <button
                       onClick={resetForm}
-                      disabled={isCreating}
+                      disabled={isSavingDraft}
                       className="flex-1 px-4 py-2 border border-[var(--border-section)] text-[var(--text-primary)] rounded-lg font-medium hover:bg-[var(--bg-section)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Cancel
                     </button>
                     <button
-                      onClick={handleCreateWill}
-                      disabled={isCreating}
+                      onClick={handleCreateDraft}
+                      disabled={isSavingDraft || formErrors.length > 0}
                       className="flex-1 px-4 py-2 bg-[var(--accent)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                      {isCreating && (
+                      {isSavingDraft && (
                         <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                       )}
-                      {isCreating ? "Creating..." : "Create Will"}
+                      {isSavingDraft 
+                        ? (editingWillId ? "Updating Draft..." : "Creating Draft...")
+                        : (editingWillId ? "Update Draft" : "Create Draft")
+                      }
                     </button>
                   </div>
                 </div>
@@ -743,6 +1115,28 @@ export default function WillsPage() {
                         </svg>
                         Deployed
                       </span>
+                      {will.state === 'DRAFT' && (
+                      <>
+                        <button
+                          onClick={() => handleEditDraft(will)}
+                          className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                          title="Edit draft"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDraft(will.willId)}
+                          className="p-1 text-[var(--text-muted)] hover:text-red-500 transition-colors"
+                          title="Delete draft"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </>
+                    )}
                     </div>
                     
                     <div className="grid grid-cols-1 gap-3 mb-3">
@@ -771,7 +1165,7 @@ export default function WillsPage() {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <p className="text-xs text-[var(--text-muted-alt)]">Network</p>
-                          <p className="text-sm font-medium text-[var(--text-primary)]">{getChainName(will.chainId)}</p>
+                          <p className="text-sm font-medium text-[var(--text-primary)]">{will.chainId ? getChainName(will.chainId) : 'Not deployed'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-[var(--text-muted-alt)]">Secondary Members</p>
@@ -805,27 +1199,34 @@ export default function WillsPage() {
                                   {member.phoneNumber}
                                 </div>
                               )}
-                              <div className="flex items-start gap-2">
-                                <div className="font-mono break-all">
-                                  {member.walletAddress}
-                                </div>
-                                <div className="relative flex-shrink-0">
-                                  <button
-                                    onClick={() => copyToClipboard(member.walletAddress, `beneficiary-${member.secondaryMemberId}`)}
-                                    className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-                                    title="Copy address"
-                                  >
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
-                                  </button>
-                                  {copiedAddress === `beneficiary-${member.secondaryMemberId}` && (
-                                    <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
-                                      Address copied!
+                              {(() => {
+                              const addressToCopy = member.walletAddress || member.tempWalletAddress || '';
+                              return (
+                                <div className="flex items-start gap-2">
+                                  <div className="font-mono break-all">
+                                    {addressToCopy || 'No address'}
+                                  </div>
+                                  {addressToCopy && (
+                                    <div className="relative flex-shrink-0">
+                                      <button
+                                        onClick={() => copyToClipboard(addressToCopy, `beneficiary-${member.secondaryMemberId}`)}
+                                        className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                                        title="Copy address"
+                                      >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                      </button>
+                                      {copiedAddress === `beneficiary-${member.secondaryMemberId}` && (
+                                        <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                                          Address copied!
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
-                              </div>
+                              );
+                            })()}
                             </div>
                           </div>
                         ))}
@@ -840,6 +1241,27 @@ export default function WillsPage() {
                         Manage
                       </button>
                     </div>
+                    {will.state === 'DRAFT' && (
+                    <div className="mt-4">
+                      <button
+                        onClick={() => handleDeployWill(will)}
+                        disabled={deployingWillId === will.willId}
+                        className="w-full px-3 py-2 text-sm font-medium rounded-lg bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {deployingWillId === will.willId ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Deploying...
+                          </>
+                        ) : (
+                          "Deploy to Blockchain"
+                        )}
+                      </button>
+                    </div>
+                  )}
                   </div>
                 ))
               )}

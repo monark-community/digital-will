@@ -23,3 +23,4 @@ export interface CreateWillResult {
   willAddress: string;
   transactionHash: string;
 }
+

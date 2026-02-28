@@ -79,7 +79,8 @@ model Will {
   state                       WillState
   wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
   secondaryMembers            SecondaryMember[]
-
+  notifications               Notifications[]
+  
   @@map("wills")
 }
 
