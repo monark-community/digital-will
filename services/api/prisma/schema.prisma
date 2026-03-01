@@ -63,6 +63,7 @@ model Contact {
   email         String
   phoneNumber   String?
   walletAddress String
+  relationship  String?
 
   createdAt DateTime @default(now())
 
@@ -97,6 +98,7 @@ model SecondaryMember {
   willId            String
   will              Will    @relation(fields: [willId], references: [willId], onDelete: Cascade)
   wallet            Wallet? @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
+  relationship      String?
 
   @@map("secondarymembers")
 }

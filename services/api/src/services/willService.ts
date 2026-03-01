@@ -13,7 +13,7 @@ interface SecondaryMemberInput {
     walletAddress: string;
     votingPower: number;
     state: SMState;
-
+    relationship?: string;
 }
 
 interface CreateWillInput {
@@ -104,16 +104,17 @@ export const createDraftWill = async (input: {
         email: string;
         phoneNumber?: string;
         tempWalletAddress?: string;  // Optionnel
-        votingPower?: number;         // Optionnel en draft
+        votingPower: number;
+        relationship?: string;       // Optionnel
     }>;
-    minSecurityPeriod?: number;      // Optionnel en draft
-    maxSecurityPeriod?: number;      // Optionnel en draft
+    minSecurityPeriod: number;
+    maxSecurityPeriod: number;
 }) => {
     const { 
         walletAddress, 
         secondaryMembers = [],
-        minSecurityPeriod = 0,        // Valeur par défaut
-        maxSecurityPeriod = 0         // Valeur par défaut
+        minSecurityPeriod = 28,        // Valeur par défaut
+        maxSecurityPeriod = 154         // Valeur par défaut
     } = input;
 
     // Vérifier que le wallet existe
@@ -149,16 +150,25 @@ export const createDraftWill = async (input: {
                 });
 
                 if (existingWallet) {
-                    console.log("✅ Le wallet existe déjà → utiliser walletAddress");
                     walletAddressToUse = member.tempWalletAddress;
                     tempWalletAddressToUse = undefined; // Pas besoin de temp
                 } else {
-                    console.log("❌ Le wallet n'existe pas → utiliser tempWalletAddress");
                     walletAddressToUse = null;
                     tempWalletAddressToUse = member.tempWalletAddress;
                 }
             }
-            console.log("HAHAHAHAHAHAHHA", walletAddressToUse, tempWalletAddressToUse);
+
+            if (member.firstName && member.lastName && member.email) {
+                await syncMemberWithContacts(tx, wallet.userId, {
+                    firstName: member.firstName,
+                    lastName: member.lastName,
+                    email: member.email,
+                    phoneNumber: member.phoneNumber,
+                    tempWalletAddress: member.tempWalletAddress,
+                    relationship: member.relationship,
+                });
+            }
+
             return {
                 firstName: member.firstName,
                 lastName: member.lastName,
@@ -196,17 +206,22 @@ export const updateDraftWill = async (
             phoneNumber?: string;
             tempWalletAddress?: string;
             votingPower?: number;
+            relationship?: string;
         }>;
         minSecurityPeriod?: number;
         maxSecurityPeriod?: number;
     }
 ) => {
 
-    //const { secondaryMembers } = input;
 
     // Vérifier que le will existe et est DRAFT
     const existingWill = await prisma.will.findUnique({
         where: { willId },
+        include: { 
+            wallet: {  // ← Inclure le wallet pour avoir accès à l'utilisateur
+                include: { user: true }
+            }
+        },
     });
 
     if (!existingWill) {
@@ -216,6 +231,9 @@ export const updateDraftWill = async (
     if (existingWill.state !== WillState.DRAFT) {
         throw new BadRequestError('Cannot update a will that is already deployed');
     }
+
+    // Récupérer l'utilisateur propriétaire du wallet
+    const userId = existingWill.wallet.userId;
 
     // Mise à jour avec transaction
     return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -237,7 +255,46 @@ export const updateDraftWill = async (
             });
 
             if (input.secondaryMembers.length > 0) {
-                // ✅ MÊME LOGIQUE QUE DANS createDraftWill
+                for (const member of input.secondaryMembers) {
+                    if (member.firstName && member.lastName && member.email) {
+                        // Vérifier si un contact existe déjà avec cet email
+                        const existingContact = await tx.contact.findFirst({
+                            where: {
+                                userId,
+                                email: member.email,
+                            },
+                        });
+
+                        if (!existingContact) {
+                            // Créer un nouveau contact
+                            await tx.contact.create({
+                                data: {
+                                    userId,
+                                    firstName: member.firstName,
+                                    lastName: member.lastName,
+                                    email: member.email,
+                                    phoneNumber: member.phoneNumber,
+                                    walletAddress: member.tempWalletAddress || '',
+                                    relationship: member.relationship,  // ← AJOUTÉ
+                                },
+                            });
+                            console.log(`✅ Contact créé pour ${member.firstName} ${member.lastName}`);
+                        } else {
+                            // Mettre à jour le contact existant
+                            await tx.contact.update({
+                                where: { contactId: existingContact.contactId },
+                                data: {
+                                    firstName: member.firstName,
+                                    lastName: member.lastName,
+                                    phoneNumber: member.phoneNumber,
+                                    walletAddress: member.tempWalletAddress || existingContact.walletAddress,
+                                    relationship: member.relationship,  // ← AJOUTÉ
+                                },
+                            });
+                            console.log(`🔄 Contact mis à jour pour ${member.firstName} ${member.lastName}`);
+                        }
+                    }
+                }
                 const membersData = await Promise.all(input.secondaryMembers.map(async (member) => {
                     let walletAddressToUse = null;
                     let tempWalletAddressToUse = member.tempWalletAddress;
@@ -249,11 +306,9 @@ export const updateDraftWill = async (
                         });
 
                         if (existingWallet) {
-                            console.log("✅ Update: wallet existe → walletAddress");
                             walletAddressToUse = member.tempWalletAddress;
                             tempWalletAddressToUse = undefined;
                         } else {
-                            console.log("❌ Update: wallet n'existe pas → tempWalletAddress");
                             walletAddressToUse = null;
                             tempWalletAddressToUse = member.tempWalletAddress;
                         }
@@ -268,6 +323,7 @@ export const updateDraftWill = async (
                         walletAddress: walletAddressToUse,  // ← Sera null si wallet n'existe pas
                         votingPower: member.votingPower || 1,
                         state: 'PENDING',
+                        relationship: member.relationship,
                         willId,
                     };
                 }));
@@ -345,4 +401,55 @@ export const deleteDraftWill = async (willId: string) => {
     return await prisma.will.delete({
         where: { willId },
     });
+};
+
+// Fonction pour synchroniser un membre avec les contacts
+const syncMemberWithContacts = async (
+    tx: Prisma.TransactionClient,
+    userId: string,
+    member: {
+        firstName: string;
+        lastName: string;
+        email: string;
+        phoneNumber?: string;
+        tempWalletAddress?: string;
+        relationship?: string;  // ← AJOUTÉ
+    }
+) => {
+    // Vérifier si un contact existe déjà avec cet email
+    const existingContact = await tx.contact.findFirst({
+        where: {
+            userId,
+            email: member.email,
+        },
+    });
+
+    if (!existingContact) {
+        // Créer un nouveau contact AVEC relationship
+        await tx.contact.create({
+            data: {
+                userId,
+                firstName: member.firstName,
+                lastName: member.lastName,
+                email: member.email,
+                phoneNumber: member.phoneNumber,
+                walletAddress: member.tempWalletAddress || '',
+                relationship: member.relationship,  // ← AJOUTÉ
+            },
+        });
+        console.log(`✅ Contact créé pour ${member.firstName} ${member.lastName} (relation: ${member.relationship || 'non spécifiée'})`);
+    } else {
+        // Mettre à jour le contact existant AVEC relationship
+        await tx.contact.update({
+            where: { contactId: existingContact.contactId },
+            data: {
+                firstName: member.firstName,
+                lastName: member.lastName,
+                phoneNumber: member.phoneNumber,
+                walletAddress: member.tempWalletAddress || existingContact.walletAddress,
+                relationship: member.relationship,  // ← AJOUTÉ (met à jour si changé)
+            },
+        });
+        console.log(`🔄 Contact mis à jour pour ${member.firstName} ${member.lastName}`);
+    }
 };

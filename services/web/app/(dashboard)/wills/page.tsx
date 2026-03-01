@@ -29,6 +29,7 @@ interface SecondaryMember {
   phoneNumber?: string;
   address: string;
   power: number;
+  relationship?: string;
 }
 
 export default function WillsPage() {
@@ -425,16 +426,23 @@ const validateDraftForm = (): { isValid: boolean; errors: string[] } => {
       errors.push(`Member ${i + 1}: Invalid email format`);
       break;
     }
-    
-    // ✅ Validation adresse wallet - OBLIGATOIRE et VALIDE
-    console.log("Vérification adresse pour membre", i + 1, ":", member.address);
+
+    if (member.phoneNumber && member.phoneNumber.trim() !== '') {
+      // Regex pour 10 chiffres (format 3-3-4)
+      const phoneRegex = /^\d{10}$/;
+      
+      if (!phoneRegex.test(member.phoneNumber)) {
+        errors.push(`Member ${i + 1}: Phone number must be 10 digits (e.g., 5141234567)`);
+        break;
+      }
+    }
+
     if (!member.address.trim()) {
       errors.push(`Member ${i + 1}: Wallet address is required`);
       break;
     } else {
       try {
         ethers.getAddress(member.address.trim());
-        console.log("✅ Adresse valide:", member.address);
       } catch (error) {
         errors.push(`Member ${i + 1}: Invalid wallet address format`);
         break;
@@ -926,14 +934,20 @@ const handleDeleteDraft = async (willId: string) => {
                             <input
                               type="text"
                               value={member.firstName}
-                              onChange={(e) => updateSecondaryMember(index, "firstName", e.target.value)}
+                              onChange={(e) => {
+                                const value = e.target.value.slice(0, 50);
+                                updateSecondaryMember(index, "firstName", value);
+                              }}
                               placeholder="First Name *"
                               className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />
                             <input
                               type="text"
                               value={member.lastName}
-                              onChange={(e) => updateSecondaryMember(index, "lastName", e.target.value)}
+                              onChange={(e) => {
+                                const value = e.target.value.slice(0, 50);
+                                updateSecondaryMember(index, "lastName", value);
+                              }}
                               placeholder="Last Name *"
                               className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />
@@ -943,15 +957,23 @@ const handleDeleteDraft = async (willId: string) => {
                             <input
                               type="email"
                               value={member.email}
-                              onChange={(e) => updateSecondaryMember(index, "email", e.target.value)}
+                              onChange={(e) => {
+                                const value = e.target.value.slice(0, 100);
+                                updateSecondaryMember(index, "email", value);
+                              }}
                               placeholder="Email *"
                               className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />
                             <input
                               type="tel"
                               value={member.phoneNumber}
-                              onChange={(e) => updateSecondaryMember(index, "phoneNumber", e.target.value)}
-                              placeholder="Phone (optional)"
+                              onChange={(e) => {
+                                // Ne garder que les chiffres
+                                const onlyNumbers = e.target.value.replace(/\D/g, '');
+                                updateSecondaryMember(index, "phoneNumber", onlyNumbers);
+                              }}
+                              placeholder="Phone (514) 123-4567"
+                              maxLength={10} // 10 chiffres sans espaces/tirets
                               className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />
                           </div>
@@ -969,9 +991,41 @@ const handleDeleteDraft = async (willId: string) => {
                               min="1"
                               max="255"
                               value={member.power}
-                              onChange={(e) => updateSecondaryMember(index, "power", parseInt(e.target.value) || 1)}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '') {
+                                  // Si l'utilisateur efface, on met la valeur par défaut 1
+                                  updateSecondaryMember(index, "power", 1);
+                                  return;
+                                }
+                                updateSecondaryMember(index, "power", parseInt(value) || 1);
+                              }}
+                              onBlur={(e) => {
+                                const value = parseInt(e.target.value);
+                                if (!isNaN(value)) {
+                                  if (value < 1) {
+                                    updateSecondaryMember(index, "power", 1);
+                                  } else if (value > 255) {
+                                    updateSecondaryMember(index, "power", 255);
+                                  }
+                                }
+                              }}
                               placeholder="Power"
                               className="w-24 px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm text-center placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                            />
+                          </div>
+                          <div className="mt-3">
+                            <input
+                              type="text"
+                              value={member.relationship || ''}
+                              onChange={(e) => {
+                                // Limiter à 30 caractères
+                                const value = e.target.value.slice(0, 30);
+                                updateSecondaryMember(index, "relationship", value);
+                              }}
+                              placeholder="Relationship (e.g., spouse, child, friend) - optional"
+                              maxLength={30}
+                              className="w-full px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />
                           </div>
                         </div>
@@ -999,23 +1053,23 @@ const handleDeleteDraft = async (willId: string) => {
                         max="154"
                         value={minSecurityPeriod}
                         onChange={(e) => {
-      const value = e.target.value;
-      // Permettre à l'utilisateur d'effacer (chaîne vide)
-      if (value === '') {
-        setMinSecurityPeriod('');
-        return;
-      }
-      // Sinon, garder la valeur numérique
-      setMinSecurityPeriod(value);
-    }}
-    onBlur={(e) => {
-      // Quand l'utilisateur quitte le champ, forcer les limites
-      const value = parseInt(e.target.value);
-      if (!isNaN(value)) {
-        if (value < 28) setMinSecurityPeriod('28');
-        else if (value > 154) setMinSecurityPeriod('154');
-      }
-    }}
+                          const value = e.target.value;
+                          // Permettre à l'utilisateur d'effacer (chaîne vide)
+                          if (value === '') {
+                            setMinSecurityPeriod('');
+                            return;
+                          }
+                          // Sinon, garder la valeur numérique
+                          setMinSecurityPeriod(value);
+                        }}
+                        onBlur={(e) => {
+                          // Quand l'utilisateur quitte le champ, forcer les limites
+                          const value = parseInt(e.target.value);
+                          if (!isNaN(value)) {
+                            if (value < 28) setMinSecurityPeriod('28');
+                            else if (value > 154) setMinSecurityPeriod('154');
+                          }
+                        }}
                         placeholder="e.g., 28"
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                       />
@@ -1030,20 +1084,20 @@ const handleDeleteDraft = async (willId: string) => {
                         max="154"
                         value={maxSecurityPeriod}
                         onChange={(e) => {
-      const value = e.target.value;
-      if (value === '') {
-        setMaxSecurityPeriod('');
-        return;
-      }
-      setMaxSecurityPeriod(value);
-    }}
-    onBlur={(e) => {
-      const value = parseInt(e.target.value);
-      if (!isNaN(value)) {
-        if (value < 28) setMaxSecurityPeriod('28');
-        else if (value > 154) setMaxSecurityPeriod('154');
-      }
-    }}
+                          const value = e.target.value;
+                          if (value === '') {
+                            setMaxSecurityPeriod('');
+                            return;
+                          }
+                          setMaxSecurityPeriod(value);
+                        }}
+                        onBlur={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (!isNaN(value)) {
+                            if (value < 28) setMaxSecurityPeriod('28');
+                            else if (value > 154) setMaxSecurityPeriod('154');
+                          }
+                        }}
                         placeholder="e.g., 154"
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                       />
@@ -1117,15 +1171,6 @@ const handleDeleteDraft = async (willId: string) => {
                       </span>
                       {will.state === 'DRAFT' && (
                       <>
-                        <button
-                          onClick={() => handleEditDraft(will)}
-                          className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-                          title="Edit draft"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </button>
                         <button
                           onClick={() => handleDeleteDraft(will.willId)}
                           className="p-1 text-[var(--text-muted)] hover:text-red-500 transition-colors"
@@ -1237,9 +1282,11 @@ const handleDeleteDraft = async (willId: string) => {
                       <button className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors">
                         View Details
                       </button>
-                      <button className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors">
-                        Manage
-                      </button>
+                      <button
+                          onClick={() => handleEditDraft(will)}
+                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+                          title="Edit draft"
+                        > Manage</button>
                     </div>
                     {will.state === 'DRAFT' && (
                     <div className="mt-4">
