@@ -39,6 +39,7 @@ interface ContactResponse {
     email: string;
     walletAddress: string;
     phoneNumber?: string | null;
+    relationship?: string | null;
 }
 
 /**
@@ -58,6 +59,7 @@ export async function getContactsByUser(userId: string): Promise<ContactResponse
         email: contact.email,
         walletAddress: contact.walletAddress,
         phoneNumber: contact.phoneNumber,
+        relationship: contact.relationship,
     }));
 }
 
@@ -71,6 +73,7 @@ export async function createContact(data: {
     email: string;
     walletAddress: string;
     phoneNumber?: string;
+    relationship?: string;
 }): Promise<ContactResponse> {
 
     if (!REGEX.EMAIL.test(data.email)) {
@@ -95,6 +98,7 @@ export async function createContact(data: {
         email: contact.email,
         walletAddress: contact.walletAddress,
         phoneNumber: contact.phoneNumber,
+        relationship: contact.relationship,
     };
 }
 
@@ -108,7 +112,8 @@ export async function updateContact(data: {
     lastName?: string;
     email?: string;
     walletAddress?: string;
-    phoneNumber?: string;
+    phoneNumber?: string | null;
+    relationship?: string | null;
 }): Promise<ContactResponse> {
     const { contactId, ...updateFields } = data;
 
@@ -139,6 +144,9 @@ export async function updateContact(data: {
         }
         updateData.phoneNumber = updateFields.phoneNumber || null;
     }
+    if (updateFields.relationship !== undefined) {
+        updateData.relationship = updateFields.relationship || null;
+    }
 
     const contact = await prisma.contact.update({
         where: { contactId },
@@ -153,6 +161,7 @@ export async function updateContact(data: {
         email: contact.email,
         walletAddress: contact.walletAddress,
         phoneNumber: contact.phoneNumber,
+        relationship: contact.relationship,
     };
 }
 

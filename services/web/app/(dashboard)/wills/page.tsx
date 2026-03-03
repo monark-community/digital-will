@@ -491,7 +491,7 @@ if (minSecurityPeriod.trim() && maxSecurityPeriod.trim() &&
   }
 }
 
-
+  console.log ("TEST1", membersWithData);
   // Vérifier les adresses en double (seulement pour celles qui sont remplies)
   const addresses = membersWithData
     .map(m => m.address.trim().toLowerCase())
@@ -516,43 +516,68 @@ const handleDeployWill = async (will: WillFromDB) => {
   setSuccessMessage(null);
   setDeployingWillId(will.willId);
 
+const trimmedFactoryAddress = factoryAddress.trim();
+  if (!trimmedFactoryAddress) {
+    setErrorMessage("Please enter a factory contract address");
+    return;
+  }
   try {
+    ethers.getAddress(trimmedFactoryAddress);
+  } catch (error) {
+    setErrorMessage("Invalid factory contract address format");
+    return;
+  }
+console.log("1");
+  try {
+    console.log("2 - Membres secondaires du will", will.secondaryMembers);
     // Préparer les membres pour la blockchain
-    const blockchainMembers = will.secondaryMembers.map(m => ({
-      address: m.walletAddress || m.tempWalletAddress || "",
-      power: m.votingPower
-    }));
-
+    const blockchainMembers = will.secondaryMembers.map(m => {
+      const address = m.walletAddress || m.tempWalletAddress;
+      if (!address) {
+        throw new Error(`Member ${m.firstName} ${m.lastName} has no wallet address`);
+      }
+      return {
+        address,
+        power: m.votingPower
+      };
+    });
+    console.log("3 - Membres triés", blockchainMembers);
     // Vérifier que tous les membres ont une adresse
     if (blockchainMembers.some(m => !m.address)) {
       throw new Error("All secondary members must have a wallet address before deployment");
     }
-
+    console.log("4 - Tous les membres ont donc une adresse.");
     // Vérifier que les adresses sont valides
     for (const member of blockchainMembers) {
       ethers.getAddress(member.address); // Vérifie le format
     }
-
+    
+    console.log ("5 - le format des adresses est bon", blockchainMembers);
     // Vérifier les adresses uniques
     const addresses = blockchainMembers.map(m => m.address.toLowerCase());
     const uniqueAddresses = new Set(addresses);
     if (addresses.length !== uniqueAddresses.size) {
       throw new Error("Duplicate secondary member addresses are not allowed");
     }
-
+    console.log("6 - les adresses sont uniques");
     // Vérifier les périodes
-    if (will.minSecurityPeriod < 0 || will.maxSecurityPeriod < 0) {
-      throw new Error("Security periods must be positive");
+    if (will.minSecurityPeriod < 28 || will.maxSecurityPeriod < 28) {
+      throw new Error("Security periods must be at least 28 days (4 weeks)");
+    }
+    if (will.minSecurityPeriod > 154 || will.maxSecurityPeriod > 154) {
+      throw new Error("Security periods must be at most 154 days (22 weeks)");
     }
     if (will.minSecurityPeriod > will.maxSecurityPeriod) {
       throw new Error("Minimum security period cannot be greater than maximum");
     }
+    console.log("7 - les périodes sont valides");
 
      // Vérifier les power (1-255)
     const invalidPower = blockchainMembers.find(m => m.power < 1 || m.power > 255);
     if (invalidPower) {
       throw new Error("Power values must be between 1 and 255");
     }
+    console.log("8 - les power sont valides");
 
     const deployedWill = await willService.deployWill(will.willId, {
       factoryAddress: config.blockchain.willFactoryAddress,
@@ -652,7 +677,7 @@ const handleDeleteDraft = async (willId: string) => {
 
   const selectedWallet = wallets?.find(w => w.walletId === selectedWalletId);
   const selectedFilterWallet = wallets?.find(w => w.walletId === selectedFilterWalletId);
-  
+ 
   // Filter wills based on selected wallet
   const displayedWills = selectedFilterWalletId === "all" 
     ? realWills 
@@ -972,7 +997,7 @@ const handleDeleteDraft = async (willId: string) => {
                                 const onlyNumbers = e.target.value.replace(/\D/g, '');
                                 updateSecondaryMember(index, "phoneNumber", onlyNumbers);
                               }}
-                              placeholder="Phone (514) 123-4567"
+                              placeholder="Phone (514) 123-4567 - Optional"
                               maxLength={10} // 10 chiffres sans espaces/tirets
                               className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />

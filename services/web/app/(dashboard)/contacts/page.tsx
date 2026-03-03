@@ -25,6 +25,7 @@ export default function ContactsPage() {
     email: "",
     phoneNumber: "",
     walletAddress: "",
+    relationship: "",
   });
 
   const [initialFormData, setInitialFormData] = useState({
@@ -33,8 +34,80 @@ export default function ContactsPage() {
     email: "",
     phoneNumber: "",
     walletAddress: "",
+    relationship: "",
   });
 
+  useEffect(() => {
+    const { errors } = validateContactForm();
+    setFormErrors(errors);
+  }, [formData]);
+
+  const [formErrors, setFormErrors] = useState<string[]>([]);
+
+  const validateContactForm = (): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    // Prénom
+    if (!formData.firstName.trim()) {
+      errors.push("First name is required");
+    } else if (formData.firstName.length > 50) {
+      errors.push("First name must be less than 50 characters");
+    }
+
+    // Nom
+    if (!formData.lastName.trim()) {
+      errors.push("Last name is required");
+    } else if (formData.lastName.length > 50) {
+      errors.push("Last name must be less than 50 characters");
+    }
+
+    // Email
+    if (!formData.email.trim()) {
+      errors.push("Email is required");
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        errors.push("Please enter a valid email address");
+      }
+    }
+
+    // Wallet Address
+    if (!formData.walletAddress.trim()) {
+      errors.push("Wallet address is required");
+    } else {
+      // Validation plus robuste avec ethers (si disponible)
+      try {
+        // Option 1: Validation simple
+        if (!formData.walletAddress.startsWith("0x") || formData.walletAddress.length !== 42) {
+          errors.push("Wallet address must start with 0x and be 42 characters long");
+        }
+        
+        // Option 2: Si ethers est disponible (recommandé)
+        // ethers.getAddress(formData.walletAddress);
+      } catch (error) {
+        errors.push("Invalid wallet address format");
+      }
+    }
+
+    // Phone (optionnel mais valide si présent)
+    if (formData.phoneNumber && formData.phoneNumber.trim() !== '') {
+      const phoneRegex = /^\d{10}$/; // 10 chiffres
+      const onlyNumbers = formData.phoneNumber.replace(/\D/g, '');
+      if (!phoneRegex.test(onlyNumbers)) {
+        errors.push("Phone number must be 10 digits");
+      }
+    }
+
+    // Relationship (optionnel mais limite)
+    if (formData.relationship && formData.relationship.length > 30) {
+      errors.push("Relationship must be less than 30 characters");
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  };
   const hasChanges = 
     formData.firstName !== initialFormData.firstName ||
     formData.lastName !== initialFormData.lastName ||
@@ -76,7 +149,8 @@ export default function ContactsPage() {
       lastName: formData.lastName,
       email: formData.email,
       walletAddress: formData.walletAddress,
-      phoneNumber: formData.phoneNumber || null,
+      phoneNumber: formData.phoneNumber || undefined,
+      relationship: formData.relationship || undefined,
     };
 
     if (editingContact) {
@@ -152,6 +226,7 @@ export default function ContactsPage() {
       email: contact.email,
       phoneNumber: contact.phoneNumber || "",
       walletAddress: contact.walletAddress,
+      relationship: contact.relationship || "",
     };
     setFormData(formValues);
     setInitialFormData(formValues);
@@ -173,6 +248,7 @@ export default function ContactsPage() {
       email: "",
       phoneNumber: "",
       walletAddress: "",
+      relationship: "",
     });
     setInitialFormData({
       firstName: "",
@@ -180,6 +256,7 @@ export default function ContactsPage() {
       email: "",
       phoneNumber: "",
       walletAddress: "",
+      relationship: "",
     });
     setErrorMessage(null);
   };
@@ -220,6 +297,7 @@ export default function ContactsPage() {
               email: "",
               phoneNumber: "",
               walletAddress: "",
+              relationship: "",
             });
             setInitialFormData({
               firstName: "",
@@ -227,6 +305,7 @@ export default function ContactsPage() {
               email: "",
               phoneNumber: "",
               walletAddress: "",
+              relationship: "",
             });
             setShowForm(true);
           }}
@@ -267,6 +346,17 @@ export default function ContactsPage() {
                 {successMessage && (
                   <div className="mb-6 px-4 py-3 bg-green-500/10 border border-green-500/50 rounded-lg text-green-500 text-sm">
                     {successMessage}
+                  </div>
+                )}
+
+                {formErrors.length > 0 && (
+                  <div className="mb-6 px-4 py-3 bg-yellow-500/10 border border-yellow-500/50 rounded-lg">
+                    <p className="text-yellow-500 text-sm font-medium mb-1">Please fix the following:</p>
+                    <ul className="list-disc list-inside text-yellow-500/80 text-xs space-y-1">
+                      {formErrors.map((error, index) => (
+                        <li key={index}>{error}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
 
@@ -369,11 +459,32 @@ export default function ContactsPage() {
                       Ethereum wallet address (starts with 0x)
                     </p>
                   </div>
+                  <div>
+                    <label 
+                      htmlFor="relationship" 
+                      className="block text-sm font-medium text-[var(--text-primary)] mb-2"
+                    >
+                      Relationship <span className="text-[var(--text-muted-alt)] text-xs">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="relationship"
+                      name="relationship"
+                      value={formData.relationship || ""}
+                      onChange={handleInputChange}
+                      maxLength={30}  // ← Limite à 30 caractères
+                      placeholder="e.g., spouse, child, friend, colleague"
+                      className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    <p className="mt-1 text-xs text-[var(--text-muted-alt)]">
+                      Optional: How is this person related to you? (max 30 characters)
+                    </p>
+                  </div>
 
                   <div className="flex gap-4 pt-4">
                     <button
                       type="submit"
-                      disabled={isAdding || isUpdating || (editingContact !== null && !hasChanges)}
+                      disabled={isAdding || isUpdating || (editingContact !== null && !hasChanges) || !validateContactForm().isValid}
                       className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
                     >
                       {isAdding || isUpdating
@@ -480,6 +591,9 @@ export default function ContactsPage() {
                         Phone
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-[var(--text-primary)]">
+                        Relationship
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-[var(--text-primary)]">
                         Wallet Address
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-[var(--text-primary)]">
@@ -501,6 +615,9 @@ export default function ContactsPage() {
                         </td>
                         <td className="py-4 px-4 text-[var(--text-secondary)]">
                           {contact.phoneNumber || "-"}
+                        </td>
+                        <td className="py-4 px-4 text-[var(--text-secondary)]">
+                          {contact.relationship || "-"}
                         </td>
                         <td className="py-4 px-4 text-[var(--text-secondary)] font-mono text-xs">
                           <div className="flex items-center gap-2">

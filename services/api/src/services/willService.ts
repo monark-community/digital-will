@@ -420,7 +420,7 @@ const syncMemberWithContacts = async (
     const existingContact = await tx.contact.findFirst({
         where: {
             userId,
-            email: member.email,
+            walletAddress: member.tempWalletAddress,
         },
     });
 
