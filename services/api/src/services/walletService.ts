@@ -45,6 +45,7 @@ export async function addWallet(data: {
   verifyWalletSignature(message, signature, walletAddress);
 
   validateMessageTimestamp(message);
+    console.log("BELEK 9", walletAddress);
 
   const existingWallet = await prisma.wallet.findUnique({
     where: { address: walletAddress.toLowerCase() },
@@ -56,6 +57,8 @@ export async function addWallet(data: {
     }
     throw new ConflictError('This wallet is already linked to another account');
   }
+
+      console.log("BELEK 10", walletAddress);
 
   const wallet = await prisma.wallet.create({
     data: {

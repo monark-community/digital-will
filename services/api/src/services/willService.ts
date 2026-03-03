@@ -366,10 +366,12 @@ export const deployWill = async (
 
     // Au déploiement, on peut valider que les membres ont les infos nécessaires
     for (const member of will.secondaryMembers) {
-        if (!member.walletAddress) {
+        const hasAddress = member.walletAddress || member.tempWalletAddress;
+        if (!hasAddress) {
             throw new BadRequestError(`Member ${member.email} has no wallet address`);
         }
     }
+    console.log("All members have wallet addresses");
 
     // Mettre à jour avec les infos blockchain
     return await prisma.will.update({

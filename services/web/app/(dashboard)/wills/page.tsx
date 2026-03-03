@@ -381,6 +381,60 @@ useEffect(() => {
       setIsCreating(false);
     }
   }; */
+const validateForDeployment = (will: WillFromDB): { isValid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+
+  // 1. Vérifier qu'il y a au moins 2 membres
+  if (will.secondaryMembers.length < 2) {
+    errors.push("At least 2 secondary members are required for deployment");
+  }
+
+  // 2. Vérifier que chaque membre a une adresse wallet valide
+  for (let i = 0; i < will.secondaryMembers.length; i++) {
+    const member = will.secondaryMembers[i];
+    const address = member.walletAddress || member.tempWalletAddress;
+    
+    if (!address) {
+      errors.push(`Member ${i + 1} (${member.firstName} ${member.lastName}) has no wallet address`);
+    } else {
+      try {
+        ethers.getAddress(address);
+      } catch (error) {
+        errors.push(`Member ${i + 1} (${member.firstName} ${member.lastName}) has invalid wallet address format`);
+      }
+    }
+
+    // 3. Vérifier le voting power (1-255)
+    if (member.votingPower < 1 || member.votingPower > 255) {
+      errors.push(`Member ${i + 1} (${member.firstName} ${member.lastName}) has invalid voting power (must be 1-255)`);
+    }
+  }
+
+  // 4. Vérifier les adresses uniques
+  const addresses = will.secondaryMembers
+    .map(m => (m.walletAddress || m.tempWalletAddress)?.toLowerCase())
+    .filter(Boolean);
+  const uniqueAddresses = new Set(addresses);
+  if (addresses.length !== uniqueAddresses.size) {
+    errors.push("Duplicate member addresses are not allowed");
+  }
+
+  // 5. Vérifier les périodes de sécurité
+  if (will.minSecurityPeriod < 28 || will.maxSecurityPeriod < 28) {
+    errors.push("Security periods must be at least 28 days (4 weeks)");
+  }
+  if (will.minSecurityPeriod > 154 || will.maxSecurityPeriod > 154) {
+    errors.push("Security periods cannot exceed 154 days (22 weeks)");
+  }
+  if (will.minSecurityPeriod > will.maxSecurityPeriod) {
+    errors.push("Minimum security period cannot be greater than maximum");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
 
 const validateDraftForm = (): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
@@ -508,6 +562,13 @@ if (minSecurityPeriod.trim() && maxSecurityPeriod.trim() &&
 };
 
 const handleDeployWill = async (will: WillFromDB) => {
+  // La validation est déjà faite par validateForDeployment
+  const deploymentValidation = validateForDeployment(will);
+  if (!deploymentValidation.isValid) {
+    setErrorMessage(deploymentValidation.errors[0]);
+    return;
+  }
+
   if (!window.confirm("Are you sure you want to deploy this will to the blockchain?")) {
     return;
   }
@@ -516,68 +577,11 @@ const handleDeployWill = async (will: WillFromDB) => {
   setSuccessMessage(null);
   setDeployingWillId(will.willId);
 
-const trimmedFactoryAddress = factoryAddress.trim();
-  if (!trimmedFactoryAddress) {
-    setErrorMessage("Please enter a factory contract address");
-    return;
-  }
   try {
-    ethers.getAddress(trimmedFactoryAddress);
-  } catch (error) {
-    setErrorMessage("Invalid factory contract address format");
-    return;
-  }
-console.log("1");
-  try {
-    console.log("2 - Membres secondaires du will", will.secondaryMembers);
-    // Préparer les membres pour la blockchain
-    const blockchainMembers = will.secondaryMembers.map(m => {
-      const address = m.walletAddress || m.tempWalletAddress;
-      if (!address) {
-        throw new Error(`Member ${m.firstName} ${m.lastName} has no wallet address`);
-      }
-      return {
-        address,
-        power: m.votingPower
-      };
-    });
-    console.log("3 - Membres triés", blockchainMembers);
-    // Vérifier que tous les membres ont une adresse
-    if (blockchainMembers.some(m => !m.address)) {
-      throw new Error("All secondary members must have a wallet address before deployment");
-    }
-    console.log("4 - Tous les membres ont donc une adresse.");
-    // Vérifier que les adresses sont valides
-    for (const member of blockchainMembers) {
-      ethers.getAddress(member.address); // Vérifie le format
-    }
-    
-    console.log ("5 - le format des adresses est bon", blockchainMembers);
-    // Vérifier les adresses uniques
-    const addresses = blockchainMembers.map(m => m.address.toLowerCase());
-    const uniqueAddresses = new Set(addresses);
-    if (addresses.length !== uniqueAddresses.size) {
-      throw new Error("Duplicate secondary member addresses are not allowed");
-    }
-    console.log("6 - les adresses sont uniques");
-    // Vérifier les périodes
-    if (will.minSecurityPeriod < 28 || will.maxSecurityPeriod < 28) {
-      throw new Error("Security periods must be at least 28 days (4 weeks)");
-    }
-    if (will.minSecurityPeriod > 154 || will.maxSecurityPeriod > 154) {
-      throw new Error("Security periods must be at most 154 days (22 weeks)");
-    }
-    if (will.minSecurityPeriod > will.maxSecurityPeriod) {
-      throw new Error("Minimum security period cannot be greater than maximum");
-    }
-    console.log("7 - les périodes sont valides");
-
-     // Vérifier les power (1-255)
-    const invalidPower = blockchainMembers.find(m => m.power < 1 || m.power > 255);
-    if (invalidPower) {
-      throw new Error("Power values must be between 1 and 255");
-    }
-    console.log("8 - les power sont valides");
+    const blockchainMembers = will.secondaryMembers.map(m => ({
+      address: m.walletAddress || m.tempWalletAddress || "",
+      power: m.votingPower
+    }));
 
     const deployedWill = await willService.deployWill(will.willId, {
       factoryAddress: config.blockchain.willFactoryAddress,
@@ -591,13 +595,10 @@ console.log("1");
       `Will deployed successfully! Contract: ${deployedWill.contractAddressInBlockchain}`
     );
 
-    setTimeout(() => {
-      window.location.reload();
-    }, 2000);
+    setTimeout(() => window.location.reload(), 2000);
   } catch (error: any) {
     console.error("Deployment error:", error);
     
-    // Gestion des erreurs MetaMask
     if (
       error.code === 4001 || 
       error.code === "ACTION_REJECTED" || 
@@ -1315,23 +1316,44 @@ const handleDeleteDraft = async (willId: string) => {
                     </div>
                     {will.state === 'DRAFT' && (
                     <div className="mt-4">
-                      <button
-                        onClick={() => handleDeployWill(will)}
-                        disabled={deployingWillId === will.willId}
-                        className="w-full px-3 py-2 text-sm font-medium rounded-lg bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        {deployingWillId === will.willId ? (
+                      {(() => {
+                        const deploymentValidation = validateForDeployment(will);
+                        return (
                           <>
-                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                            Deploying...
+                            {!deploymentValidation.isValid && (
+                              <div className="mb-3 p-2 bg-yellow-500/10 border border-yellow-500/50 rounded-lg">
+                                <p className="text-yellow-500 text-xs font-medium mb-1">Cannot deploy until fixed:</p>
+                                <ul className="list-disc list-inside text-yellow-500/80 text-xs space-y-0.5">
+                                  {deploymentValidation.errors.map((error, idx) => (
+                                    <li key={idx}>{error}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            <button
+                              onClick={() => handleDeployWill(will)}
+                              disabled={deployingWillId === will.willId || !deploymentValidation.isValid}
+                              className={`w-full px-3 py-2 text-sm font-medium rounded-lg flex items-center justify-center gap-2 ${
+                                deploymentValidation.isValid
+                                  ? 'bg-[var(--accent)] hover:opacity-90 text-white'
+                                  : 'bg-gray-400 cursor-not-allowed text-gray-200'
+                              } transition-opacity disabled:opacity-50`}
+                            >
+                              {deployingWillId === will.willId ? (
+                                <>
+                                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                  </svg>
+                                  Deploying...
+                                </>
+                              ) : (
+                                "Deploy to Blockchain"
+                              )}
+                            </button>
                           </>
-                        ) : (
-                          "Deploy to Blockchain"
-                        )}
-                      </button>
+                        );
+                      })()}
                     </div>
                   )}
                   </div>
