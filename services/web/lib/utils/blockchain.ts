@@ -123,3 +123,27 @@ export async function cancelWillContract(contractAddress: string): Promise<strin
   await tx.wait();
   return tx.hash;
 }
+
+/**
+ * Update a deployed will's SM list and/or security period via MetaMask.
+ * Pass empty arrays for lists that are unchanged.
+ * Pass { minSecurityPeriod: 0n, maxSecurityPeriod: 0n } to skip period update.
+ */
+export async function updateWillContract(
+  contractAddress: string,
+  updatedSmList: Array<{ smAddress: string; votePower: number }>,
+  addedSmList: Array<{ smAddress: string; votePower: number }>,
+  deletedSmList: string[],
+  securityPeriodConfig: { minSecurityPeriod: bigint; maxSecurityPeriod: bigint }
+): Promise<string> {
+  const signer = await getSigner();
+  const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
+  const tx = await contract.updateWill(
+    updatedSmList.map(m => [ethers.getAddress(m.smAddress), m.votePower]),
+    addedSmList.map(m => [ethers.getAddress(m.smAddress), m.votePower]),
+    deletedSmList.map(a => ethers.getAddress(a)),
+    [securityPeriodConfig.minSecurityPeriod, securityPeriodConfig.maxSecurityPeriod]
+  );
+  await tx.wait();
+  return tx.hash;
+}

@@ -424,6 +424,103 @@ export const deleteDraftWill = async (willId: string) => {
     });
 };
 
+export const updateDeployedWillInDB = async (
+    willId: string,
+    input: {
+        updatedMembers?: Array<{
+            secondaryMemberId: string;
+            firstName?: string;
+            lastName?: string;
+            email?: string;
+            relationship?: string;
+            walletAddress?: string;
+            votingPower?: number;
+        }>;
+        addedMembers?: Array<{
+            walletAddress: string;
+            votingPower: number;
+        }>;
+        deletedMemberIds?: string[];
+        minSecurityPeriod?: number;
+        maxSecurityPeriod?: number;
+    }
+) => {
+    const existingWill = await prisma.will.findUnique({ where: { willId } });
+    if (!existingWill) throw new NotFoundError('Will not found');
+    if (existingWill.state === WillState.DRAFT) throw new BadRequestError('Use the draft update endpoint for draft wills');
+    if (existingWill.state === WillState.CANCELED || existingWill.state === WillState.EXECUTED)
+        throw new BadRequestError('Cannot update a canceled or executed will');
+
+    return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        if (input.minSecurityPeriod !== undefined || input.maxSecurityPeriod !== undefined) {
+            await tx.will.update({
+                where: { willId },
+                data: {
+                    ...(input.minSecurityPeriod !== undefined && { minSecurityPeriod: input.minSecurityPeriod }),
+                    ...(input.maxSecurityPeriod !== undefined && { maxSecurityPeriod: input.maxSecurityPeriod }),
+                },
+            });
+        }
+
+        if (input.updatedMembers?.length) {
+            for (const m of input.updatedMembers) {
+                let walletAddress: string | null = null;
+                let tempWalletAddress: string | null | undefined = undefined;
+                if (m.walletAddress) {
+                    const existing = await tx.wallet.findUnique({ where: { address: m.walletAddress } });
+                    if (existing) {
+                        walletAddress = m.walletAddress;
+                        tempWalletAddress = null;
+                    } else {
+                        walletAddress = null;
+                        tempWalletAddress = m.walletAddress;
+                    }
+                }
+                await tx.secondaryMember.update({
+                    where: { secondaryMemberId: m.secondaryMemberId },
+                    data: {
+                        ...(m.firstName !== undefined && { firstName: m.firstName }),
+                        ...(m.lastName !== undefined && { lastName: m.lastName }),
+                        ...(m.email !== undefined && { email: m.email }),
+                        ...(m.relationship !== undefined && { relationship: m.relationship }),
+                        ...(m.walletAddress !== undefined && { walletAddress, tempWalletAddress }),
+                        ...(m.votingPower !== undefined && { votingPower: m.votingPower }),
+                    },
+                });
+            }
+        }
+
+        if (input.deletedMemberIds?.length) {
+            await tx.secondaryMember.deleteMany({
+                where: { secondaryMemberId: { in: input.deletedMemberIds } },
+            });
+        }
+
+        if (input.addedMembers?.length) {
+            for (const m of input.addedMembers) {
+                const existing = await tx.wallet.findUnique({ where: { address: m.walletAddress } });
+                await tx.secondaryMember.create({
+                    data: {
+                        firstName: '',
+                        lastName: '',
+                        email: '',
+                        walletAddress: existing ? m.walletAddress : null,
+                        tempWalletAddress: existing ? null : m.walletAddress,
+                        votingPower: m.votingPower,
+                        state: 'PENDING',
+                        willId,
+                    },
+                });
+            }
+        }
+
+        return await tx.will.findUnique({
+            where: { willId },
+            include: { secondaryMembers: true },
+        });
+    });
+};
+
 // Fonction pour synchroniser un membre avec les contacts
 const syncMemberWithContacts = async (
     tx: Prisma.TransactionClient,

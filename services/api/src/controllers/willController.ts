@@ -200,3 +200,32 @@ export const handleDeleteDraft = async (
     next(error);
   }
 };
+
+export const handleUpdateDeployedWill = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { willId } = req.params;
+    if (!willId) throw new BadRequestError('Will ID is required');
+
+    const { updatedMembers, addedMembers, deletedMemberIds, minSecurityPeriod, maxSecurityPeriod } = req.body;
+
+    const will = await willService.updateDeployedWillInDB(willId, {
+      updatedMembers,
+      addedMembers,
+      deletedMemberIds,
+      minSecurityPeriod,
+      maxSecurityPeriod,
+    });
+
+    res.json({
+      success: true,
+      data: will,
+      message: 'Will members updated successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};

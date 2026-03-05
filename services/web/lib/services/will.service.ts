@@ -335,6 +335,29 @@ console.log("14 - Transaction envoyée, hash :", tx.hash);
       throw new Error("Failed to delete draft will: " + (error.response?.data?.message || error.message));
     }
   }
+
+  /**
+   * Update members and/or security periods of a deployed (INACTIVE/ACTIVE) will in the DB.
+   * Call AFTER the blockchain updateWill tx succeeds (or alone if only names changed).
+   */
+  async updateDeployedWillMembers(willId: string, params: {
+    updatedMembers?: Array<{ secondaryMemberId: string; firstName?: string; lastName?: string; email?: string; relationship?: string; walletAddress?: string; votingPower?: number; }>;
+    addedMembers?: Array<{ walletAddress: string; votingPower: number; }>;
+    deletedMemberIds?: string[];
+    minSecurityPeriod?: number;
+    maxSecurityPeriod?: number;
+  }): Promise<WillFromDB> {
+    try {
+      const response = await apiClient.put<{ success: boolean; data: WillFromDB }>(
+        API_ROUTES.WILLS.UPDATE_MEMBERS(willId),
+        params
+      );
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error updating deployed will members:", error);
+      throw new Error("Failed to update will: " + (error.response?.data?.message || error.message));
+    }
+  }
 }
 
 export const willService = new WillService();

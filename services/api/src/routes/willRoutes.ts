@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { handleGetWills, handleCreateDraft, handleUpdateDraft, handleDeployWill, handleDeleteDraft, handleCancelWillOnChain } from "../controllers/willController";
+import { handleGetWills, handleCreateDraft, handleUpdateDraft, handleDeployWill, handleDeleteDraft, handleCancelWillOnChain, handleUpdateDeployedWill } from "../controllers/willController";
 import { verifyToken } from "../middlewares/authMiddleware";
 
 const router = Router();
@@ -47,5 +47,12 @@ router.delete("/draft/:willId", handleDeleteDraft);
  * @access  Private
  */
 router.post("/:willId/cancel", handleCancelWillOnChain);
+
+/**
+ * @route   PUT /wills/:willId/members
+ * @desc    Update members of a deployed (INACTIVE/ACTIVE) will
+ * @access  Private
+ */
+router.put("/:willId/members", handleUpdateDeployedWill);
 
 export default router;
