@@ -9,6 +9,20 @@ import { config } from "@/lib/config";
 import { ethers } from "ethers";
 import { getContractBalance, fundWillContract, withdrawWillContract, cancelWillContract } from "@/lib/utils/blockchain";
 
+function getMetaMaskErrorMessage(err: any): string | null {
+  if (
+    err?.code === 4001 ||
+    err?.code === "ACTION_REJECTED" ||
+    err?.reason === "rejected" ||
+    err?.message?.includes("user rejected") ||
+    err?.message?.includes("User denied") ||
+    err?.message?.includes("ethers-user-denied")
+  ) {
+    return "Transaction cancelled. You rejected the request in MetaMask.";
+  }
+  return null;
+}
+
 // Chain ID to name mapping
 const CHAIN_NAMES: Record<number, string> = {
   1: "Ethereum Mainnet",
@@ -285,7 +299,7 @@ useEffect(() => {
       setFundModal(null);
       setFundAmount("");
     } catch (err: any) {
-      setFundError(err.message ?? "Transaction failed.");
+      setFundError(getMetaMaskErrorMessage(err) ?? err.message ?? "Transaction failed.");
     } finally {
       setIsFunding(false);
     }
@@ -313,7 +327,7 @@ useEffect(() => {
       setWithdrawModal(null);
       setWithdrawAmount("");
     } catch (err: any) {
-      setWithdrawError(err.message ?? "Transaction failed.");
+      setWithdrawError(getMetaMaskErrorMessage(err) ?? err.message ?? "Transaction failed.");
     } finally {
       setIsWithdrawing(false);
     }
@@ -333,7 +347,7 @@ useEffect(() => {
       ));
       setCancelModal(null);
     } catch (err: any) {
-      setCancelError(err.message ?? "Transaction failed.");
+      setCancelError(getMetaMaskErrorMessage(err) ?? err.message ?? "Transaction failed.");
     } finally {
       setIsCanceling(false);
     }
@@ -791,18 +805,7 @@ const handleConfirmDeploy = async (fundEth?: string) => {
     setTimeout(() => window.location.reload(), 2000);
   } catch (error: any) {
     console.error("Deployment error:", error);
-
-    if (
-      error.code === 4001 ||
-      error.code === "ACTION_REJECTED" ||
-      error.reason === "rejected" ||
-      error.message?.includes("user rejected") ||
-      error.message?.includes("User denied")
-    ) {
-      setErrorMessage("Transaction cancelled. You rejected the transaction in MetaMask.");
-    } else {
-      setErrorMessage(error.message || "Failed to deploy will");
-    }
+    setErrorMessage(getMetaMaskErrorMessage(error) ?? error.message ?? "Failed to deploy will.");
   } finally {
     setDeployingWillId(null);
   }
