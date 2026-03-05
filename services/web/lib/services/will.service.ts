@@ -62,6 +62,7 @@ export interface WillFromDB {
     tempWalletAddress?: string | null;
     votingPower: number;
     state: 'PENDING' | 'VALIDATED' | 'DECLARED_DEATH';
+    relationship?: string | null;
   }>;
 }
 

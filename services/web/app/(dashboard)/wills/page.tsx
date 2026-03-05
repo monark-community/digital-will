@@ -1192,12 +1192,14 @@ const handleDeleteDraft = async (willId: string) => {
                         <h3 className="font-semibold text-[var(--text-primary)] mb-1">Will Contract</h3>
                         <p className="text-xs text-[var(--text-muted-alt)] font-mono">{will.contractAddressInBlockchain}</p>
                       </div>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-500">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
-                        Deployed
-                      </span>
+                      {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-500">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                          </svg>
+                          Deployed
+                        </span>
+                      )}
                       {will.state === 'DRAFT' && (
                       <>
                         <button
@@ -1271,6 +1273,14 @@ const handleDeleteDraft = async (willId: string) => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                   </svg>
                                   {member.phoneNumber}
+                                </div>
+                              )}
+                              {member.relationship && (
+                                <div className="flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                  </svg>
+                                  <span>{member.relationship}</span>
                                 </div>
                               )}
                               {(() => {
