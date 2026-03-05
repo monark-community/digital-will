@@ -386,6 +386,24 @@ export const deployWill = async (
     });
 };
 
+export const cancelWillOnChain = async (willId: string) => {
+    const will = await prisma.will.findUnique({ where: { willId } });
+
+    if (!will) throw new NotFoundError('Will not found');
+    if (will.state === WillState.DRAFT) throw new BadRequestError('Will is already a draft');
+    if (will.state === WillState.EXECUTED) throw new BadRequestError('Cannot revert an executed will');
+
+    return await prisma.will.update({
+        where: { willId },
+        data: {
+            state: WillState.DRAFT,
+            contractAddressInBlockchain: null,
+            chainId: null,
+        },
+        include: { secondaryMembers: true },
+    });
+};
+
 // 4. Supprimer un brouillon (optionnel, pour plus tard)
 export const deleteDraftWill = async (willId: string) => {
     const will = await prisma.will.findUnique({

@@ -289,6 +289,22 @@ console.log("14 - Transaction envoyée, hash :", tx.hash);
   }
   
   /**
+   * Revert a canceled on-chain will back to DRAFT in the DB
+   */
+  async cancelWill(willId: string): Promise<WillFromDB> {
+    try {
+      const response = await apiClient.post<{
+        success: boolean;
+        data: WillFromDB;
+      }>(API_ROUTES.WILLS.CANCEL(willId));
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error canceling will:", error);
+      throw new Error("Failed to cancel will: " + (error.response?.data?.message || error.message));
+    }
+  }
+
+  /**
    * Delete a draft will
    */
   async deleteDraftWill(willId: string): Promise<void> {

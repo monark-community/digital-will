@@ -7,7 +7,7 @@ import { willService, type SecondaryMemberInput, type WillFromDB } from "@/lib/s
 import type { Contact } from "@/lib/types";
 import { config } from "@/lib/config";
 import { ethers } from "ethers";
-import { getContractBalance, fundWillContract, withdrawWillContract } from "@/lib/utils/blockchain";
+import { getContractBalance, fundWillContract, withdrawWillContract, cancelWillContract } from "@/lib/utils/blockchain";
 
 // Chain ID to name mapping
 const CHAIN_NAMES: Record<number, string> = {
@@ -70,6 +70,9 @@ export default function WillsPage() {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [cancelModal, setCancelModal] = useState<{ willId: string; contractAddress: string } | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [isCanceling, setIsCanceling] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -237,6 +240,26 @@ useEffect(() => {
       setWithdrawError(err.message ?? "Transaction failed.");
     } finally {
       setIsWithdrawing(false);
+    }
+  };
+
+  const handleCancelWill = async () => {
+    if (!cancelModal) return;
+    setCancelError(null);
+    setIsCanceling(true);
+    try {
+      await cancelWillContract(cancelModal.contractAddress);
+      await willService.cancelWill(cancelModal.willId);
+      setRealWills(prev => prev.map(w =>
+        w.willId === cancelModal.willId
+          ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null }
+          : w
+      ));
+      setCancelModal(null);
+    } catch (err: any) {
+      setCancelError(err.message ?? "Transaction failed.");
+    } finally {
+      setIsCanceling(false);
     }
   };
 
@@ -1262,7 +1285,7 @@ const handleDeleteDraft = async (willId: string) => {
                   <div key={will.willId} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="font-semibold text-[var(--text-primary)] mb-1">Will Contract</h3>
+                        <h3 className="font-semibold text-[var(--text-primary)] mb-1">Will Draft</h3>
                         <p className="text-xs text-[var(--text-muted-alt)] font-mono">{will.contractAddressInBlockchain}</p>
                       </div>
                       {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (
@@ -1442,6 +1465,14 @@ const handleDeleteDraft = async (willId: string) => {
                           className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
                           title="Edit draft"
                         > Manage</button>
+                      {will.state !== 'DRAFT' && will.state !== 'CANCELED' && will.state !== 'EXECUTED' && will.contractAddressInBlockchain && (
+                        <button
+                          onClick={() => { setCancelModal({ willId: will.willId, contractAddress: will.contractAddressInBlockchain! }); setCancelError(null); }}
+                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
+                          Cancel Will
+                        </button>
+                      )}
                     </div>
                     {will.state === 'DRAFT' && (
                     <div className="mt-4">
@@ -1584,6 +1615,50 @@ const handleDeleteDraft = async (willId: string) => {
                 {isWithdrawing ? (
                   <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Sending...</>
                 ) : 'Confirm & Withdraw'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {cancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-red-500/15 flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Cancel Will</h2>
+                <p className="text-xs text-[var(--text-muted-alt)]">This action is irreversible</p>
+              </div>
+            </div>
+            <p className="text-sm text-[var(--text-muted-alt)] mb-1">
+              The will contract will be permanently canceled. Any ETH held in the contract will be automatically returned to your wallet.
+            </p>
+            <p className="text-xs text-[var(--text-muted-alt)] font-mono break-all mb-5 mt-3 opacity-60">{cancelModal.contractAddress}</p>
+
+            {cancelError && (
+              <p className="text-red-400 text-xs mb-4">{cancelError}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setCancelModal(null); setCancelError(null); }}
+                disabled={isCanceling}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Keep Will
+              </button>
+              <button
+                onClick={handleCancelWill}
+                disabled={isCanceling}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isCanceling ? (
+                  <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Canceling...</>
+                ) : 'Yes, Cancel Will'}
               </button>
             </div>
           </div>

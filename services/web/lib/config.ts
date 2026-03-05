@@ -39,6 +39,7 @@ export const API_ROUTES = {
     BASE: "/api/wills",
     DRAFT: "/api/wills/draft",
     DEPLOY: (willId: string) => `/api/wills/${willId}/deploy`,
+    CANCEL: (willId: string) => `/api/wills/${willId}/cancel`,
     BY_WALLET: (walletAddress: string) => `/api/wills/${walletAddress}`,
   },
 } as const;

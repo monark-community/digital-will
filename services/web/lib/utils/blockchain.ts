@@ -110,3 +110,16 @@ export async function withdrawWillContract(
   await tx.wait();
   return tx.hash;
 }
+
+/**
+ * Cancel a will contract by calling cancelWill() via MetaMask.
+ * The contract will auto-withdraw all ETH back to the PM.
+ * Returns the transaction hash on success.
+ */
+export async function cancelWillContract(contractAddress: string): Promise<string> {
+  const signer = await getSigner();
+  const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
+  const tx = await contract.cancelWill();
+  await tx.wait();
+  return tx.hash;
+}

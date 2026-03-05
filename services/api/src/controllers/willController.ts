@@ -156,6 +156,27 @@ console.log ("Deploying will with params dans controller:", { willId, contractAd
   }
 };
 
+export const handleCancelWillOnChain = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { willId } = req.params;
+    if (!willId) throw new BadRequestError('Will ID is required');
+
+    const will = await willService.cancelWillOnChain(willId);
+
+    res.json({
+      success: true,
+      data: will,
+      message: 'Will reverted to draft successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // 4. Supprimer un brouillon
 export const handleDeleteDraft = async (
   req: Request,

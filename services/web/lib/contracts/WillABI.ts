@@ -19,4 +19,11 @@ export const WILL_ABI = [
     "stateMutability": "nonpayable",
     "type": "function"
   },
+  {
+    "inputs": [],
+    "name": "cancelWill",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
 ] as const;
