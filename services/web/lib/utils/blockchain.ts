@@ -84,3 +84,29 @@ export async function fundWillContract(
   await tx.wait();
   return tx.hash;
 }
+
+/**
+ * Withdraw ETH from a will contract by calling withdraw(amount) via MetaMask.
+ * Returns the transaction hash on success.
+ * Throws if the requested amount exceeds the contract balance.
+ */
+export async function withdrawWillContract(
+  contractAddress: string,
+  amountEth: string
+): Promise<string> {
+  const provider = getProvider();
+  const amountWei = ethers.parseEther(amountEth);
+
+  const contractBalance = await provider.getBalance(contractAddress);
+  if (contractBalance < amountWei) {
+    throw new Error(
+      `Insufficient contract balance. Contract holds ${parseFloat(ethers.formatEther(contractBalance)).toFixed(4)} ETH.`
+    );
+  }
+
+  const signer = await getSigner();
+  const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
+  const tx = await contract.withdraw(amountWei);
+  await tx.wait();
+  return tx.hash;
+}

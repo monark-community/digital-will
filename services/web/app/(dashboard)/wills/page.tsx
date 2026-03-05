@@ -7,7 +7,7 @@ import { willService, type SecondaryMemberInput, type WillFromDB } from "@/lib/s
 import type { Contact } from "@/lib/types";
 import { config } from "@/lib/config";
 import { ethers } from "ethers";
-import { getContractBalance, fundWillContract } from "@/lib/utils/blockchain";
+import { getContractBalance, fundWillContract, withdrawWillContract } from "@/lib/utils/blockchain";
 
 // Chain ID to name mapping
 const CHAIN_NAMES: Record<number, string> = {
@@ -66,6 +66,10 @@ export default function WillsPage() {
   const [fundAmount, setFundAmount] = useState("");
   const [fundError, setFundError] = useState<string | null>(null);
   const [isFunding, setIsFunding] = useState(false);
+  const [withdrawModal, setWithdrawModal] = useState<{ willId: string; contractAddress: string } | null>(null);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -212,6 +216,27 @@ useEffect(() => {
       setFundError(err.message ?? "Transaction failed.");
     } finally {
       setIsFunding(false);
+    }
+  };
+
+  const handleWithdrawWill = async () => {
+    if (!withdrawModal) return;
+    const amount = withdrawAmount.trim();
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      setWithdrawError("Please enter a valid amount greater than 0.");
+      return;
+    }
+    setWithdrawError(null);
+    setIsWithdrawing(true);
+    try {
+      await withdrawWillContract(withdrawModal.contractAddress, amount);
+      await refreshBalance(withdrawModal.willId, withdrawModal.contractAddress);
+      setWithdrawModal(null);
+      setWithdrawAmount("");
+    } catch (err: any) {
+      setWithdrawError(err.message ?? "Transaction failed.");
+    } finally {
+      setIsWithdrawing(false);
     }
   };
 
@@ -1297,22 +1322,46 @@ const handleDeleteDraft = async (willId: string) => {
                         </div>
                       </div>
                       {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (
-                        <div className="mt-3 flex items-center justify-between rounded-lg border border-[var(--border-section)] bg-[var(--bg-card)] px-4 py-3">
+                        <div className="mt-3 flex items-center justify-between rounded-lg border border-[var(--border-section)] bg-[var(--bg-card)] px-4 py-2">
                           <div className="flex items-center gap-2">
                             <svg className="w-4 h-4 text-[var(--text-muted-alt)]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <span className="text-xs text-[var(--text-muted-alt)]">Contract Balance</span>
                           </div>
-                          <span className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)] font-mono">
-                            <svg className="w-5.5 h-5.5 text-[#627EEA]" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M16 2L6 16.5L16 21.5L26 16.5L16 2Z" fillOpacity="0.9" />
-                              <path d="M16 21.5L6 16.5L16 30L26 16.5L16 21.5Z" fillOpacity="0.7" />
-                            </svg>
-                            {contractBalances[will.willId] !== undefined
-                              ? `${parseFloat(contractBalances[will.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[will.willId]).toFixed(4)).toString()} ETH`
-                              : '...'}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)] font-mono">
+                              <svg className="w-5.5 h-5.5 text-[#627EEA]" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M16 2L6 16.5L16 21.5L26 16.5L16 2Z" fillOpacity="0.9" />
+                                <path d="M16 21.5L6 16.5L16 30L26 16.5L16 21.5Z" fillOpacity="0.7" />
+                              </svg>
+                              {contractBalances[will.willId] !== undefined
+                                ? `${parseFloat(contractBalances[will.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[will.willId]).toFixed(4)).toString()} ETH`
+                                : '...'}
+                            </span>
+                            <div className="flex items-center gap-1 ml-2">
+                              <button
+                                onClick={() => {
+                                  setFundModal({ willId: will.willId, contractAddress: will.contractAddressInBlockchain! });
+                                  setFundAmount("");
+                                  setFundError(null);
+                                }}
+                                className="px-2.5 py-1 text-xs font-medium rounded-md border border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                              >
+                                Fund
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setWithdrawModal({ willId: will.willId, contractAddress: will.contractAddressInBlockchain! });
+                                  setWithdrawAmount("");
+                                  setWithdrawError(null);
+                                }}
+                                className="px-2.5 py-1 text-xs font-medium rounded-md border border-orange-500/50 text-orange-400 hover:bg-orange-500/10 transition-colors"
+                              >
+                                Withdraw
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1393,18 +1442,6 @@ const handleDeleteDraft = async (willId: string) => {
                           className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
                           title="Edit draft"
                         > Manage</button>
-                      {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (
-                        <button
-                          onClick={() => {
-                            setFundModal({ willId: will.willId, contractAddress: will.contractAddressInBlockchain! });
-                            setFundAmount("");
-                            setFundError(null);
-                          }}
-                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
-                        >
-                          Fund
-                        </button>
-                      )}
                     </div>
                     {will.state === 'DRAFT' && (
                     <div className="mt-4">
@@ -1496,6 +1533,57 @@ const handleDeleteDraft = async (willId: string) => {
                 {isFunding ? (
                   <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Sending...</>
                 ) : 'Confirm & Send'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {withdrawModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1">Withdraw Funds</h2>
+            <p className="text-xs text-[var(--text-muted-alt)] font-mono break-all mb-1">{withdrawModal.contractAddress}</p>
+            {contractBalances[withdrawModal.willId] !== undefined && (
+              <p className="text-xs text-[var(--text-muted-alt)] mb-4">
+                Available: <span className="font-semibold text-[var(--text-primary)]">{parseFloat(contractBalances[withdrawModal.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[withdrawModal.willId]).toFixed(4)).toString()} ETH</span>
+              </p>
+            )}
+
+            <label className="block text-xs text-[var(--text-muted-alt)] mb-1">Amount (ETH)</label>
+            <div className="relative mb-4">
+              <input
+                type="number"
+                min="0"
+                step="any"
+                placeholder="0.01"
+                value={withdrawAmount}
+                onChange={e => { setWithdrawAmount(e.target.value); setWithdrawError(null); }}
+                className="w-full bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg px-3 py-2 pr-12 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                disabled={isWithdrawing}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted-alt)] font-mono">ETH</span>
+            </div>
+
+            {withdrawError && (
+              <p className="text-red-400 text-xs mb-4">{withdrawError}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setWithdrawModal(null); setWithdrawAmount(""); setWithdrawError(null); }}
+                disabled={isWithdrawing}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleWithdrawWill}
+                disabled={isWithdrawing}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isWithdrawing ? (
+                  <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Sending...</>
+                ) : 'Confirm & Withdraw'}
               </button>
             </div>
           </div>
