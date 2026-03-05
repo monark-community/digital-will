@@ -74,9 +74,33 @@ export default function WillsPage() {
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [isCanceling, setIsCanceling] = useState(false);
   const [deployModal, setDeployModal] = useState<WillFromDB | null>(null);
+  const [deployFundAmount, setDeployFundAmount] = useState("");
+  const [deployFundError, setDeployFundError] = useState<string | null>(null);
+  const [deployWalletBalance, setDeployWalletBalance] = useState<string | null>(null);
   const [deleteDraftModal, setDeleteDraftModal] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (!deployModal) {
+      setDeployWalletBalance(null);
+      return;
+    }
+    const fetchWalletBalance = async () => {
+      try {
+        if (typeof window !== 'undefined' && (window as any).ethereum) {
+          const provider = new ethers.BrowserProvider((window as any).ethereum);
+          const signer = await provider.getSigner();
+          const address = await signer.getAddress();
+          const balance = await provider.getBalance(address);
+          setDeployWalletBalance(ethers.formatEther(balance));
+        }
+      } catch {
+        setDeployWalletBalance(null);
+      }
+    };
+    fetchWalletBalance();
+  }, [deployModal]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -673,14 +697,29 @@ const handleDeployWill = async (will: WillFromDB) => {
   setDeployModal(will);
 };
 
-const handleConfirmDeploy = async () => {
+const handleConfirmDeploy = async (fundEth?: string) => {
   if (!deployModal) return;
+
+  if (fundEth && parseFloat(fundEth) > 0 && deployWalletBalance !== null) {
+    const gasBuffer = 0.005;
+    const requested = parseFloat(fundEth);
+    const available = parseFloat(deployWalletBalance);
+    if (available < requested + gasBuffer) {
+      setDeployFundError(
+        `Insufficient balance. You have ${available.toFixed(4)} ETH but need at least ${(requested + gasBuffer).toFixed(4)} ETH (funding + gas).`
+      );
+      return;
+    }
+  }
+
   const will = deployModal;
 
   setErrorMessage(null);
   setSuccessMessage(null);
   setDeployingWillId(will.willId);
   setDeployModal(null);
+  setDeployFundAmount("");
+  setDeployFundError(null);
 
   try {
     const blockchainMembers = will.secondaryMembers.map(m => ({
@@ -694,6 +733,7 @@ const handleConfirmDeploy = async () => {
       secondaryMembers: blockchainMembers,
       minSecurityPeriodDays: will.minSecurityPeriod,
       maxSecurityPeriodDays: will.maxSecurityPeriod,
+      initialFundEth: fundEth && parseFloat(fundEth) > 0 ? fundEth : undefined,
     });
 
     setSuccessMessage(
@@ -1695,7 +1735,7 @@ const handleConfirmDeleteDraft = async () => {
               The will contract will be deployed to the blockchain. Secondary members will be notified to validate their participation.
             </p>
 
-            <div className="rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/40 px-4 py-3 mb-5 space-y-1">
+            <div className="rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/40 px-4 py-3 mb-4 space-y-1">
               <div className="flex justify-between text-xs">
                 <span className="text-[var(--text-muted-alt)]">Security period</span>
                 <span className="text-[var(--text-primary)] font-medium">{deployModal.minSecurityPeriod}–{deployModal.maxSecurityPeriod} days</span>
@@ -1710,18 +1750,64 @@ const handleConfirmDeleteDraft = async () => {
               </div>
             </div>
 
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-[var(--text-muted-alt)] mb-1.5">
+                Fund contract now <span className="text-[var(--text-muted-alt)] font-normal">(optional)</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="0.00"
+                  value={deployFundAmount}
+                  onChange={e => { setDeployFundAmount(e.target.value); setDeployFundError(null); }}
+                  className="w-full bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg px-3 py-2 pr-12 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted-alt)] font-mono">ETH</span>
+              </div>
+              <div className="flex items-center justify-between mt-1.5">
+                {deployFundError ? (
+                  <p className="text-red-400 text-xs">{deployFundError}</p>
+                ) : (
+                  <span />
+                )}
+                {deployWalletBalance !== null && (
+                  <p className="text-xs text-[var(--text-muted-alt)] ml-auto">
+                    Balance:{" "}
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      {parseFloat(deployWalletBalance).toFixed(4)} ETH
+                    </span>
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <button
-                onClick={() => setDeployModal(null)}
-                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+                onClick={() => { setDeployModal(null); setDeployFundAmount(""); setDeployFundError(null); }}
+                className="px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={handleConfirmDeploy}
+                onClick={() => handleConfirmDeploy(undefined)}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Fund Later
+              </button>
+              <button
+                onClick={() => {
+                  const amt = parseFloat(deployFundAmount);
+                  if (deployFundAmount && (isNaN(amt) || amt <= 0)) {
+                    setDeployFundError("Enter a valid amount greater than 0.");
+                    return;
+                  }
+                  handleConfirmDeploy(deployFundAmount || undefined);
+                }}
                 className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent)] text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               >
-                Deploy Now
+                {deployFundAmount && parseFloat(deployFundAmount) > 0 ? "Deploy & Fund" : "Deploy Now"}
               </button>
             </div>
           </div>

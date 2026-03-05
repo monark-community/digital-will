@@ -97,12 +97,27 @@ class WillService {
         params.securityPeriodConfig.minSecurityPeriod,
         params.securityPeriodConfig.maxSecurityPeriod,
       ];
-console.log("13 - Juste avant la transaction");
+      const txOverrides: { value?: bigint } = {};
+      if (params.fundEth && parseFloat(params.fundEth) > 0) {
+        const amountWei = ethers.parseEther(params.fundEth);
+        const gasBuffer = ethers.parseEther("0.005");
+        const signerAddress = await signer.getAddress();
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const userBalance = await provider.getBalance(signerAddress);
+        if (userBalance < amountWei + gasBuffer) {
+          throw new Error(
+            `Insufficient balance. You have ${parseFloat(ethers.formatEther(userBalance)).toFixed(4)} ETH but need at least ${parseFloat(ethers.formatEther(amountWei + gasBuffer)).toFixed(4)} ETH (funding + gas).`
+          );
+        }
+        txOverrides.value = amountWei;
+      }
+
       // Send the transaction
       const tx = await factoryContract.createWill(
         checksummedOwner,
         smList,
-        securityConfig
+        securityConfig,
+        txOverrides
       );
 console.log("14 - Transaction envoyée, hash :", tx.hash);
       const receipt = await tx.wait();
@@ -159,6 +174,8 @@ console.log("14 - Transaction envoyée, hash :", tx.hash);
     secondaryMembers: Array<{ address: string; power: number }>;
     minSecurityPeriodDays: number;
     maxSecurityPeriodDays: number;
+    /** Optional ETH amount to send with the createWill tx (e.g. "0.5") */
+    initialFundEth?: string;
   }): Promise<WillFromDB> {
     try {
       console.log("9 - on voudra utiliser ", params.secondaryMembers);
@@ -171,7 +188,8 @@ console.log("14 - Transaction envoyée, hash :", tx.hash);
           power: m.power 
         })),
         params.minSecurityPeriodDays,
-        params.maxSecurityPeriodDays
+        params.maxSecurityPeriodDays,
+        params.initialFundEth
       );
       console.log("10 - Paramètres préparés pour la blockchain", blockchainParams);
 
@@ -205,7 +223,8 @@ console.log("14 - Transaction envoyée, hash :", tx.hash);
     ownerAddress: string,
     secondaryMembers: Array<{ address: string; power: number }>,
     minSecurityPeriodDays: number,
-    maxSecurityPeriodDays: number
+    maxSecurityPeriodDays: number,
+    fundEth?: string
   ): CreateWillParams {
     return {
       factoryAddress,
@@ -218,6 +237,7 @@ console.log("14 - Transaction envoyée, hash :", tx.hash);
         minSecurityPeriod: daysToSeconds(minSecurityPeriodDays),
         maxSecurityPeriod: daysToSeconds(maxSecurityPeriodDays),
       },
+      fundEth,
     };
   }
 

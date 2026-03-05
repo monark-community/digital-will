@@ -17,6 +17,7 @@ export interface CreateWillParams {
   owner: string;
   secondaryMembers: SMPartialInfo[];
   securityPeriodConfig: SecurityPeriodConfig;
+  fundEth?: string;
 }
 
 export interface CreateWillResult {
