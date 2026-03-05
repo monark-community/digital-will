@@ -7,6 +7,21 @@ import { willService, type SecondaryMemberInput, type WillFromDB } from "@/lib/s
 import type { Contact } from "@/lib/types";
 import { config } from "@/lib/config";
 import { ethers } from "ethers";
+import { getContractBalance, fundWillContract, withdrawWillContract, cancelWillContract, updateWillContract } from "@/lib/utils/blockchain";
+
+function getMetaMaskErrorMessage(err: any): string | null {
+  if (
+    err?.code === 4001 ||
+    err?.code === "ACTION_REJECTED" ||
+    err?.reason === "rejected" ||
+    err?.message?.includes("user rejected") ||
+    err?.message?.includes("User denied") ||
+    err?.message?.includes("ethers-user-denied")
+  ) {
+    return "Transaction cancelled. You rejected the request in MetaMask.";
+  }
+  return null;
+}
 
 // Chain ID to name mapping
 const CHAIN_NAMES: Record<number, string> = {
@@ -29,6 +44,18 @@ interface SecondaryMember {
   phoneNumber?: string;
   address: string;
   power: number;
+  relationship?: string;
+}
+
+interface EditWillMember {
+  secondaryMemberId?: string;
+  originalAddress?: string;
+  address: string;
+  power: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  relationship: string;
 }
 
 export default function WillsPage() {
@@ -42,7 +69,8 @@ export default function WillsPage() {
   const [isLoadingWills, setIsLoadingWills] = useState(false);
   const [selectedFilterWalletId, setSelectedFilterWalletId] = useState<string>("all");
   const [showFilterWalletDropdown, setShowFilterWalletDropdown] = useState(false);
-  
+  const [editingWillId, setEditingWillId] = useState<string | null>(null); // Pour la modification
+  const [deployingWillId, setDeployingWillId] = useState<string | null>(null); // Pour le déploiement
   const [factoryAddress, setFactoryAddress] = useState(config.blockchain.willFactoryAddress);
   const [selectedWalletId, setSelectedWalletId] = useState("");
   const [secondaryMembers, setSecondaryMembers] = useState<SecondaryMember[]>([
@@ -53,10 +81,90 @@ export default function WillsPage() {
   const [maxSecurityPeriod, setMaxSecurityPeriod] = useState("");
   const [showWalletDropdown, setShowWalletDropdown] = useState(false);
   const [showContactDropdown, setShowContactDropdown] = useState<number | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<string[]>([]);
+  const [contractBalances, setContractBalances] = useState<Record<string, string>>({});
+  const [fundModal, setFundModal] = useState<{ willId: string; contractAddress: string } | null>(null);
+  const [fundAmount, setFundAmount] = useState("");
+  const [fundError, setFundError] = useState<string | null>(null);
+  const [isFunding, setIsFunding] = useState(false);
+  const [fundWalletBalance, setFundWalletBalance] = useState<string | null>(null);
+  const [withdrawModal, setWithdrawModal] = useState<{ willId: string; contractAddress: string } | null>(null);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [withdrawWalletBalance, setWithdrawWalletBalance] = useState<string | null>(null);
+  const [cancelModal, setCancelModal] = useState<{ willId: string; contractAddress: string } | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [isCanceling, setIsCanceling] = useState(false);
+  const [deployModal, setDeployModal] = useState<WillFromDB | null>(null);
+  const [deployFundAmount, setDeployFundAmount] = useState("");
+  const [deployFundError, setDeployFundError] = useState<string | null>(null);
+  const [deployWalletBalance, setDeployWalletBalance] = useState<string | null>(null);
+  const [deleteDraftModal, setDeleteDraftModal] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [editWillModal, setEditWillModal] = useState<WillFromDB | null>(null);
+  const [editWillMembers, setEditWillMembers] = useState<EditWillMember[]>([]);
+  const [editWillMinPeriod, setEditWillMinPeriod] = useState("");
+  const [editWillMaxPeriod, setEditWillMaxPeriod] = useState("");
+  const [isUpdatingWill, setIsUpdatingWill] = useState(false);
+  const [editWillError, setEditWillError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!fundModal) { setFundWalletBalance(null); return; }
+    const fetch = async () => {
+      try {
+        if (typeof window !== 'undefined' && (window as any).ethereum) {
+          const provider = new ethers.BrowserProvider((window as any).ethereum);
+          const signer = await provider.getSigner();
+          const balance = await provider.getBalance(await signer.getAddress());
+          setFundWalletBalance(ethers.formatEther(balance));
+        }
+      } catch { setFundWalletBalance(null); }
+    };
+    fetch();
+  }, [fundModal]);
+
+  useEffect(() => {
+    if (!withdrawModal) { setWithdrawWalletBalance(null); return; }
+    const fetch = async () => {
+      try {
+        if (typeof window !== 'undefined' && (window as any).ethereum) {
+          const provider = new ethers.BrowserProvider((window as any).ethereum);
+          const signer = await provider.getSigner();
+          const balance = await provider.getBalance(await signer.getAddress());
+          setWithdrawWalletBalance(ethers.formatEther(balance));
+        }
+      } catch { setWithdrawWalletBalance(null); }
+    };
+    fetch();
+  }, [withdrawModal]);
+
+  useEffect(() => {
+    if (!deployModal) {
+      setDeployWalletBalance(null);
+      return;
+    }
+    const fetchWalletBalance = async () => {
+      try {
+        if (typeof window !== 'undefined' && (window as any).ethereum) {
+          const provider = new ethers.BrowserProvider((window as any).ethereum);
+          const signer = await provider.getSigner();
+          const address = await signer.getAddress();
+          const balance = await provider.getBalance(address);
+          setDeployWalletBalance(ethers.formatEther(balance));
+        }
+      } catch {
+        setDeployWalletBalance(null);
+      }
+    };
+    fetchWalletBalance();
+  }, [deployModal]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -88,6 +196,19 @@ export default function WillsPage() {
         const willsArrays = await Promise.all(allWillsPromises);
         const allWills = willsArrays.flat();
         setRealWills(allWills);
+
+        const deployedWills = allWills.filter(w => w.contractAddressInBlockchain && w.state !== 'DRAFT');
+        const balanceEntries = await Promise.all(
+          deployedWills.map(async (w) => {
+            try {
+              const balance = await getContractBalance(w.contractAddressInBlockchain!);
+              return [w.willId, balance] as [string, string];
+            } catch {
+              return [w.willId, '—'] as [string, string];
+            }
+          })
+        );
+        setContractBalances(Object.fromEntries(balanceEntries));
       } catch (error) {
         console.error("Error fetching wills:", error);
       } finally {
@@ -97,6 +218,34 @@ export default function WillsPage() {
 
     fetchWills();
   }, [wallets]);
+
+useEffect(() => {
+  const { errors } = validateDraftForm();
+  setFormErrors(errors);
+}, [selectedWalletId, secondaryMembers, minSecurityPeriod, maxSecurityPeriod]);
+// Quand le min change, ajuster le max si nécessaire
+useEffect(() => {
+  const min = parseInt(minSecurityPeriod);
+  const max = parseInt(maxSecurityPeriod);
+  
+  if (!isNaN(min) && !isNaN(max) && min > max) {
+    setMaxSecurityPeriod(min.toString());
+  }
+}, [minSecurityPeriod]);
+
+// Quand le max change, juste vérifier qu'il reste valide
+useEffect(() => {
+  const min = parseInt(minSecurityPeriod);
+  const max = parseInt(maxSecurityPeriod);
+  
+  if (!isNaN(min) && !isNaN(max) && max < min) {
+    // Option 1: Ajuster automatiquement
+    // setMinSecurityPeriod(max.toString());
+    
+    // Option 2: Laisser l'erreur être gérée par la validation
+    // (c'est ce qu'on fait déjà)
+  }
+}, [maxSecurityPeriod]);
 
   const addSecondaryMember = () => {
     setSecondaryMembers([...secondaryMembers, { 
@@ -131,10 +280,97 @@ export default function WillsPage() {
       phoneNumber: contact.phoneNumber || "",
       address: contact.walletAddress,
       power: updated[index].power,
+      relationship: contact.relationship || "",
     };
     setSecondaryMembers(updated);
     setShowContactDropdown(null);
   };
+  const refreshBalance = async (willId: string, contractAddress: string) => {
+    try {
+      const balance = await getContractBalance(contractAddress);
+      setContractBalances(prev => ({ ...prev, [willId]: balance }));
+    } catch {
+    }
+  };
+
+  const handleFundWill = async () => {
+    if (!fundModal) return;
+    const amount = fundAmount.trim();
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      setFundError("Please enter a valid amount greater than 0.");
+      return;
+    }
+    if (fundWalletBalance !== null) {
+      const gasBuffer = 0.005;
+      if (parseFloat(fundWalletBalance) < parseFloat(amount) + gasBuffer) {
+        setFundError(
+          `Insufficient balance. You have ${parseFloat(fundWalletBalance).toFixed(4)} ETH but need at least ${(parseFloat(amount) + gasBuffer).toFixed(4)} ETH (amount + gas).`
+        );
+        return;
+      }
+    }
+    setFundError(null);
+    setIsFunding(true);
+    try {
+      await fundWillContract(fundModal.contractAddress, amount);
+      await refreshBalance(fundModal.willId, fundModal.contractAddress);
+      setFundModal(null);
+      setFundAmount("");
+    } catch (err: any) {
+      setFundError(getMetaMaskErrorMessage(err) ?? err.message ?? "Transaction failed.");
+    } finally {
+      setIsFunding(false);
+    }
+  };
+
+  const handleWithdrawWill = async () => {
+    if (!withdrawModal) return;
+    const amount = withdrawAmount.trim();
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      setWithdrawError("Please enter a valid amount greater than 0.");
+      return;
+    }
+    const contractBal = contractBalances[withdrawModal.willId];
+    if (contractBal !== undefined && parseFloat(amount) > parseFloat(contractBal)) {
+      setWithdrawError(
+        `Amount exceeds contract balance (${parseFloat(contractBal).toFixed(4)} ETH).`
+      );
+      return;
+    }
+    setWithdrawError(null);
+    setIsWithdrawing(true);
+    try {
+      await withdrawWillContract(withdrawModal.contractAddress, amount);
+      await refreshBalance(withdrawModal.willId, withdrawModal.contractAddress);
+      setWithdrawModal(null);
+      setWithdrawAmount("");
+    } catch (err: any) {
+      setWithdrawError(getMetaMaskErrorMessage(err) ?? err.message ?? "Transaction failed.");
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
+
+  const handleCancelWill = async () => {
+    if (!cancelModal) return;
+    setCancelError(null);
+    setIsCanceling(true);
+    try {
+      await cancelWillContract(cancelModal.contractAddress);
+      await willService.cancelWill(cancelModal.willId);
+      setRealWills(prev => prev.map(w =>
+        w.willId === cancelModal.willId
+          ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null }
+          : w
+      ));
+      setCancelModal(null);
+    } catch (err: any) {
+      setCancelError(getMetaMaskErrorMessage(err) ?? err.message ?? "Transaction failed.");
+    } finally {
+      setIsCanceling(false);
+    }
+  };
+
   const copyToClipboard = async (address: string, identifier: string) => {
     try {
       await navigator.clipboard.writeText(address);
@@ -144,11 +380,13 @@ export default function WillsPage() {
       console.error('Failed to copy address:', err);
     }
   };
-  const handleCreateWill = async () => {
+  const handleCreateDraft = async () => {
+    const { isValid } = validateDraftForm();
+    if (!isValid) return;
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const trimmedFactoryAddress = factoryAddress.trim();
+    /* const trimmedFactoryAddress = factoryAddress.trim();
     if (!trimmedFactoryAddress) {
       setErrorMessage("Please enter a factory contract address");
       return;
@@ -159,9 +397,9 @@ export default function WillsPage() {
     } catch (error) {
       setErrorMessage("Invalid factory contract address format");
       return;
-    }
+    } */
 
-    if (!selectedWalletId) {
+    /* if (!selectedWalletId) {
       setErrorMessage("Please select a wallet");
       return;
     }
@@ -170,14 +408,64 @@ export default function WillsPage() {
     if (!selectedWallet) {
       setErrorMessage("Selected wallet not found");
       return;
-    }
+    } */
 
-    const validMembers = secondaryMembers.filter(sm => sm.address.trim() !== "");
-    if (validMembers.length < 2) {
+    const validMembers = secondaryMembers.filter(m => m.firstName.trim() || m.lastName.trim() || m.email.trim() || m.address.trim());
+    /*if (validMembers.length < 2) {
       setErrorMessage("Please add at least 2 secondary members (contract requirement)");
       return;
-    }
+    } */
 
+    setIsSavingDraft(true);
+    try{
+      if (editingWillId) {
+            // Mode édition : mettre à jour un draft existant
+            await willService.updateDraftWill(editingWillId, {
+              secondaryMembers: validMembers.map(m => ({
+                firstName: m.firstName,
+                lastName: m.lastName,
+                email: m.email,
+                phoneNumber: m.phoneNumber,
+                tempWalletAddress: m.address, // Utilisé comme tempWalletAddress en draft
+                votingPower: m.power,
+                relationship: m.relationship,
+              })),
+              minSecurityPeriod: parseInt(minSecurityPeriod) || 0,
+              maxSecurityPeriod: parseInt(maxSecurityPeriod) || 0,
+            });
+            setSuccessMessage("Draft will updated successfully!");
+          } else {
+            // Mode création : nouveau draft
+            await willService.createDraftWill({
+              walletAddress: selectedWallet.address,
+              secondaryMembers: validMembers.map(m => ({
+                firstName: m.firstName,
+                lastName: m.lastName,
+                email: m.email,
+                phoneNumber: m.phoneNumber,
+                tempWalletAddress: m.address,
+                votingPower: m.power,
+                relationship: m.relationship,
+              })),
+              minSecurityPeriod: parseInt(minSecurityPeriod) || 0,
+              maxSecurityPeriod: parseInt(maxSecurityPeriod) || 0,
+            });
+            setSuccessMessage("Draft will saved successfully!");
+          }
+
+          setTimeout(() => {
+            resetForm();
+            window.location.reload(); // Refresh to show new/updated will
+          }, 2000);
+        } catch (error: any) {
+          setErrorMessage(error.message);
+        } finally {
+          setIsSavingDraft(false);
+        }
+      };
+
+
+    /* }
     for (const member of validMembers) {
       if (!member.firstName.trim()) {
         setErrorMessage("Please provide first name for all secondary members");
@@ -250,7 +538,7 @@ export default function WillsPage() {
         maxPeriod
       );
 
-      const blockchainResult = await willService.createWill(params);
+      const blockchainResult = await willService.createWillOnBlockchain(params);
 
       try {
         const provider = new ethers.BrowserProvider((window as any).ethereum);
@@ -299,6 +587,512 @@ export default function WillsPage() {
     } finally {
       setIsCreating(false);
     }
+  }; */
+const validateForDeployment = (will: WillFromDB): { isValid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+
+  // 1. Vérifier qu'il y a au moins 2 membres
+  if (will.secondaryMembers.length < 2) {
+    errors.push("At least 2 secondary members are required for deployment");
+  }
+
+  // 2. Vérifier que chaque membre a une adresse wallet valide
+  for (let i = 0; i < will.secondaryMembers.length; i++) {
+    const member = will.secondaryMembers[i];
+    const address = member.walletAddress || member.tempWalletAddress;
+    
+    if (!address) {
+      errors.push(`Member ${i + 1} (${member.firstName} ${member.lastName}) has no wallet address`);
+    } else {
+      try {
+        ethers.getAddress(address);
+      } catch (error) {
+        errors.push(`Member ${i + 1} (${member.firstName} ${member.lastName}) has invalid wallet address format`);
+      }
+    }
+
+    // 3. Vérifier le voting power (1-255)
+    if (member.votingPower < 1 || member.votingPower > 255) {
+      errors.push(`Member ${i + 1} (${member.firstName} ${member.lastName}) has invalid voting power (must be 1-255)`);
+    }
+  }
+
+  // 4. Vérifier les adresses uniques
+  const addresses = will.secondaryMembers
+    .map(m => (m.walletAddress || m.tempWalletAddress)?.toLowerCase())
+    .filter(Boolean);
+  const uniqueAddresses = new Set(addresses);
+  if (addresses.length !== uniqueAddresses.size) {
+    errors.push("Duplicate member addresses are not allowed");
+  }
+
+  // 5. Vérifier les périodes de sécurité
+  if (will.minSecurityPeriod < 28 || will.maxSecurityPeriod < 28) {
+    errors.push("Security periods must be at least 28 days (4 weeks)");
+  }
+  if (will.minSecurityPeriod > 154 || will.maxSecurityPeriod > 154) {
+    errors.push("Security periods cannot exceed 154 days (22 weeks)");
+  }
+  if (will.minSecurityPeriod > will.maxSecurityPeriod) {
+    errors.push("Minimum security period cannot be greater than maximum");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+const validateDraftForm = (): { isValid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+
+  // Vérifier qu'un wallet est sélectionné
+  if (!selectedWalletId) {
+    errors.push("Please select a wallet");
+  }
+
+  // Filtrer les membres qui ont au moins un champ rempli
+  const membersWithData = secondaryMembers.filter(m => 
+    m.firstName.trim() || m.lastName.trim() || m.email.trim() || m.address.trim()
+  );
+
+  for (let i = 0; i < secondaryMembers.length; i++) {
+  const member = secondaryMembers[i];
+  
+  // Vérifier si AU MOINS UN champ est rempli (sauf power qui a une valeur par défaut)
+  const hasAnyField = member.firstName.trim() || member.lastName.trim() || 
+                      member.email.trim() || member.address.trim() || 
+                      member.phoneNumber?.trim();
+
+  if (hasAnyField) {
+    // Validation prénom
+    if (!member.firstName.trim()) {
+      errors.push(`Member ${i + 1}: First name is required`);
+      break;
+    }
+    
+    // Validation nom
+    if (!member.lastName.trim()) {
+      errors.push(`Member ${i + 1}: Last name is required`);
+      break;
+    }
+    
+    // Validation email
+    if (!member.email.trim()) {
+      errors.push(`Member ${i + 1}: Email is required`);
+      break;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(member.email)) {
+      errors.push(`Member ${i + 1}: Invalid email format`);
+      break;
+    }
+
+    if (member.phoneNumber && member.phoneNumber.trim() !== '') {
+      // Regex pour 10 chiffres (format 3-3-4)
+      const phoneRegex = /^\d{10}$/;
+      
+      if (!phoneRegex.test(member.phoneNumber)) {
+        errors.push(`Member ${i + 1}: Phone number must be 10 digits (e.g., 5141234567)`);
+        break;
+      }
+    }
+
+    if (!member.address.trim()) {
+      errors.push(`Member ${i + 1}: Wallet address is required`);
+      break;
+    } else {
+      try {
+        ethers.getAddress(member.address.trim());
+      } catch (error) {
+        errors.push(`Member ${i + 1}: Invalid wallet address format`);
+        break;
+      }
+    }
+    
+    // Validation power
+    if (member.power < 1 || member.power > 255) {
+      errors.push(`Member ${i + 1}: Power must be between 1 and 255`);
+      break;
+    }
+  }
+}
+
+  // Validation des périodes (si fournies)
+  const minPeriod = parseInt(minSecurityPeriod);
+  const maxPeriod = parseInt(maxSecurityPeriod);
+
+  // Vérifier que les deux sont remplis
+if (!minSecurityPeriod.trim()) {
+  errors.push("Minimum security period is required");
+} else if (isNaN(minPeriod) || minPeriod < 0) {
+  errors.push("Minimum security period must be a valid positive number");
+}
+
+if (!maxSecurityPeriod.trim()) {
+  errors.push("Maximum security period is required");
+} else if (isNaN(maxPeriod) || maxPeriod < 0) {
+  errors.push("Maximum security period must be a valid positive number");
+}
+if (minSecurityPeriod.trim() && maxSecurityPeriod.trim() && 
+    !isNaN(minPeriod) && !isNaN(maxPeriod) && 
+    minPeriod >= 0 && maxPeriod >= 0) {
+  
+  if (minPeriod > maxPeriod) {
+    errors.push("Minimum security period cannot be greater than maximum");
+  }
+  
+  // Optionnel : vérifier des plages spécifiques
+  if (minPeriod < 28) {
+    errors.push("Minimum security period must be at least 28 days (4 weeks)");
+  }
+  
+  if (maxPeriod > 154) {
+    errors.push("Maximum security period cannot exceed 154 days (22 weeks)");
+  }
+}
+
+  console.log ("TEST1", membersWithData);
+  // Vérifier les adresses en double (seulement pour celles qui sont remplies)
+  const addresses = membersWithData
+    .map(m => m.address.trim().toLowerCase())
+    .filter(addr => addr !== '');
+  const uniqueAddresses = new Set(addresses);
+  if (addresses.length !== uniqueAddresses.size) {
+    errors.push("Duplicate secondary member addresses are not allowed");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+const handleDeployWill = async (will: WillFromDB) => {
+  const deploymentValidation = validateForDeployment(will);
+  if (!deploymentValidation.isValid) {
+    setErrorMessage(deploymentValidation.errors[0]);
+    return;
+  }
+  setDeployModal(will);
+};
+
+const handleConfirmDeploy = async (fundEth?: string) => {
+  if (!deployModal) return;
+
+  if (fundEth && parseFloat(fundEth) > 0 && deployWalletBalance !== null) {
+    const gasBuffer = 0.005;
+    const requested = parseFloat(fundEth);
+    const available = parseFloat(deployWalletBalance);
+    if (available < requested + gasBuffer) {
+      setDeployFundError(
+        `Insufficient balance. You have ${available.toFixed(4)} ETH but need at least ${(requested + gasBuffer).toFixed(4)} ETH (funding + gas).`
+      );
+      return;
+    }
+  }
+
+  const will = deployModal;
+
+  setErrorMessage(null);
+  setSuccessMessage(null);
+  setDeployingWillId(will.willId);
+  setDeployModal(null);
+  setDeployFundAmount("");
+  setDeployFundError(null);
+
+  try {
+    const blockchainMembers = will.secondaryMembers.map(m => ({
+      address: m.walletAddress || m.tempWalletAddress || "",
+      power: m.votingPower
+    }));
+
+    const deployedWill = await willService.deployWill(will.willId, {
+      factoryAddress: config.blockchain.willFactoryAddress,
+      ownerAddress: will.walletAddress,
+      secondaryMembers: blockchainMembers,
+      minSecurityPeriodDays: will.minSecurityPeriod,
+      maxSecurityPeriodDays: will.maxSecurityPeriod,
+      initialFundEth: fundEth && parseFloat(fundEth) > 0 ? fundEth : undefined,
+    });
+
+    setSuccessMessage(
+      `Will deployed successfully! Contract: ${deployedWill.contractAddressInBlockchain}`
+    );
+
+    setTimeout(() => window.location.reload(), 2000);
+  } catch (error: any) {
+    console.error("Deployment error:", error);
+    setErrorMessage(getMetaMaskErrorMessage(error) ?? error.message ?? "Failed to deploy will.");
+  } finally {
+    setDeployingWillId(null);
+  }
+};
+
+const handleEditDraft = (will: WillFromDB) => {
+  // Pré-remplir le formulaire avec les données du will
+  setSelectedWalletId(wallets?.find(w => w.address === will.walletAddress)?.walletId || "");
+  setSecondaryMembers(will.secondaryMembers.map(m => ({
+    firstName: m.firstName,
+    lastName: m.lastName,
+    email: m.email,
+    phoneNumber: m.phoneNumber || "",
+    address: m.walletAddress || m.tempWalletAddress || "",
+    power: m.votingPower,
+    relationship: m.relationship || "",
+  })));
+
+  if (will.secondaryMembers.length < 2) {
+    setSecondaryMembers(prev => {
+      const newMembers = [...prev];
+      while (newMembers.length < 2) {
+        newMembers.push({ firstName: "", lastName: "", email: "", phoneNumber: "", address: "", power: 1 });
+      }
+      return newMembers;
+    });
+  }
+  setMinSecurityPeriod(will.minSecurityPeriod.toString());
+  setMaxSecurityPeriod(will.maxSecurityPeriod.toString());
+  
+  // Stocker l'ID du will en cours d'édition
+  setEditingWillId(will.willId);
+  
+  // Ouvrir le formulaire
+  setShowCreateForm(true);
+};
+const handleDeleteDraft = (willId: string) => {
+  setDeleteDraftModal(willId);
+  setDeleteError(null);
+};
+
+const handleConfirmDeleteDraft = async () => {
+  if (!deleteDraftModal) return;
+  setDeleteError(null);
+  setIsDeleting(true);
+  try {
+    await willService.deleteDraftWill(deleteDraftModal);
+    setRealWills(prev => prev.filter(w => w.willId !== deleteDraftModal));
+    setDeleteDraftModal(null);
+  } catch (error: any) {
+    setDeleteError(error.message ?? 'Failed to delete draft.');
+  } finally {
+    setIsDeleting(false);
+  }
+};
+
+  const handleOpenEditWill = (will: WillFromDB) => {
+    setEditWillMembers(
+      will.secondaryMembers.map(m => ({
+        secondaryMemberId: m.secondaryMemberId,
+        originalAddress: m.walletAddress || m.tempWalletAddress || "",
+        address: m.walletAddress || m.tempWalletAddress || "",
+        power: m.votingPower,
+        firstName: m.firstName,
+        lastName: m.lastName,
+        email: m.email,
+        relationship: m.relationship ?? "",
+      }))
+    );
+    setEditWillMinPeriod(will.minSecurityPeriod.toString());
+    setEditWillMaxPeriod(will.maxSecurityPeriod.toString());
+    setEditWillError(null);
+    setEditWillModal(will);
+  };
+
+  const computeEditWillDiffs = () => {
+    if (!editWillModal) return null;
+
+    const originalById = new Map(
+      editWillModal.secondaryMembers.map(m => [
+        m.secondaryMemberId,
+        {
+          address: (m.walletAddress || m.tempWalletAddress || "").toLowerCase(),
+          power: m.votingPower,
+          firstName: m.firstName,
+          lastName: m.lastName,
+          email: m.email,
+          relationship: m.relationship ?? "",
+        },
+      ])
+    );
+
+    const currentExisting = editWillMembers.filter(m => m.secondaryMemberId);
+    const currentSmIds = new Set(currentExisting.map(m => m.secondaryMemberId!));
+
+    const updatedSmList: Array<{ smAddress: string; votePower: number }> = [];
+    const blockchainAddedSmList: Array<{ smAddress: string; votePower: number }> = [];
+    const blockchainDeletedSmList: string[] = [];
+
+    for (const m of currentExisting) {
+      const orig = originalById.get(m.secondaryMemberId!);
+      if (!orig) continue;
+      const newAddr = m.address.trim().toLowerCase();
+      if (newAddr !== orig.address && newAddr !== "") {
+        blockchainDeletedSmList.push(orig.address);
+        blockchainAddedSmList.push({ smAddress: m.address.trim(), votePower: m.power });
+      } else if (m.power !== orig.power) {
+        updatedSmList.push({ smAddress: orig.address, votePower: m.power });
+      }
+    }
+
+    for (const [id, orig] of originalById) {
+      if (!currentSmIds.has(id)) blockchainDeletedSmList.push(orig.address);
+    }
+
+    const newMembers = editWillMembers.filter(m => !m.secondaryMemberId && m.address.trim());
+    for (const m of newMembers) {
+      blockchainAddedSmList.push({ smAddress: m.address.trim(), votePower: m.power });
+    }
+
+    const needsBlockchain = updatedSmList.length > 0 || blockchainAddedSmList.length > 0 || blockchainDeletedSmList.length > 0;
+
+    const parsedMin = parseInt(editWillMinPeriod) || 0;
+    const parsedMax = parseInt(editWillMaxPeriod) || 0;
+    const minChanged = parsedMin !== editWillModal.minSecurityPeriod;
+    const maxChanged = parsedMax !== editWillModal.maxSecurityPeriod;
+    const periodChanged = minChanged || maxChanged;
+    const periodConfig = periodChanged
+      ? {
+          minSecurityPeriod: BigInt(parsedMin * 86400),
+          maxSecurityPeriod: BigInt(parsedMax * 86400),
+        }
+      : { minSecurityPeriod: BigInt(0), maxSecurityPeriod: BigInt(0) };
+
+    const dbUpdatedMembers = currentExisting
+      .filter(m => {
+        const orig = originalById.get(m.secondaryMemberId!);
+        if (!orig) return false;
+        return (
+          m.address.trim().toLowerCase() !== orig.address ||
+          m.power !== orig.power ||
+          m.firstName !== orig.firstName ||
+          m.lastName !== orig.lastName ||
+          m.email !== orig.email ||
+          m.relationship !== orig.relationship
+        );
+      })
+      .map(m => ({
+        secondaryMemberId: m.secondaryMemberId!,
+        firstName: m.firstName,
+        lastName: m.lastName,
+        email: m.email,
+        relationship: m.relationship,
+        walletAddress: m.address.trim(),
+        votingPower: m.power,
+      }));
+
+    const dbDeletedMemberIds = [...originalById.keys()].filter(id => !currentSmIds.has(id));
+    const dbAddedMembers = newMembers.map(m => ({
+      walletAddress: m.address.trim(),
+      votingPower: m.power,
+      firstName: m.firstName,
+      lastName: m.lastName,
+      email: m.email,
+      relationship: m.relationship || undefined,
+    }));
+
+    return {
+      updatedSmList,
+      addedSmList: blockchainAddedSmList,
+      deletedSmList: blockchainDeletedSmList,
+      periodConfig,
+      periodChanged,
+      needsBlockchain,
+      dbUpdatedMembers,
+      dbDeletedMemberIds,
+      dbAddedMembers,
+      dbMinPeriod: minChanged ? parseInt(editWillMinPeriod) : undefined,
+      dbMaxPeriod: maxChanged ? parseInt(editWillMaxPeriod) : undefined,
+    };
+  };
+
+  const hasEditWillChanges = (): boolean => {
+    const diffs = computeEditWillDiffs();
+    if (!diffs) return false;
+    return (
+      diffs.needsBlockchain ||
+      diffs.periodChanged ||
+      diffs.dbUpdatedMembers.length > 0 ||
+      diffs.dbDeletedMemberIds.length > 0 ||
+      diffs.dbAddedMembers.length > 0
+    );
+  };
+
+  const validateEditWill = (): string | null => {
+    if (!editWillModal) return null;
+    const existingMembers = editWillMembers.filter(m => m.secondaryMemberId);
+    const newMembers = editWillMembers.filter(m => !m.secondaryMemberId && m.address.trim());
+    if (existingMembers.length + newMembers.length < 2)
+      return "At least 2 secondary members are required.";
+
+    for (const m of [...existingMembers, ...newMembers]) {
+      const label = m.firstName ? `"${m.firstName}"` : "A member";
+      if (!m.address.trim())
+        return `${label} is missing a wallet address.`;
+      try { ethers.getAddress(m.address.trim()); }
+      catch { return `Invalid address for ${label}: ${m.address}`; }
+      if (!m.power || m.power < 1 || m.power > 255)
+        return `Power for ${label} must be between 1 and 255.`;
+    }
+
+    const allAddresses = [...existingMembers, ...newMembers].map(m => m.address.trim().toLowerCase());
+    if (new Set(allAddresses).size !== allAddresses.length)
+      return "Duplicate addresses are not allowed.";
+
+    const minP = parseInt(editWillMinPeriod);
+    const maxP = parseInt(editWillMaxPeriod);
+    if (!editWillMinPeriod.trim() || isNaN(minP)) return "Minimum security period is required.";
+    if (minP < 28) return "Minimum security period must be at least 28 days.";
+    if (!editWillMaxPeriod.trim() || isNaN(maxP)) return "Maximum security period is required.";
+    if (maxP > 154) return "Maximum security period cannot exceed 154 days.";
+    if (minP > maxP) return "Minimum period cannot exceed maximum.";
+    return null;
+  };
+
+  const handleUpdateWill = async () => {
+    if (!editWillModal) return;
+    const validationErr = validateEditWill();
+    if (validationErr) { setEditWillError(validationErr); return; }
+    const diffs = computeEditWillDiffs();
+    if (!diffs) return;
+
+    setEditWillError(null);
+    setIsUpdatingWill(true);
+    try {
+      // 1. Blockchain — only if address/power/membership/period changed
+      if ((diffs.needsBlockchain || diffs.periodChanged) && editWillModal.contractAddressInBlockchain) {
+        await updateWillContract(
+          editWillModal.contractAddressInBlockchain,
+          diffs.updatedSmList,
+          diffs.addedSmList,
+          diffs.deletedSmList,
+          diffs.periodConfig
+        );
+      }
+      // 2. DB — update names, addresses, power, add/remove members
+      const hasDbChanges =
+        diffs.dbUpdatedMembers.length > 0 ||
+        diffs.dbDeletedMemberIds.length > 0 ||
+        diffs.dbAddedMembers.length > 0 ||
+        diffs.dbMinPeriod !== undefined ||
+        diffs.dbMaxPeriod !== undefined;
+      if (hasDbChanges) {
+        await willService.updateDeployedWillMembers(editWillModal.willId, {
+          updatedMembers: diffs.dbUpdatedMembers,
+          deletedMemberIds: diffs.dbDeletedMemberIds,
+          addedMembers: diffs.dbAddedMembers,
+          minSecurityPeriod: diffs.dbMinPeriod,
+          maxSecurityPeriod: diffs.dbMaxPeriod,
+        });
+      }
+      setEditWillModal(null);
+      setSuccessMessage("Will updated successfully.");
+      setTimeout(() => window.location.reload(), 2000);
+    } catch (err: any) {
+      setEditWillError(getMetaMaskErrorMessage(err) ?? err.message ?? "Update failed.");
+    } finally {
+      setIsUpdatingWill(false);
+    }
   };
 
   const resetForm = () => {
@@ -315,11 +1109,12 @@ export default function WillsPage() {
     setShowContactDropdown(null);
     setErrorMessage(null);
     setSuccessMessage(null);
+    setEditingWillId(null);
   };
 
   const selectedWallet = wallets?.find(w => w.walletId === selectedWalletId);
   const selectedFilterWallet = wallets?.find(w => w.walletId === selectedFilterWalletId);
-  
+ 
   // Filter wills based on selected wallet
   const displayedWills = selectedFilterWalletId === "all" 
     ? realWills 
@@ -418,7 +1213,7 @@ export default function WillsPage() {
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
               <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="sticky top-0 bg-[var(--bg-card)] border-b border-[var(--border-section)] px-6 py-4 flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)]">Create New Will</h2>
+                  <h2 className="text-2xl font-bold text-[var(--text-primary)]"> {editingWillId ? "Edit Draft Will" : "Create New Will"}</h2>
                   <button
                     onClick={resetForm}
                     className="text-[var(--text-muted-alt)] hover:text-[var(--text-primary)] transition-colors"
@@ -439,6 +1234,17 @@ export default function WillsPage() {
                   {successMessage && (
                     <div className="px-4 py-3 bg-green-500/10 border border-green-500/50 rounded-lg text-green-500 text-sm">
                       {successMessage}
+                    </div>
+                  )}
+
+                  {formErrors.length > 0 && (
+                    <div className="px-4 py-3 bg-yellow-500/10 border border-yellow-500/50 rounded-lg">
+                      <p className="text-yellow-500 text-sm font-medium mb-1">Please fix the following:</p>
+                      <ul className="list-disc list-inside text-yellow-500/80 text-xs space-y-1">
+                        {formErrors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
 
@@ -590,14 +1396,20 @@ export default function WillsPage() {
                             <input
                               type="text"
                               value={member.firstName}
-                              onChange={(e) => updateSecondaryMember(index, "firstName", e.target.value)}
+                              onChange={(e) => {
+                                const value = e.target.value.slice(0, 50);
+                                updateSecondaryMember(index, "firstName", value);
+                              }}
                               placeholder="First Name *"
                               className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />
                             <input
                               type="text"
                               value={member.lastName}
-                              onChange={(e) => updateSecondaryMember(index, "lastName", e.target.value)}
+                              onChange={(e) => {
+                                const value = e.target.value.slice(0, 50);
+                                updateSecondaryMember(index, "lastName", value);
+                              }}
                               placeholder="Last Name *"
                               className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />
@@ -607,15 +1419,23 @@ export default function WillsPage() {
                             <input
                               type="email"
                               value={member.email}
-                              onChange={(e) => updateSecondaryMember(index, "email", e.target.value)}
+                              onChange={(e) => {
+                                const value = e.target.value.slice(0, 100);
+                                updateSecondaryMember(index, "email", value);
+                              }}
                               placeholder="Email *"
                               className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />
                             <input
                               type="tel"
                               value={member.phoneNumber}
-                              onChange={(e) => updateSecondaryMember(index, "phoneNumber", e.target.value)}
-                              placeholder="Phone (optional)"
+                              onChange={(e) => {
+                                // Ne garder que les chiffres
+                                const onlyNumbers = e.target.value.replace(/\D/g, '');
+                                updateSecondaryMember(index, "phoneNumber", onlyNumbers);
+                              }}
+                              placeholder="Phone (514) 123-4567 - Optional"
+                              maxLength={10} // 10 chiffres sans espaces/tirets
                               className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />
                           </div>
@@ -633,9 +1453,41 @@ export default function WillsPage() {
                               min="1"
                               max="255"
                               value={member.power}
-                              onChange={(e) => updateSecondaryMember(index, "power", parseInt(e.target.value) || 1)}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '') {
+                                  // Si l'utilisateur efface, on met la valeur par défaut 1
+                                  updateSecondaryMember(index, "power", 1);
+                                  return;
+                                }
+                                updateSecondaryMember(index, "power", parseInt(value) || 1);
+                              }}
+                              onBlur={(e) => {
+                                const value = parseInt(e.target.value);
+                                if (!isNaN(value)) {
+                                  if (value < 1) {
+                                    updateSecondaryMember(index, "power", 1);
+                                  } else if (value > 255) {
+                                    updateSecondaryMember(index, "power", 255);
+                                  }
+                                }
+                              }}
                               placeholder="Power"
                               className="w-24 px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm text-center placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                            />
+                          </div>
+                          <div className="mt-3">
+                            <input
+                              type="text"
+                              value={member.relationship || ''}
+                              onChange={(e) => {
+                                // Limiter à 30 caractères
+                                const value = e.target.value.slice(0, 30);
+                                updateSecondaryMember(index, "relationship", value);
+                              }}
+                              placeholder="Relationship (e.g., spouse, child, friend) - optional"
+                              maxLength={30}
+                              className="w-full px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />
                           </div>
                         </div>
@@ -659,10 +1511,28 @@ export default function WillsPage() {
                       </label>
                       <input
                         type="number"
-                        min="0"
+                        min="28"
+                        max="154"
                         value={minSecurityPeriod}
-                        onChange={(e) => setMinSecurityPeriod(e.target.value)}
-                        placeholder="e.g., 7"
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Permettre à l'utilisateur d'effacer (chaîne vide)
+                          if (value === '') {
+                            setMinSecurityPeriod('');
+                            return;
+                          }
+                          // Sinon, garder la valeur numérique
+                          setMinSecurityPeriod(value);
+                        }}
+                        onBlur={(e) => {
+                          // Quand l'utilisateur quitte le champ, forcer les limites
+                          const value = parseInt(e.target.value);
+                          if (!isNaN(value)) {
+                            if (value < 28) setMinSecurityPeriod('28');
+                            else if (value > 154) setMinSecurityPeriod('154');
+                          }
+                        }}
+                        placeholder="e.g., 28"
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                       />
                     </div>
@@ -672,10 +1542,25 @@ export default function WillsPage() {
                       </label>
                       <input
                         type="number"
-                        min="0"
+                        min="28"
+                        max="154"
                         value={maxSecurityPeriod}
-                        onChange={(e) => setMaxSecurityPeriod(e.target.value)}
-                        placeholder="e.g., 365"
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === '') {
+                            setMaxSecurityPeriod('');
+                            return;
+                          }
+                          setMaxSecurityPeriod(value);
+                        }}
+                        onBlur={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (!isNaN(value)) {
+                            if (value < 28) setMaxSecurityPeriod('28');
+                            else if (value > 154) setMaxSecurityPeriod('154');
+                          }
+                        }}
+                        placeholder="e.g., 154"
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                       />
                     </div>
@@ -684,23 +1569,26 @@ export default function WillsPage() {
                   <div className="flex gap-3 pt-4">
                     <button
                       onClick={resetForm}
-                      disabled={isCreating}
+                      disabled={isSavingDraft}
                       className="flex-1 px-4 py-2 border border-[var(--border-section)] text-[var(--text-primary)] rounded-lg font-medium hover:bg-[var(--bg-section)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Cancel
                     </button>
                     <button
-                      onClick={handleCreateWill}
-                      disabled={isCreating}
+                      onClick={handleCreateDraft}
+                      disabled={isSavingDraft || formErrors.length > 0}
                       className="flex-1 px-4 py-2 bg-[var(--accent)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                      {isCreating && (
+                      {isSavingDraft && (
                         <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                       )}
-                      {isCreating ? "Creating..." : "Create Will"}
+                      {isSavingDraft 
+                        ? (editingWillId ? "Updating Draft..." : "Creating Draft...")
+                        : (editingWillId ? "Update Draft" : "Create Draft")
+                      }
                     </button>
                   </div>
                 </div>
@@ -734,15 +1622,30 @@ export default function WillsPage() {
                   <div key={will.willId} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="font-semibold text-[var(--text-primary)] mb-1">Will Contract</h3>
+                        <h3 className="font-semibold text-[var(--text-primary)] mb-1">{will.state === 'DRAFT' ? 'Will Draft' : 'Deployed Will'}</h3>
                         <p className="text-xs text-[var(--text-muted-alt)] font-mono">{will.contractAddressInBlockchain}</p>
                       </div>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-500">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
-                        Deployed
-                      </span>
+                      {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-500">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                          </svg>
+                          Deployed
+                        </span>
+                      )}
+                      {will.state === 'DRAFT' && (
+                      <>
+                        <button
+                          onClick={() => handleDeleteDraft(will.willId)}
+                          className="px-2.5 py-1 text-xs font-medium rounded-md border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-1.5"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Delete
+                        </button>
+                      </>
+                    )}
                     </div>
                     
                     <div className="grid grid-cols-1 gap-3 mb-3">
@@ -771,13 +1674,64 @@ export default function WillsPage() {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <p className="text-xs text-[var(--text-muted-alt)]">Network</p>
-                          <p className="text-sm font-medium text-[var(--text-primary)]">{getChainName(will.chainId)}</p>
+                          <p className="text-sm font-medium text-[var(--text-primary)]">{will.chainId ? getChainName(will.chainId) : 'Not deployed'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-[var(--text-muted-alt)]">Secondary Members</p>
                           <p className="text-sm font-medium text-[var(--text-primary)]">{will.secondaryMembers.length} people</p>
                         </div>
+                        <div>
+                          <p className="text-xs text-[var(--text-muted-alt)]">Min Security Period</p>
+                          <p className="text-sm font-medium text-[var(--text-primary)]">{will.minSecurityPeriod} days</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[var(--text-muted-alt)]">Max Security Period</p>
+                          <p className="text-sm font-medium text-[var(--text-primary)]">{will.maxSecurityPeriod} days</p>
+                        </div>
                       </div>
+                      {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (
+                        <div className="mt-3 flex items-center justify-between rounded-lg border border-[var(--border-section)] bg-[var(--bg-card)] px-4 py-2">
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-[var(--text-muted-alt)]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="text-xs text-[var(--text-muted-alt)]">Contract Balance</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)] font-mono">
+                              <svg className="w-5.5 h-5.5 text-[#627EEA]" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M16 2L6 16.5L16 21.5L26 16.5L16 2Z" fillOpacity="0.9" />
+                                <path d="M16 21.5L6 16.5L16 30L26 16.5L16 21.5Z" fillOpacity="0.7" />
+                              </svg>
+                              {contractBalances[will.willId] !== undefined
+                                ? `${parseFloat(contractBalances[will.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[will.willId]).toFixed(4)).toString()} ETH`
+                                : '...'}
+                            </span>
+                            <div className="flex items-center gap-1 ml-2">
+                              <button
+                                onClick={() => {
+                                  setFundModal({ willId: will.willId, contractAddress: will.contractAddressInBlockchain! });
+                                  setFundAmount("");
+                                  setFundError(null);
+                                }}
+                                className="px-2.5 py-1 text-xs font-medium rounded-md border border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                              >
+                                Fund
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setWithdrawModal({ willId: will.willId, contractAddress: will.contractAddressInBlockchain! });
+                                  setWithdrawAmount("");
+                                  setWithdrawError(null);
+                                }}
+                                className="px-2.5 py-1 text-xs font-medium rounded-md border border-orange-500/50 text-orange-400 hover:bg-orange-500/10 transition-colors"
+                              >
+                                Withdraw
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="border-t border-[var(--border-section)] pt-3 mt-3">
@@ -788,6 +1742,10 @@ export default function WillsPage() {
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-sm font-medium text-[var(--text-primary)]">
                                 {member.firstName} {member.lastName}
+                              </span>
+                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-500/15 flex items-center gap-1">
+                                <span className="text-violet-400/70">Power</span>
+                                <span className="text-violet-300 font-semibold">{member.votingPower}</span>
                               </span>
                             </div>
                             <div className="text-xs text-[var(--text-muted-alt)] space-y-1">
@@ -805,27 +1763,42 @@ export default function WillsPage() {
                                   {member.phoneNumber}
                                 </div>
                               )}
-                              <div className="flex items-start gap-2">
-                                <div className="font-mono break-all">
-                                  {member.walletAddress}
+                              {member.relationship && (
+                                <div className="flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                  </svg>
+                                  <span>{member.relationship}</span>
                                 </div>
-                                <div className="relative flex-shrink-0">
-                                  <button
-                                    onClick={() => copyToClipboard(member.walletAddress, `beneficiary-${member.secondaryMemberId}`)}
-                                    className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-                                    title="Copy address"
-                                  >
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
-                                  </button>
-                                  {copiedAddress === `beneficiary-${member.secondaryMemberId}` && (
-                                    <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
-                                      Address copied!
+                              )}
+                              {(() => {
+                              const addressToCopy = member.walletAddress || member.tempWalletAddress || '';
+                              return (
+                                <div className="flex items-start gap-2">
+                                  <div className="font-mono break-all">
+                                    {addressToCopy || 'No address'}
+                                  </div>
+                                  {addressToCopy && (
+                                    <div className="relative flex-shrink-0">
+                                      <button
+                                        onClick={() => copyToClipboard(addressToCopy, `beneficiary-${member.secondaryMemberId}`)}
+                                        className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                                        title="Copy address"
+                                      >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                      </button>
+                                      {copiedAddress === `beneficiary-${member.secondaryMemberId}` && (
+                                        <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                                          Address copied!
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
-                              </div>
+                              );
+                            })()}
                             </div>
                           </div>
                         ))}
@@ -833,13 +1806,72 @@ export default function WillsPage() {
                     </div>
 
                     <div className="flex gap-2 mt-4">
-                      <button className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors">
-                        View Details
-                      </button>
-                      <button className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors">
-                        Manage
-                      </button>
+                      {will.state === 'DRAFT' ? (
+                        <button
+                          onClick={() => handleEditDraft(will)}
+                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+                        >
+                          Edit Will
+                        </button>
+                      ) : will.state !== 'CANCELED' && will.state !== 'EXECUTED' ? (
+                        <button
+                          onClick={() => handleOpenEditWill(will)}
+                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+                        >
+                          Edit Will
+                        </button>
+                      ) : null}
+                      {will.state !== 'DRAFT' && will.state !== 'CANCELED' && will.state !== 'EXECUTED' && will.contractAddressInBlockchain && (
+                        <button
+                          onClick={() => { setCancelModal({ willId: will.willId, contractAddress: will.contractAddressInBlockchain! }); setCancelError(null); }}
+                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
+                          Cancel Will
+                        </button>
+                      )}
                     </div>
+                    {will.state === 'DRAFT' && (
+                    <div className="mt-4">
+                      {(() => {
+                        const deploymentValidation = validateForDeployment(will);
+                        return (
+                          <>
+                            {!deploymentValidation.isValid && (
+                              <div className="mb-3 p-2 bg-yellow-500/10 border border-yellow-500/50 rounded-lg">
+                                <p className="text-yellow-500 text-xs font-medium mb-1">Cannot deploy until fixed:</p>
+                                <ul className="list-disc list-inside text-yellow-500/80 text-xs space-y-0.5">
+                                  {deploymentValidation.errors.map((error, idx) => (
+                                    <li key={idx}>{error}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            <button
+                              onClick={() => handleDeployWill(will)}
+                              disabled={deployingWillId === will.willId || !deploymentValidation.isValid}
+                              className={`w-full px-3 py-2 text-sm font-medium rounded-lg flex items-center justify-center gap-2 ${
+                                deploymentValidation.isValid
+                                  ? 'bg-[var(--accent)] hover:opacity-90 text-white'
+                                  : 'bg-gray-400 cursor-not-allowed text-gray-200'
+                              } transition-opacity disabled:opacity-50`}
+                            >
+                              {deployingWillId === will.willId ? (
+                                <>
+                                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                  </svg>
+                                  Deploying...
+                                </>
+                              ) : (
+                                "Deploy to Blockchain"
+                              )}
+                            </button>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
                   </div>
                 ))
               )}
@@ -847,6 +1879,575 @@ export default function WillsPage() {
           </div>
         </div>
       </div>
+      {fundModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Fund Contract</h2>
+                <p className="text-xs text-[var(--text-muted-alt)] font-mono break-all">{fundModal.contractAddress.slice(0, 10)}…{fundModal.contractAddress.slice(-8)}</p>
+              </div>
+            </div>
+
+            <label className="block text-xs font-medium text-[var(--text-muted-alt)] mb-1.5">Amount (ETH)</label>
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                step="any"
+                placeholder="0.01"
+                value={fundAmount}
+                onChange={e => { setFundAmount(e.target.value); setFundError(null); }}
+                className="w-full bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg px-3 py-2 pr-12 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                disabled={isFunding}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted-alt)] font-mono">ETH</span>
+            </div>
+            <div className="flex items-center justify-between mt-1.5 mb-4">
+              {fundError ? (
+                <p className="text-red-400 text-xs">{fundError}</p>
+              ) : <span />}
+              {fundWalletBalance !== null && (
+                <p className="text-xs text-[var(--text-muted-alt)] ml-auto">
+                  Your wallet: <span className="font-semibold text-[var(--text-primary)]">{parseFloat(fundWalletBalance).toFixed(4)} ETH</span>
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setFundModal(null); setFundAmount(""); setFundError(null); }}
+                disabled={isFunding}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleFundWill}
+                disabled={isFunding}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isFunding ? (
+                  <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Sending...</>
+                ) : 'Confirm & Send'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {withdrawModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-orange-500/15 flex items-center justify-center">
+                <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5m-7 7l7-7 7 7" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Withdraw Funds</h2>
+                <p className="text-xs text-[var(--text-muted-alt)] font-mono break-all">{withdrawModal.contractAddress.slice(0, 10)}…{withdrawModal.contractAddress.slice(-8)}</p>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/40 px-4 py-2.5 mb-4 flex items-center justify-between">
+              <span className="text-xs text-[var(--text-muted-alt)]">Contract balance</span>
+              <span className="text-sm font-semibold text-[var(--text-primary)] font-mono">
+                {contractBalances[withdrawModal.willId] !== undefined
+                  ? `${parseFloat(contractBalances[withdrawModal.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[withdrawModal.willId]).toFixed(4)).toString()} ETH`
+                  : '—'}
+              </span>
+            </div>
+
+            <label className="block text-xs font-medium text-[var(--text-muted-alt)] mb-1.5">Amount (ETH)</label>
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                step="any"
+                placeholder="0.01"
+                value={withdrawAmount}
+                onChange={e => { setWithdrawAmount(e.target.value); setWithdrawError(null); }}
+                className="w-full bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg px-3 py-2 pr-12 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                disabled={isWithdrawing}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted-alt)] font-mono">ETH</span>
+            </div>
+            <div className="flex items-center justify-between mt-1.5 mb-4">
+              {withdrawError ? (
+                <p className="text-red-400 text-xs">{withdrawError}</p>
+              ) : <span />}
+              {withdrawWalletBalance !== null && (
+                <p className="text-xs text-[var(--text-muted-alt)] ml-auto">
+                  Your wallet: <span className="font-semibold text-[var(--text-primary)]">{parseFloat(withdrawWalletBalance).toFixed(4)} ETH</span>
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setWithdrawModal(null); setWithdrawAmount(""); setWithdrawError(null); }}
+                disabled={isWithdrawing}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleWithdrawWill}
+                disabled={isWithdrawing}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isWithdrawing ? (
+                  <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Withdrawing...</>
+                ) : 'Confirm & Withdraw'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {cancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-red-500/15 flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Cancel Will</h2>
+                <p className="text-xs text-[var(--text-muted-alt)]">This action is irreversible</p>
+              </div>
+            </div>
+            <p className="text-sm text-[var(--text-muted-alt)] mb-1">
+              The will contract will be permanently canceled. Any ETH held in the contract will be automatically returned to your wallet.
+            </p>
+            <p className="text-xs text-[var(--text-muted-alt)] font-mono break-all mb-5 mt-3 opacity-60">{cancelModal.contractAddress}</p>
+
+            {cancelError && (
+              <p className="text-red-400 text-xs mb-4">{cancelError}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setCancelModal(null); setCancelError(null); }}
+                disabled={isCanceling}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Keep Will
+              </button>
+              <button
+                onClick={handleCancelWill}
+                disabled={isCanceling}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isCanceling ? (
+                  <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Canceling...</>
+                ) : 'Yes, Cancel Will'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {deployModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-[var(--accent)]/15 flex items-center justify-center">
+                <svg className="w-5 h-5 text-[var(--accent)]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Deploy Will</h2>
+                <p className="text-xs text-[var(--text-muted-alt)]">This will trigger a MetaMask transaction</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-[var(--text-muted-alt)] mb-3">
+              The will contract will be deployed to the blockchain. Secondary members will be notified to validate their participation.
+            </p>
+
+            <div className="rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/40 px-4 py-3 mb-4 space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="text-[var(--text-muted-alt)]">Security period</span>
+                <span className="text-[var(--text-primary)] font-medium">{deployModal.minSecurityPeriod}–{deployModal.maxSecurityPeriod} days</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-[var(--text-muted-alt)]">Beneficiaries</span>
+                <span className="text-[var(--text-primary)] font-medium">{deployModal.secondaryMembers.length} people</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-[var(--text-muted-alt)]">Wallet</span>
+                <span className="text-[var(--text-primary)] font-mono">{deployModal.walletAddress.slice(0, 6)}…{deployModal.walletAddress.slice(-4)}</span>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-[var(--text-muted-alt)] mb-1.5">
+                Fund contract now <span className="text-[var(--text-muted-alt)] font-normal">(optional)</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="0.00"
+                  value={deployFundAmount}
+                  onChange={e => { setDeployFundAmount(e.target.value); setDeployFundError(null); }}
+                  className="w-full bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg px-3 py-2 pr-12 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted-alt)] font-mono">ETH</span>
+              </div>
+              <div className="flex items-center justify-between mt-1.5">
+                {deployFundError ? (
+                  <p className="text-red-400 text-xs">{deployFundError}</p>
+                ) : (
+                  <span />
+                )}
+                {deployWalletBalance !== null && (
+                  <p className="text-xs text-[var(--text-muted-alt)] ml-auto">
+                    Balance:{" "}
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      {parseFloat(deployWalletBalance).toFixed(4)} ETH
+                    </span>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setDeployModal(null); setDeployFundAmount(""); setDeployFundError(null); }}
+                className="px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleConfirmDeploy(undefined)}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Fund Later
+              </button>
+              <button
+                onClick={() => {
+                  const amt = parseFloat(deployFundAmount);
+                  if (deployFundAmount && (isNaN(amt) || amt <= 0)) {
+                    setDeployFundError("Enter a valid amount greater than 0.");
+                    return;
+                  }
+                  handleConfirmDeploy(deployFundAmount || undefined);
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent)] text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              >
+                {deployFundAmount && parseFloat(deployFundAmount) > 0 ? "Deploy & Fund" : "Deploy Now"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteDraftModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-red-500/15 flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Delete Draft</h2>
+                <p className="text-xs text-[var(--text-muted-alt)]">This action is irreversible</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-[var(--text-muted-alt)] mb-5">
+              This draft will be permanently deleted from our records. It has not been deployed to the blockchain, so no on-chain transaction is needed, but once deleted it cannot be recovered.
+            </p>
+
+            {deleteError && (
+              <p className="text-red-400 text-xs mb-4">{deleteError}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setDeleteDraftModal(null); setDeleteError(null); }}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Keep Draft
+              </button>
+              <button
+                onClick={handleConfirmDeleteDraft}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Deleting...</>
+                ) : 'Yes, Delete Draft'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editWillModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl w-full max-w-lg shadow-xl flex flex-col max-h-[90vh]">
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border-section)] flex-shrink-0">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-[var(--accent)]/15 flex items-center justify-center">
+                <svg className="w-5 h-5 text-[var(--accent)]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Edit Will</h2>
+                <p className="text-xs text-[var(--text-muted-alt)] font-mono truncate">{editWillModal.contractAddressInBlockchain}</p>
+              </div>
+              <button onClick={() => setEditWillModal(null)} className="text-[var(--text-muted-alt)] hover:text-[var(--text-primary)] transition-colors flex-shrink-0">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-6 py-4 space-y-5">
+              {editWillError && (
+                <div className="px-4 py-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-xs">
+                  {editWillError}
+                </div>
+              )}
+
+              <div>
+                <p className="text-xs font-semibold text-[var(--text-primary)] mb-2 uppercase tracking-wide">Security Period</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-[var(--text-muted-alt)] mb-1">Min (days)</label>
+                    <input
+                      type="number" min="28" max="154"
+                      value={editWillMinPeriod}
+                      onChange={e => { setEditWillMinPeriod(e.target.value); setEditWillError(null); }}
+                      className="w-full px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-[var(--text-muted-alt)] mb-1">Max (days)</label>
+                    <input
+                      type="number" min="28" max="154"
+                      value={editWillMaxPeriod}
+                      onChange={e => { setEditWillMaxPeriod(e.target.value); setEditWillError(null); }}
+                      className="w-full px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-[var(--text-primary)] mb-2 uppercase tracking-wide">Secondary Members</p>
+                <div className="space-y-2">
+                  {editWillMembers.filter(m => m.secondaryMemberId).map((m) => {
+                    const absIdx = editWillMembers.indexOf(m);
+                    const orig = editWillModal?.secondaryMembers.find(x => x.secondaryMemberId === m.secondaryMemberId);
+                    const origAddr = (orig?.walletAddress || orig?.tempWalletAddress || "").toLowerCase();
+                    const addrChanged = m.address.trim().toLowerCase() !== origAddr;
+                    return (
+                      <div key={m.secondaryMemberId} className="bg-[var(--bg-section)]/40 border border-[var(--border-section)] rounded-lg px-3 py-3 space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text" value={m.firstName} placeholder="First name"
+                            onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, firstName: e.target.value } : x)); setEditWillError(null); }}
+                            className="px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                          />
+                          <input
+                            type="text" value={m.lastName} placeholder="Last name"
+                            onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, lastName: e.target.value } : x)); setEditWillError(null); }}
+                            className="px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                          />
+                          <input
+                            type="email" value={m.email} placeholder="Email"
+                            onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, email: e.target.value } : x)); setEditWillError(null); }}
+                            className="px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                          />
+                          <input
+                            type="text" value={m.relationship} placeholder="Relationship (optional)"
+                            onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, relationship: e.target.value } : x)); setEditWillError(null); }}
+                            className="px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 relative">
+                            <input
+                              type="text" value={m.address} placeholder="0x... wallet address"
+                              onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, address: e.target.value } : x)); setEditWillError(null); }}
+                              className={`w-full px-2 py-1.5 text-xs bg-[var(--bg-section)] border rounded font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] ${addrChanged ? 'border-amber-500/70' : 'border-[var(--border-section)]'}`}
+                            />
+                            {addrChanged && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-amber-400 text-xs" title="Address changed — will require blockchain signature">⚠</span>}
+                          </div>
+                          <label className="text-xs text-[var(--text-muted-alt)] flex-shrink-0">Power</label>
+                          <input
+                            type="number" min="1" max="255" value={m.power}
+                            onChange={e => { const v = parseInt(e.target.value) || 1; setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, power: v } : x)); setEditWillError(null); }}
+                            className="w-16 px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-center text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                          />
+                          <button
+                            onClick={() => {
+                              const totalValid = editWillMembers.filter(x => x.secondaryMemberId || (!x.secondaryMemberId && x.address.trim())).length;
+                              if (totalValid <= 2) { setEditWillError("A will must have at least 2 secondary members."); return; }
+                              setEditWillMembers(prev => prev.filter((_, i) => i !== absIdx));
+                              setEditWillError(null);
+                            }}
+                            className="p-1 text-red-400 hover:bg-red-500/10 rounded transition-colors flex-shrink-0"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {editWillMembers.filter(m => !m.secondaryMemberId).length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-[var(--text-primary)] mb-2 uppercase tracking-wide">New Members</p>
+                  <div className="space-y-2">
+                    {editWillMembers.filter(m => !m.secondaryMemberId).map((m, relIdx) => {
+                      const absIdx = editWillMembers.findIndex((x, i) => !x.secondaryMemberId && editWillMembers.slice(0, i + 1).filter(y => !y.secondaryMemberId).length === relIdx + 1);
+                      return (
+                        <div key={absIdx} className="bg-[var(--bg-section)]/40 border border-[var(--accent)]/30 rounded-lg px-3 py-3 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="text" value={m.firstName} placeholder="First name"
+                              onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, firstName: e.target.value } : x)); setEditWillError(null); }}
+                              className="px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                            />
+                            <input
+                              type="text" value={m.lastName} placeholder="Last name"
+                              onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, lastName: e.target.value } : x)); setEditWillError(null); }}
+                              className="px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                            />
+                            <input
+                              type="email" value={m.email} placeholder="Email"
+                              onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, email: e.target.value } : x)); setEditWillError(null); }}
+                              className="px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                            />
+                            <input
+                              type="text" value={m.relationship} placeholder="Relationship (optional)"
+                              onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, relationship: e.target.value } : x)); setEditWillError(null); }}
+                              className="px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text" value={m.address} placeholder="0x... wallet address"
+                              onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, address: e.target.value } : x)); setEditWillError(null); }}
+                              className="flex-1 min-w-0 px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                            />
+                            <label className="text-xs text-[var(--text-muted-alt)] flex-shrink-0">Power</label>
+                            <input
+                              type="number" min="1" max="255" value={m.power}
+                              onChange={e => { const v = parseInt(e.target.value) || 1; setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, power: v } : x)); setEditWillError(null); }}
+                              className="w-16 px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-center text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                            />
+                            <button
+                              onClick={() => { setEditWillMembers(prev => prev.filter((_, i) => i !== absIdx)); setEditWillError(null); }}
+                              className="p-1 text-red-400 hover:bg-red-500/10 rounded transition-colors flex-shrink-0"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={() => setEditWillMembers(prev => [...prev, { address: "", power: 1, firstName: "", lastName: "", email: "", relationship: "" }])}
+                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-[var(--accent)] border border-[var(--accent)] rounded-lg hover:bg-[var(--accent)]/10 transition-colors w-full justify-center"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Member
+              </button>
+
+              {(() => {
+                const diffs = computeEditWillDiffs();
+                if (!diffs) return null;
+                const infoOnlyUpdates = diffs.dbUpdatedMembers.filter(dbm =>
+                  !diffs.updatedSmList.some(x => x.smAddress.toLowerCase() === dbm.walletAddress.toLowerCase()) &&
+                  !diffs.addedSmList.some(x => x.smAddress.toLowerCase() === dbm.walletAddress.toLowerCase())
+                );
+                const total = diffs.updatedSmList.length + diffs.addedSmList.length + diffs.deletedSmList.length + (diffs.periodChanged ? 1 : 0) + infoOnlyUpdates.length;
+                if (total === 0) return (
+                  <p className="text-xs text-center text-[var(--text-muted-alt)]">No changes yet.</p>
+                );
+                return (
+                  <div className="rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/40 px-4 py-3 space-y-1 text-xs">
+                    <p className="font-semibold text-[var(--text-primary)] mb-1.5">Changes ({total})</p>
+                    {infoOnlyUpdates.map(m => (
+                      <p key={m.secondaryMemberId} className="text-[var(--text-muted-alt)]">
+                        ✏️ Info updated: {m.firstName} {m.lastName}
+                      </p>
+                    ))}
+                    {diffs.updatedSmList.map(m => (
+                      <p key={m.smAddress} className="text-[var(--text-muted-alt)]">
+                        🔑 Power updated: {m.smAddress.slice(0, 8)}… → {m.votePower}
+                      </p>
+                    ))}
+                    {diffs.addedSmList.map(m => (
+                      <p key={m.smAddress} className="text-emerald-400">
+                        ✚ Added: {m.smAddress.slice(0, 8)}… (power {m.votePower})
+                      </p>
+                    ))}
+                    {diffs.deletedSmList.map(addr => (
+                      <p key={addr} className="text-red-400">
+                        ✕ Removed: {addr.slice(0, 8)}…
+                      </p>
+                    ))}
+                    {diffs.periodChanged && (
+                      <p className="text-[var(--text-muted-alt)]">
+                        📅 Security period: {editWillMinPeriod}–{editWillMaxPeriod} days
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="flex gap-2 px-6 py-4 border-t border-[var(--border-section)] flex-shrink-0">
+              <button
+                onClick={() => setEditWillModal(null)}
+                disabled={isUpdatingWill}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateWill}
+                disabled={isUpdatingWill || !hasEditWillChanges()}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isUpdatingWill ? (
+                  <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Updating…</>
+                ) : 'Update Will'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

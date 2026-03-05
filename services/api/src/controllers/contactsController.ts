@@ -20,9 +20,10 @@ export const handleGetContacts = asyncHandler(async (req: Request, res: Response
  */
 export const handleAddContact = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
-    const { firstName, lastName, email, walletAddress, phoneNumber } = req.body;
-
-    const contact = await contactsService.createContact({ userId, firstName, lastName, email, walletAddress: walletAddress?.toLowerCase(), phoneNumber });
+    const { firstName, lastName, email, walletAddress, phoneNumber, relationship } = req.body;
+    
+    console.log("BELEK 1", walletAddress);
+    const contact = await contactsService.createContact({ userId, firstName, lastName, email, walletAddress: walletAddress?.toLowerCase(), phoneNumber, relationship });
 
     res.status(StatusCodes.CREATED).json({
         success: true,
@@ -54,9 +55,11 @@ export const handleDeleteContact = asyncHandler(async (req: Request, res: Respon
 export const handleUpdateContact = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     const { contactId } = req.params;
-    const { firstName, lastName, email, walletAddress, phoneNumber } = req.body;
+    const { firstName, lastName, email, walletAddress, phoneNumber, relationship } = req.body;
+    
+    console.log("BELEK 2", walletAddress);
 
-    const contact = await contactsService.updateContact({ userId, contactId, firstName, lastName, email, walletAddress: walletAddress?.toLowerCase(), phoneNumber });
+    const contact = await contactsService.updateContact({ userId, contactId, firstName, lastName, email, walletAddress: walletAddress?.toLowerCase(), phoneNumber, relationship });
 
     res.status(StatusCodes.OK).json({
         success: true,

@@ -120,6 +120,8 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
  * Check if wallet exists and get associated user
  */
 export async function checkWalletExists(walletAddress: string): Promise<{ exists: boolean; userId?: string }> {
+      console.log("BELEK 3", walletAddress);
+
   const wallet = await prisma.wallet.findUnique({
     where: { address: walletAddress.toLowerCase() },
     include: { user: true },
@@ -147,6 +149,7 @@ export async function walletSignIn(
 
   // Validate timestamp to prevent replay attacks
   validateMessageTimestamp(message);
+    console.log("BELEK 4", walletAddress);
 
   const wallet = await prisma.wallet.findUnique({
     where: { address: walletAddress.toLowerCase() },
@@ -183,6 +186,8 @@ export async function walletSignIn(
  * Link wallet to existing user account
  */
 export async function linkWallet(userId: string, walletAddress: string): Promise<UserResponse> {
+      console.log("BELEK 5", walletAddress);
+
   const existingWallet = await prisma.user.findUnique({
     where: { walletAddress: walletAddress.toLowerCase() },
   });
@@ -190,6 +195,7 @@ export async function linkWallet(userId: string, walletAddress: string): Promise
   if (existingWallet && existingWallet.userId !== userId) {
     throw new ConflictError('This wallet is already linked to another account');
   }
+    console.log("BELEK 6", walletAddress);
 
   const user = await prisma.user.update({
     where: { userId },
@@ -226,6 +232,8 @@ export async function createAccountWithWallet(data: {
 
   validateMessageTimestamp(message);
 
+      console.log("BELEK 7", walletAddress);
+
   const existingWallet = await prisma.wallet.findUnique({
     where: { address: walletAddress.toLowerCase() },
   });
@@ -244,6 +252,8 @@ export async function createAccountWithWallet(data: {
 
   const randomPassword = Math.random().toString(36).substring(2, 15);
   const passwordHash = await bcrypt.hash(randomPassword, PASSWORD.SALT_ROUNDS);
+
+      console.log("BELEK 8", walletAddress);
 
   const user = await prisma.user.create({
     data: {
