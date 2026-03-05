@@ -752,7 +752,6 @@ if (minSecurityPeriod.trim() && maxSecurityPeriod.trim() &&
   }
 }
 
-  console.log ("TEST1", membersWithData);
   // Vérifier les adresses en double (seulement pour celles qui sont remplies)
   const addresses = membersWithData
     .map(m => m.address.trim().toLowerCase())

@@ -279,7 +279,6 @@ export const updateDraftWill = async (
                                     relationship: member.relationship,  // ← AJOUTÉ
                                 },
                             });
-                            console.log(`✅ Contact créé pour ${member.firstName} ${member.lastName}`);
                         } else {
                             // Mettre à jour le contact existant
                             await tx.contact.update({
@@ -292,7 +291,6 @@ export const updateDraftWill = async (
                                     relationship: member.relationship,  // ← AJOUTÉ
                                 },
                             });
-                            console.log(`🔄 Contact mis à jour pour ${member.firstName} ${member.lastName}`);
                         }
                     }
                 }
@@ -372,7 +370,6 @@ export const deployWill = async (
             throw new BadRequestError(`Member ${member.email} has no wallet address`);
         }
     }
-    console.log("All members have wallet addresses");
 
     // Mettre à jour avec les infos blockchain
     return await prisma.will.update({
@@ -560,7 +557,6 @@ const syncMemberWithContacts = async (
                 relationship: member.relationship,  // ← AJOUTÉ
             },
         });
-        console.log(`✅ Contact créé pour ${member.firstName} ${member.lastName} (relation: ${member.relationship || 'non spécifiée'})`);
     } else {
         // Mettre à jour le contact existant AVEC relationship
         await tx.contact.update({
@@ -573,6 +569,5 @@ const syncMemberWithContacts = async (
                 relationship: member.relationship,  // ← AJOUTÉ (met à jour si changé)
             },
         });
-        console.log(`🔄 Contact mis à jour pour ${member.firstName} ${member.lastName}`);
     }
 };

@@ -16,8 +16,6 @@ export function verifyWalletSignature(
   try {
     const recoveredAddress = verifyMessage(message, signature);
 
-        console.log("BELEK 11 double ici", expectedAddress, recoveredAddress);
-
     if (recoveredAddress.toLowerCase() !== expectedAddress.toLowerCase()) {
       throw new UnauthorizedError('Signature verification failed: Address mismatch');
     }

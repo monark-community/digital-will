@@ -75,7 +75,6 @@ class WillService {
    */
   async createWillOnBlockchain(params: CreateWillParams): Promise<CreateWillResult> {
     try {
-      console.log("12 - Création du testament sur la blockchain avec les paramètres suivants :", params);
       const signer = await getSigner();
 
       const checksummedFactoryAddress = ethers.getAddress(params.factoryAddress);
@@ -119,7 +118,6 @@ class WillService {
         securityConfig,
         txOverrides
       );
-console.log("14 - Transaction envoyée, hash :", tx.hash);
       const receipt = await tx.wait();
 
       if (!receipt) {
@@ -178,7 +176,6 @@ console.log("14 - Transaction envoyée, hash :", tx.hash);
     initialFundEth?: string;
   }): Promise<WillFromDB> {
     try {
-      console.log("9 - on voudra utiliser ", params.secondaryMembers);
       // 1. Préparer les paramètres pour la blockchain
       const blockchainParams = this.prepareCreateWillParams(
         params.factoryAddress,
@@ -191,12 +188,10 @@ console.log("14 - Transaction envoyée, hash :", tx.hash);
         params.maxSecurityPeriodDays,
         params.initialFundEth
       );
-      console.log("10 - Paramètres préparés pour la blockchain", blockchainParams);
 
       // 2. Appeler la blockchain
       const provider = new ethers.BrowserProvider((window as any).ethereum);
       const network = await provider.getNetwork();
-      console.log("11 - Réseau détecté", network);
       const blockchainResult = await this.createWillOnBlockchain(blockchainParams);
 
       // 3. Mettre à jour la DB via la route de déploiement

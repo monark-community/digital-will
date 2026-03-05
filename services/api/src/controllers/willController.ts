@@ -128,7 +128,6 @@ export const handleDeployWill = async (
   try {
     const { willId } = req.params;
     const { contractAddressInBlockchain, chainId } = req.body;
-console.log ("Deploying will with params dans controller:", { willId, contractAddressInBlockchain, chainId });
     if (!willId) {
       throw new BadRequestError('Will ID is required');
     }
