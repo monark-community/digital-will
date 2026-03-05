@@ -66,10 +66,12 @@ export default function WillsPage() {
   const [fundAmount, setFundAmount] = useState("");
   const [fundError, setFundError] = useState<string | null>(null);
   const [isFunding, setIsFunding] = useState(false);
+  const [fundWalletBalance, setFundWalletBalance] = useState<string | null>(null);
   const [withdrawModal, setWithdrawModal] = useState<{ willId: string; contractAddress: string } | null>(null);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [withdrawWalletBalance, setWithdrawWalletBalance] = useState<string | null>(null);
   const [cancelModal, setCancelModal] = useState<{ willId: string; contractAddress: string } | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [isCanceling, setIsCanceling] = useState(false);
@@ -80,6 +82,36 @@ export default function WillsPage() {
   const [deleteDraftModal, setDeleteDraftModal] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (!fundModal) { setFundWalletBalance(null); return; }
+    const fetch = async () => {
+      try {
+        if (typeof window !== 'undefined' && (window as any).ethereum) {
+          const provider = new ethers.BrowserProvider((window as any).ethereum);
+          const signer = await provider.getSigner();
+          const balance = await provider.getBalance(await signer.getAddress());
+          setFundWalletBalance(ethers.formatEther(balance));
+        }
+      } catch { setFundWalletBalance(null); }
+    };
+    fetch();
+  }, [fundModal]);
+
+  useEffect(() => {
+    if (!withdrawModal) { setWithdrawWalletBalance(null); return; }
+    const fetch = async () => {
+      try {
+        if (typeof window !== 'undefined' && (window as any).ethereum) {
+          const provider = new ethers.BrowserProvider((window as any).ethereum);
+          const signer = await provider.getSigner();
+          const balance = await provider.getBalance(await signer.getAddress());
+          setWithdrawWalletBalance(ethers.formatEther(balance));
+        }
+      } catch { setWithdrawWalletBalance(null); }
+    };
+    fetch();
+  }, [withdrawModal]);
 
   useEffect(() => {
     if (!deployModal) {
@@ -236,6 +268,15 @@ useEffect(() => {
       setFundError("Please enter a valid amount greater than 0.");
       return;
     }
+    if (fundWalletBalance !== null) {
+      const gasBuffer = 0.005;
+      if (parseFloat(fundWalletBalance) < parseFloat(amount) + gasBuffer) {
+        setFundError(
+          `Insufficient balance. You have ${parseFloat(fundWalletBalance).toFixed(4)} ETH but need at least ${(parseFloat(amount) + gasBuffer).toFixed(4)} ETH (amount + gas).`
+        );
+        return;
+      }
+    }
     setFundError(null);
     setIsFunding(true);
     try {
@@ -255,6 +296,13 @@ useEffect(() => {
     const amount = withdrawAmount.trim();
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
       setWithdrawError("Please enter a valid amount greater than 0.");
+      return;
+    }
+    const contractBal = contractBalances[withdrawModal.willId];
+    if (contractBal !== undefined && parseFloat(amount) > parseFloat(contractBal)) {
+      setWithdrawError(
+        `Amount exceeds contract balance (${parseFloat(contractBal).toFixed(4)} ETH).`
+      );
       return;
     }
     setWithdrawError(null);
@@ -1578,11 +1626,20 @@ const handleConfirmDeleteDraft = async () => {
       {fundModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1">Fund Contract</h2>
-            <p className="text-xs text-[var(--text-muted-alt)] font-mono break-all mb-4">{fundModal.contractAddress}</p>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Fund Contract</h2>
+                <p className="text-xs text-[var(--text-muted-alt)] font-mono break-all">{fundModal.contractAddress.slice(0, 10)}…{fundModal.contractAddress.slice(-8)}</p>
+              </div>
+            </div>
 
-            <label className="block text-xs text-[var(--text-muted-alt)] mb-1">Amount (ETH)</label>
-            <div className="relative mb-4">
+            <label className="block text-xs font-medium text-[var(--text-muted-alt)] mb-1.5">Amount (ETH)</label>
+            <div className="relative">
               <input
                 type="number"
                 min="0"
@@ -1595,10 +1652,16 @@ const handleConfirmDeleteDraft = async () => {
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted-alt)] font-mono">ETH</span>
             </div>
-
-            {fundError && (
-              <p className="text-red-400 text-xs mb-4">{fundError}</p>
-            )}
+            <div className="flex items-center justify-between mt-1.5 mb-4">
+              {fundError ? (
+                <p className="text-red-400 text-xs">{fundError}</p>
+              ) : <span />}
+              {fundWalletBalance !== null && (
+                <p className="text-xs text-[var(--text-muted-alt)] ml-auto">
+                  Your wallet: <span className="font-semibold text-[var(--text-primary)]">{parseFloat(fundWalletBalance).toFixed(4)} ETH</span>
+                </p>
+              )}
+            </div>
 
             <div className="flex gap-2">
               <button
@@ -1624,16 +1687,29 @@ const handleConfirmDeleteDraft = async () => {
       {withdrawModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1">Withdraw Funds</h2>
-            <p className="text-xs text-[var(--text-muted-alt)] font-mono break-all mb-1">{withdrawModal.contractAddress}</p>
-            {contractBalances[withdrawModal.willId] !== undefined && (
-              <p className="text-xs text-[var(--text-muted-alt)] mb-4">
-                Available: <span className="font-semibold text-[var(--text-primary)]">{parseFloat(contractBalances[withdrawModal.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[withdrawModal.willId]).toFixed(4)).toString()} ETH</span>
-              </p>
-            )}
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-orange-500/15 flex items-center justify-center">
+                <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5m-7 7l7-7 7 7" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Withdraw Funds</h2>
+                <p className="text-xs text-[var(--text-muted-alt)] font-mono break-all">{withdrawModal.contractAddress.slice(0, 10)}…{withdrawModal.contractAddress.slice(-8)}</p>
+              </div>
+            </div>
 
-            <label className="block text-xs text-[var(--text-muted-alt)] mb-1">Amount (ETH)</label>
-            <div className="relative mb-4">
+            <div className="rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/40 px-4 py-2.5 mb-4 flex items-center justify-between">
+              <span className="text-xs text-[var(--text-muted-alt)]">Contract balance</span>
+              <span className="text-sm font-semibold text-[var(--text-primary)] font-mono">
+                {contractBalances[withdrawModal.willId] !== undefined
+                  ? `${parseFloat(contractBalances[withdrawModal.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[withdrawModal.willId]).toFixed(4)).toString()} ETH`
+                  : '—'}
+              </span>
+            </div>
+
+            <label className="block text-xs font-medium text-[var(--text-muted-alt)] mb-1.5">Amount (ETH)</label>
+            <div className="relative">
               <input
                 type="number"
                 min="0"
@@ -1646,10 +1722,16 @@ const handleConfirmDeleteDraft = async () => {
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted-alt)] font-mono">ETH</span>
             </div>
-
-            {withdrawError && (
-              <p className="text-red-400 text-xs mb-4">{withdrawError}</p>
-            )}
+            <div className="flex items-center justify-between mt-1.5 mb-4">
+              {withdrawError ? (
+                <p className="text-red-400 text-xs">{withdrawError}</p>
+              ) : <span />}
+              {withdrawWalletBalance !== null && (
+                <p className="text-xs text-[var(--text-muted-alt)] ml-auto">
+                  Your wallet: <span className="font-semibold text-[var(--text-primary)]">{parseFloat(withdrawWalletBalance).toFixed(4)} ETH</span>
+                </p>
+              )}
+            </div>
 
             <div className="flex gap-2">
               <button
@@ -1665,7 +1747,7 @@ const handleConfirmDeleteDraft = async () => {
                 className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isWithdrawing ? (
-                  <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Sending...</>
+                  <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Withdrawing...</>
                 ) : 'Confirm & Withdraw'}
               </button>
             </div>
