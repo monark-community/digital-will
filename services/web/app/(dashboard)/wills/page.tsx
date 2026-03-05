@@ -73,6 +73,7 @@ export default function WillsPage() {
   const [cancelModal, setCancelModal] = useState<{ willId: string; contractAddress: string } | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [deployModal, setDeployModal] = useState<WillFromDB | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -661,20 +662,22 @@ if (minSecurityPeriod.trim() && maxSecurityPeriod.trim() &&
 };
 
 const handleDeployWill = async (will: WillFromDB) => {
-  // La validation est déjà faite par validateForDeployment
   const deploymentValidation = validateForDeployment(will);
   if (!deploymentValidation.isValid) {
     setErrorMessage(deploymentValidation.errors[0]);
     return;
   }
+  setDeployModal(will);
+};
 
-  if (!window.confirm("Are you sure you want to deploy this will to the blockchain?")) {
-    return;
-  }
+const handleConfirmDeploy = async () => {
+  if (!deployModal) return;
+  const will = deployModal;
 
   setErrorMessage(null);
   setSuccessMessage(null);
   setDeployingWillId(will.willId);
+  setDeployModal(null);
 
   try {
     const blockchainMembers = will.secondaryMembers.map(m => ({
@@ -697,10 +700,10 @@ const handleDeployWill = async (will: WillFromDB) => {
     setTimeout(() => window.location.reload(), 2000);
   } catch (error: any) {
     console.error("Deployment error:", error);
-    
+
     if (
-      error.code === 4001 || 
-      error.code === "ACTION_REJECTED" || 
+      error.code === 4001 ||
+      error.code === "ACTION_REJECTED" ||
       error.reason === "rejected" ||
       error.message?.includes("user rejected") ||
       error.message?.includes("User denied")
@@ -1659,6 +1662,57 @@ const handleDeleteDraft = async (willId: string) => {
                 {isCanceling ? (
                   <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Canceling...</>
                 ) : 'Yes, Cancel Will'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {deployModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-[var(--accent)]/15 flex items-center justify-center">
+                <svg className="w-5 h-5 text-[var(--accent)]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Deploy Will</h2>
+                <p className="text-xs text-[var(--text-muted-alt)]">This will trigger a MetaMask transaction</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-[var(--text-muted-alt)] mb-3">
+              The will contract will be deployed to the blockchain. Secondary members will be notified to validate their participation.
+            </p>
+
+            <div className="rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/40 px-4 py-3 mb-5 space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="text-[var(--text-muted-alt)]">Security period</span>
+                <span className="text-[var(--text-primary)] font-medium">{deployModal.minSecurityPeriod}–{deployModal.maxSecurityPeriod} days</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-[var(--text-muted-alt)]">Beneficiaries</span>
+                <span className="text-[var(--text-primary)] font-medium">{deployModal.secondaryMembers.length} people</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-[var(--text-muted-alt)]">Wallet</span>
+                <span className="text-[var(--text-primary)] font-mono">{deployModal.walletAddress.slice(0, 6)}…{deployModal.walletAddress.slice(-4)}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDeployModal(null)}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeploy}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent)] text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              >
+                Deploy Now
               </button>
             </div>
           </div>
