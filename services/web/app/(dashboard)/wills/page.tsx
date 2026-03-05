@@ -1297,7 +1297,7 @@ const handleConfirmDeleteDraft = async () => {
                   <div key={will.willId} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="font-semibold text-[var(--text-primary)] mb-1">Will Draft</h3>
+                        <h3 className="font-semibold text-[var(--text-primary)] mb-1">{will.state === 'DRAFT' ? 'Will Draft' : 'Deployed Will'}</h3>
                         <p className="text-xs text-[var(--text-muted-alt)] font-mono">{will.contractAddressInBlockchain}</p>
                       </div>
                       {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (
