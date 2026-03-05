@@ -208,7 +208,7 @@ export default function PrimaryMemberContent() {
                     {will.secondaryMembers.slice(0, 2).map((member: WillFromDB['secondaryMembers'][0]) => (
                       <div key={member.secondaryMemberId} className="text-xs">
                         <span className="text-[var(--text-primary)] font-medium">{member.FirstName} {member.LastName}</span>
-                        <p className="text-[var(--text-muted-alt)] font-mono text-[10px]">{member.walletAddress.slice(0, 10)}...{member.walletAddress.slice(-8)}</p>
+                        <p className="text-[var(--text-muted-alt)] font-mono text-[10px]">{member.walletAddress ? `${member.walletAddress.slice(0, 10)}...${member.walletAddress.slice(-8)}` : 'No wallet'}</p>
                       </div>
                     ))}
                     {will.secondaryMembers.length > 2 && (

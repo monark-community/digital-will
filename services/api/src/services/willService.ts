@@ -178,6 +178,7 @@ export const createDraftWill = async (input: {
                 walletAddress: walletAddressToUse,
                 votingPower: member.votingPower || 1,
                 state: 'PENDING',
+                relationship: member.relationship,
                 willId: will.willId,
             };
         }));

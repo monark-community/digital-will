@@ -162,6 +162,7 @@ useEffect(() => {
       phoneNumber: contact.phoneNumber || "",
       address: contact.walletAddress,
       power: updated[index].power,
+      relationship: contact.relationship || "",
     };
     setSecondaryMembers(updated);
     setShowContactDropdown(null);
@@ -223,6 +224,7 @@ useEffect(() => {
                 phoneNumber: m.phoneNumber,
                 tempWalletAddress: m.address, // Utilisé comme tempWalletAddress en draft
                 votingPower: m.power,
+                relationship: m.relationship,
               })),
               minSecurityPeriod: parseInt(minSecurityPeriod) || 0,
               maxSecurityPeriod: parseInt(maxSecurityPeriod) || 0,
@@ -239,6 +241,7 @@ useEffect(() => {
                 phoneNumber: m.phoneNumber,
                 tempWalletAddress: m.address,
                 votingPower: m.power,
+                relationship: m.relationship,
               })),
               minSecurityPeriod: parseInt(minSecurityPeriod) || 0,
               maxSecurityPeriod: parseInt(maxSecurityPeriod) || 0,
