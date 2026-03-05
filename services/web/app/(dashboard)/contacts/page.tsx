@@ -113,7 +113,8 @@ export default function ContactsPage() {
     formData.lastName !== initialFormData.lastName ||
     formData.email !== initialFormData.email ||
     formData.phoneNumber !== initialFormData.phoneNumber ||
-    formData.walletAddress !== initialFormData.walletAddress;
+    formData.walletAddress !== initialFormData.walletAddress ||
+    formData.relationship !== initialFormData.relationship;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -150,7 +151,7 @@ export default function ContactsPage() {
       email: formData.email,
       walletAddress: formData.walletAddress,
       phoneNumber: formData.phoneNumber || undefined,
-      relationship: formData.relationship || undefined,
+      relationship: formData.relationship.trim() || null,
     };
 
     if (editingContact) {
