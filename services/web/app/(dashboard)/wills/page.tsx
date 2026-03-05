@@ -1665,6 +1665,14 @@ const handleConfirmDeleteDraft = async () => {
                           <p className="text-xs text-[var(--text-muted-alt)]">Secondary Members</p>
                           <p className="text-sm font-medium text-[var(--text-primary)]">{will.secondaryMembers.length} people</p>
                         </div>
+                        <div>
+                          <p className="text-xs text-[var(--text-muted-alt)]">Min Security Period</p>
+                          <p className="text-sm font-medium text-[var(--text-primary)]">{will.minSecurityPeriod} days</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[var(--text-muted-alt)]">Max Security Period</p>
+                          <p className="text-sm font-medium text-[var(--text-primary)]">{will.maxSecurityPeriod} days</p>
+                        </div>
                       </div>
                       {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (
                         <div className="mt-3 flex items-center justify-between rounded-lg border border-[var(--border-section)] bg-[var(--bg-card)] px-4 py-2">
@@ -1719,6 +1727,10 @@ const handleConfirmDeleteDraft = async () => {
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-sm font-medium text-[var(--text-primary)]">
                                 {member.firstName} {member.lastName}
+                              </span>
+                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-500/15 flex items-center gap-1">
+                                <span className="text-violet-400/70">Power</span>
+                                <span className="text-violet-300 font-semibold">{member.votingPower}</span>
                               </span>
                             </div>
                             <div className="text-xs text-[var(--text-muted-alt)] space-y-1">
