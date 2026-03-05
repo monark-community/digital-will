@@ -74,6 +74,9 @@ export default function WillsPage() {
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [isCanceling, setIsCanceling] = useState(false);
   const [deployModal, setDeployModal] = useState<WillFromDB | null>(null);
+  const [deleteDraftModal, setDeleteDraftModal] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -747,17 +750,23 @@ const handleEditDraft = (will: WillFromDB) => {
   // Ouvrir le formulaire
   setShowCreateForm(true);
 };
-const handleDeleteDraft = async (willId: string) => {
-  if (!window.confirm("Are you sure you want to delete this draft will?")) {
-    return;
-  }
+const handleDeleteDraft = (willId: string) => {
+  setDeleteDraftModal(willId);
+  setDeleteError(null);
+};
 
+const handleConfirmDeleteDraft = async () => {
+  if (!deleteDraftModal) return;
+  setDeleteError(null);
+  setIsDeleting(true);
   try {
-    await willService.deleteDraftWill(willId);
-    setSuccessMessage("Draft will deleted successfully");
-    setTimeout(() => window.location.reload(), 2000);
+    await willService.deleteDraftWill(deleteDraftModal);
+    setRealWills(prev => prev.filter(w => w.willId !== deleteDraftModal));
+    setDeleteDraftModal(null);
   } catch (error: any) {
-    setErrorMessage(error.message);
+    setDeleteError(error.message ?? 'Failed to delete draft.');
+  } finally {
+    setIsDeleting(false);
   }
 };
 
@@ -1303,12 +1312,12 @@ const handleDeleteDraft = async (willId: string) => {
                       <>
                         <button
                           onClick={() => handleDeleteDraft(will.willId)}
-                          className="p-1 text-[var(--text-muted)] hover:text-red-500 transition-colors"
-                          title="Delete draft"
+                          className="px-2.5 py-1 text-xs font-medium rounded-md border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-1.5"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
+                          Delete
                         </button>
                       </>
                     )}
@@ -1713,6 +1722,51 @@ const handleDeleteDraft = async (willId: string) => {
                 className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent)] text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               >
                 Deploy Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteDraftModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-red-500/15 flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Delete Draft</h2>
+                <p className="text-xs text-[var(--text-muted-alt)]">This action is irreversible</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-[var(--text-muted-alt)] mb-5">
+              This draft will be permanently deleted from our records. It has not been deployed to the blockchain, so no on-chain transaction is needed, but once deleted it cannot be recovered.
+            </p>
+
+            {deleteError && (
+              <p className="text-red-400 text-xs mb-4">{deleteError}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setDeleteDraftModal(null); setDeleteError(null); }}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Keep Draft
+              </button>
+              <button
+                onClick={handleConfirmDeleteDraft}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Deleting...</>
+                ) : 'Yes, Delete Draft'}
               </button>
             </div>
           </div>
