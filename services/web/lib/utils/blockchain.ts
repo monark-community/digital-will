@@ -46,3 +46,12 @@ export async function waitForTransaction(hash: string): Promise<ethers.Transacti
   const provider = getProvider();
   return await provider.waitForTransaction(hash);
 }
+
+/**
+ * Get the ETH balance of a contract address, returned as a formatted string (e.g. "0.05")
+ */
+export async function getContractBalance(contractAddress: string): Promise<string> {
+  const provider = getProvider();
+  const balanceWei = await provider.getBalance(contractAddress);
+  return ethers.formatEther(balanceWei);
+}

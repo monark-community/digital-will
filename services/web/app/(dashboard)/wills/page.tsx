@@ -7,6 +7,7 @@ import { willService, type SecondaryMemberInput, type WillFromDB } from "@/lib/s
 import type { Contact } from "@/lib/types";
 import { config } from "@/lib/config";
 import { ethers } from "ethers";
+import { getContractBalance } from "@/lib/utils/blockchain";
 
 // Chain ID to name mapping
 const CHAIN_NAMES: Record<number, string> = {
@@ -60,6 +61,7 @@ export default function WillsPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<string[]>([]);
+  const [contractBalances, setContractBalances] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -91,6 +93,19 @@ export default function WillsPage() {
         const willsArrays = await Promise.all(allWillsPromises);
         const allWills = willsArrays.flat();
         setRealWills(allWills);
+
+        const deployedWills = allWills.filter(w => w.contractAddressInBlockchain && w.state !== 'DRAFT');
+        const balanceEntries = await Promise.all(
+          deployedWills.map(async (w) => {
+            try {
+              const balance = await getContractBalance(w.contractAddressInBlockchain!);
+              return [w.willId, balance] as [string, string];
+            } catch {
+              return [w.willId, '—'] as [string, string];
+            }
+          })
+        );
+        setContractBalances(Object.fromEntries(balanceEntries));
       } catch (error) {
         console.error("Error fetching wills:", error);
       } finally {
@@ -1248,6 +1263,25 @@ const handleDeleteDraft = async (willId: string) => {
                           <p className="text-sm font-medium text-[var(--text-primary)]">{will.secondaryMembers.length} people</p>
                         </div>
                       </div>
+                      {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (
+                        <div className="mt-3 flex items-center justify-between rounded-lg border border-[var(--border-section)] bg-[var(--bg-card)] px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-[var(--text-muted-alt)]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="text-xs text-[var(--text-muted-alt)]">Contract Balance</span>
+                          </div>
+                          <span className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)] font-mono">
+                            <svg className="w-5.5 h-5.5 text-[#627EEA]" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M16 2L6 16.5L16 21.5L26 16.5L16 2Z" fillOpacity="0.9" />
+                              <path d="M16 21.5L6 16.5L16 30L26 16.5L16 21.5Z" fillOpacity="0.7" />
+                            </svg>
+                            {contractBalances[will.willId] !== undefined
+                              ? `${parseFloat(contractBalances[will.willId]) === 0 ? '0' : parseFloat(contractBalances[will.willId]).toFixed(4)} ETH`
+                              : '...'}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="border-t border-[var(--border-section)] pt-3 mt-3">
