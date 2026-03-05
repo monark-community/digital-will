@@ -945,13 +945,15 @@ const handleConfirmDeleteDraft = async () => {
 
     const needsBlockchain = updatedSmList.length > 0 || blockchainAddedSmList.length > 0 || blockchainDeletedSmList.length > 0;
 
-    const minChanged = parseInt(editWillMinPeriod) !== editWillModal.minSecurityPeriod;
-    const maxChanged = parseInt(editWillMaxPeriod) !== editWillModal.maxSecurityPeriod;
+    const parsedMin = parseInt(editWillMinPeriod) || 0;
+    const parsedMax = parseInt(editWillMaxPeriod) || 0;
+    const minChanged = parsedMin !== editWillModal.minSecurityPeriod;
+    const maxChanged = parsedMax !== editWillModal.maxSecurityPeriod;
     const periodChanged = minChanged || maxChanged;
     const periodConfig = periodChanged
       ? {
-          minSecurityPeriod: BigInt(parseInt(editWillMinPeriod) * 86400),
-          maxSecurityPeriod: BigInt(parseInt(editWillMaxPeriod) * 86400),
+          minSecurityPeriod: BigInt(parsedMin * 86400),
+          maxSecurityPeriod: BigInt(parsedMax * 86400),
         }
       : { minSecurityPeriod: BigInt(0), maxSecurityPeriod: BigInt(0) };
 
@@ -1016,10 +1018,13 @@ const handleConfirmDeleteDraft = async () => {
       return "At least 2 secondary members are required.";
 
     for (const m of [...existingMembers, ...newMembers]) {
+      const label = m.firstName ? `"${m.firstName}"` : "A member";
+      if (!m.address.trim())
+        return `${label} is missing a wallet address.`;
       try { ethers.getAddress(m.address.trim()); }
-      catch { return `Invalid address: ${m.address}`; }
-      if (m.power < 1 || m.power > 255)
-        return `Power for ${m.firstName || m.address} must be between 1 and 255.`;
+      catch { return `Invalid address for ${label}: ${m.address}`; }
+      if (!m.power || m.power < 1 || m.power > 255)
+        return `Power for ${label} must be between 1 and 255.`;
     }
 
     const allAddresses = [...existingMembers, ...newMembers].map(m => m.address.trim().toLowerCase());
@@ -1028,8 +1033,10 @@ const handleConfirmDeleteDraft = async () => {
 
     const minP = parseInt(editWillMinPeriod);
     const maxP = parseInt(editWillMaxPeriod);
-    if (isNaN(minP) || minP < 28) return "Minimum security period must be at least 28 days.";
-    if (isNaN(maxP) || maxP > 154) return "Maximum security period cannot exceed 154 days.";
+    if (!editWillMinPeriod.trim() || isNaN(minP)) return "Minimum security period is required.";
+    if (minP < 28) return "Minimum security period must be at least 28 days.";
+    if (!editWillMaxPeriod.trim() || isNaN(maxP)) return "Maximum security period is required.";
+    if (maxP > 154) return "Maximum security period cannot exceed 154 days.";
     if (minP > maxP) return "Minimum period cannot exceed maximum.";
     return null;
   };
