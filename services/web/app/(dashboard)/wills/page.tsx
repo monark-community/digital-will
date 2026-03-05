@@ -839,6 +839,7 @@ const handleEditDraft = (will: WillFromDB) => {
     phoneNumber: m.phoneNumber || "",
     address: m.walletAddress || m.tempWalletAddress || "",
     power: m.votingPower,
+    relationship: m.relationship || "",
   })));
 
   if (will.secondaryMembers.length < 2) {
