@@ -342,7 +342,7 @@ console.log("14 - Transaction envoyée, hash :", tx.hash);
    */
   async updateDeployedWillMembers(willId: string, params: {
     updatedMembers?: Array<{ secondaryMemberId: string; firstName?: string; lastName?: string; email?: string; relationship?: string; walletAddress?: string; votingPower?: number; }>;
-    addedMembers?: Array<{ walletAddress: string; votingPower: number; }>;
+    addedMembers?: Array<{ walletAddress: string; votingPower: number; firstName?: string; lastName?: string; email?: string; relationship?: string; }>;
     deletedMemberIds?: string[];
     minSecurityPeriod?: number;
     maxSecurityPeriod?: number;

@@ -439,6 +439,10 @@ export const updateDeployedWillInDB = async (
         addedMembers?: Array<{
             walletAddress: string;
             votingPower: number;
+            firstName?: string;
+            lastName?: string;
+            email?: string;
+            relationship?: string;
         }>;
         deletedMemberIds?: string[];
         minSecurityPeriod?: number;
@@ -501,9 +505,10 @@ export const updateDeployedWillInDB = async (
                 const existing = await tx.wallet.findUnique({ where: { address: m.walletAddress } });
                 await tx.secondaryMember.create({
                     data: {
-                        firstName: '',
-                        lastName: '',
-                        email: '',
+                        firstName: m.firstName ?? '',
+                        lastName: m.lastName ?? '',
+                        email: m.email ?? '',
+                        relationship: m.relationship ?? null,
                         walletAddress: existing ? m.walletAddress : null,
                         tempWalletAddress: existing ? null : m.walletAddress,
                         votingPower: m.votingPower,

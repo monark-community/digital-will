@@ -981,7 +981,14 @@ const handleConfirmDeleteDraft = async () => {
       }));
 
     const dbDeletedMemberIds = [...originalById.keys()].filter(id => !currentSmIds.has(id));
-    const dbAddedMembers = newMembers.map(m => ({ walletAddress: m.address.trim(), votingPower: m.power }));
+    const dbAddedMembers = newMembers.map(m => ({
+      walletAddress: m.address.trim(),
+      votingPower: m.power,
+      firstName: m.firstName,
+      lastName: m.lastName,
+      email: m.email,
+      relationship: m.relationship || undefined,
+    }));
 
     return {
       updatedSmList,
@@ -2248,7 +2255,6 @@ const handleConfirmDeleteDraft = async () => {
                     const orig = editWillModal?.secondaryMembers.find(x => x.secondaryMemberId === m.secondaryMemberId);
                     const origAddr = (orig?.walletAddress || orig?.tempWalletAddress || "").toLowerCase();
                     const addrChanged = m.address.trim().toLowerCase() !== origAddr;
-                    const validCount = editWillMembers.filter(x => x.secondaryMemberId || (!x.secondaryMemberId && x.address.trim())).length;
                     return (
                       <div key={m.secondaryMemberId} className="bg-[var(--bg-section)]/40 border border-[var(--border-section)] rounded-lg px-3 py-3 space-y-2">
                         <div className="grid grid-cols-2 gap-2">
@@ -2288,16 +2294,19 @@ const handleConfirmDeleteDraft = async () => {
                             onChange={e => { const v = parseInt(e.target.value) || 1; setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, power: v } : x)); setEditWillError(null); }}
                             className="w-16 px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-center text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                           />
-                          {validCount > 2 && (
-                            <button
-                              onClick={() => { setEditWillMembers(prev => prev.filter((_, i) => i !== absIdx)); setEditWillError(null); }}
-                              className="p-1 text-red-400 hover:bg-red-500/10 rounded transition-colors flex-shrink-0"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          )}
+                          <button
+                            onClick={() => {
+                              const totalValid = editWillMembers.filter(x => x.secondaryMemberId || (!x.secondaryMemberId && x.address.trim())).length;
+                              if (totalValid <= 2) { setEditWillError("A will must have at least 2 secondary members."); return; }
+                              setEditWillMembers(prev => prev.filter((_, i) => i !== absIdx));
+                              setEditWillError(null);
+                            }}
+                            className="p-1 text-red-400 hover:bg-red-500/10 rounded transition-colors flex-shrink-0"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         </div>
                       </div>
                     );
@@ -2312,37 +2321,50 @@ const handleConfirmDeleteDraft = async () => {
                     {editWillMembers.filter(m => !m.secondaryMemberId).map((m, relIdx) => {
                       const absIdx = editWillMembers.findIndex((x, i) => !x.secondaryMemberId && editWillMembers.slice(0, i + 1).filter(y => !y.secondaryMemberId).length === relIdx + 1);
                       return (
-                        <div key={absIdx} className="flex items-center gap-2 bg-[var(--bg-section)]/40 border border-[var(--accent)]/30 rounded-lg px-3 py-2">
-                          <input
-                            type="text"
-                            value={m.address}
-                            onChange={e => {
-                              const v = e.target.value;
-                              setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, address: v } : x));
-                              setEditWillError(null);
-                            }}
-                            placeholder="0x... wallet address"
-                            className="flex-1 min-w-0 px-2 py-1 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
-                          />
-                          <label className="text-xs text-[var(--text-muted-alt)] flex-shrink-0">Power</label>
-                          <input
-                            type="number" min="1" max="255"
-                            value={m.power}
-                            onChange={e => {
-                              const v = parseInt(e.target.value) || 1;
-                              setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, power: v } : x));
-                              setEditWillError(null);
-                            }}
-                            className="w-16 px-2 py-1 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-center text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
-                          />
-                          <button
-                            onClick={() => setEditWillMembers(prev => prev.filter((_, i) => i !== absIdx))}
-                            className="p-1 text-red-400 hover:bg-red-500/10 rounded transition-colors flex-shrink-0"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
+                        <div key={absIdx} className="bg-[var(--bg-section)]/40 border border-[var(--accent)]/30 rounded-lg px-3 py-3 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="text" value={m.firstName} placeholder="First name"
+                              onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, firstName: e.target.value } : x)); setEditWillError(null); }}
+                              className="px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                            />
+                            <input
+                              type="text" value={m.lastName} placeholder="Last name"
+                              onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, lastName: e.target.value } : x)); setEditWillError(null); }}
+                              className="px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                            />
+                            <input
+                              type="email" value={m.email} placeholder="Email"
+                              onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, email: e.target.value } : x)); setEditWillError(null); }}
+                              className="px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                            />
+                            <input
+                              type="text" value={m.relationship} placeholder="Relationship (optional)"
+                              onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, relationship: e.target.value } : x)); setEditWillError(null); }}
+                              className="px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text" value={m.address} placeholder="0x... wallet address"
+                              onChange={e => { setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, address: e.target.value } : x)); setEditWillError(null); }}
+                              className="flex-1 min-w-0 px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                            />
+                            <label className="text-xs text-[var(--text-muted-alt)] flex-shrink-0">Power</label>
+                            <input
+                              type="number" min="1" max="255" value={m.power}
+                              onChange={e => { const v = parseInt(e.target.value) || 1; setEditWillMembers(prev => prev.map((x, i) => i === absIdx ? { ...x, power: v } : x)); setEditWillError(null); }}
+                              className="w-16 px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-center text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                            />
+                            <button
+                              onClick={() => { setEditWillMembers(prev => prev.filter((_, i) => i !== absIdx)); setEditWillError(null); }}
+                              className="p-1 text-red-400 hover:bg-red-500/10 rounded transition-colors flex-shrink-0"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
