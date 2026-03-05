@@ -7,7 +7,7 @@ import { willService, type SecondaryMemberInput, type WillFromDB } from "@/lib/s
 import type { Contact } from "@/lib/types";
 import { config } from "@/lib/config";
 import { ethers } from "ethers";
-import { getContractBalance } from "@/lib/utils/blockchain";
+import { getContractBalance, fundWillContract } from "@/lib/utils/blockchain";
 
 // Chain ID to name mapping
 const CHAIN_NAMES: Record<number, string> = {
@@ -62,6 +62,10 @@ export default function WillsPage() {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [contractBalances, setContractBalances] = useState<Record<string, string>>({});
+  const [fundModal, setFundModal] = useState<{ willId: string; contractAddress: string } | null>(null);
+  const [fundAmount, setFundAmount] = useState("");
+  const [fundError, setFundError] = useState<string | null>(null);
+  const [isFunding, setIsFunding] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -182,6 +186,35 @@ useEffect(() => {
     setSecondaryMembers(updated);
     setShowContactDropdown(null);
   };
+  const refreshBalance = async (willId: string, contractAddress: string) => {
+    try {
+      const balance = await getContractBalance(contractAddress);
+      setContractBalances(prev => ({ ...prev, [willId]: balance }));
+    } catch {
+    }
+  };
+
+  const handleFundWill = async () => {
+    if (!fundModal) return;
+    const amount = fundAmount.trim();
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      setFundError("Please enter a valid amount greater than 0.");
+      return;
+    }
+    setFundError(null);
+    setIsFunding(true);
+    try {
+      await fundWillContract(fundModal.contractAddress, amount);
+      await refreshBalance(fundModal.willId, fundModal.contractAddress);
+      setFundModal(null);
+      setFundAmount("");
+    } catch (err: any) {
+      setFundError(err.message ?? "Transaction failed.");
+    } finally {
+      setIsFunding(false);
+    }
+  };
+
   const copyToClipboard = async (address: string, identifier: string) => {
     try {
       await navigator.clipboard.writeText(address);
@@ -1277,7 +1310,7 @@ const handleDeleteDraft = async (willId: string) => {
                               <path d="M16 21.5L6 16.5L16 30L26 16.5L16 21.5Z" fillOpacity="0.7" />
                             </svg>
                             {contractBalances[will.willId] !== undefined
-                              ? `${parseFloat(contractBalances[will.willId]) === 0 ? '0' : parseFloat(contractBalances[will.willId]).toFixed(4)} ETH`
+                              ? `${parseFloat(contractBalances[will.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[will.willId]).toFixed(4)).toString()} ETH`
                               : '...'}
                           </span>
                         </div>
@@ -1360,6 +1393,18 @@ const handleDeleteDraft = async (willId: string) => {
                           className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
                           title="Edit draft"
                         > Manage</button>
+                      {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (
+                        <button
+                          onClick={() => {
+                            setFundModal({ willId: will.willId, contractAddress: will.contractAddressInBlockchain! });
+                            setFundAmount("");
+                            setFundError(null);
+                          }}
+                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                        >
+                          Fund
+                        </button>
+                      )}
                     </div>
                     {will.state === 'DRAFT' && (
                     <div className="mt-4">
@@ -1410,6 +1455,52 @@ const handleDeleteDraft = async (willId: string) => {
           </div>
         </div>
       </div>
+      {fundModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1">Fund Contract</h2>
+            <p className="text-xs text-[var(--text-muted-alt)] font-mono break-all mb-4">{fundModal.contractAddress}</p>
+
+            <label className="block text-xs text-[var(--text-muted-alt)] mb-1">Amount (ETH)</label>
+            <div className="relative mb-4">
+              <input
+                type="number"
+                min="0"
+                step="any"
+                placeholder="0.01"
+                value={fundAmount}
+                onChange={e => { setFundAmount(e.target.value); setFundError(null); }}
+                className="w-full bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg px-3 py-2 pr-12 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                disabled={isFunding}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted-alt)] font-mono">ETH</span>
+            </div>
+
+            {fundError && (
+              <p className="text-red-400 text-xs mb-4">{fundError}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setFundModal(null); setFundAmount(""); setFundError(null); }}
+                disabled={isFunding}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleFundWill}
+                disabled={isFunding}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isFunding ? (
+                  <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Sending...</>
+                ) : 'Confirm & Send'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

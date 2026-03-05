@@ -4,6 +4,7 @@
 
 import { ethers } from "ethers";
 import { config } from "@/lib/config";
+import { WILL_ABI } from "@/lib/contracts/WillABI";
 
 /**
  * Get the JSON-RPC provider for the blockchain
@@ -54,4 +55,32 @@ export async function getContractBalance(contractAddress: string): Promise<strin
   const provider = getProvider();
   const balanceWei = await provider.getBalance(contractAddress);
   return ethers.formatEther(balanceWei);
+}
+
+/**
+ * Fund a will contract by calling deposit() via MetaMask.
+ * Returns the transaction hash on success.
+ * Throws if the user has insufficient balance.
+ */
+export async function fundWillContract(
+  contractAddress: string,
+  amountEth: string
+): Promise<string> {
+  const signer = await getSigner();
+  const provider = new ethers.BrowserProvider(window.ethereum);
+
+  const amountWei = ethers.parseEther(amountEth);
+  const signerAddress = await signer.getAddress();
+  const userBalance = await provider.getBalance(signerAddress);
+
+  // Rough gas buffer: 0.001 ETH
+  const gasBuffer = ethers.parseEther("0.001");
+  if (userBalance < amountWei + gasBuffer) {
+    throw new Error(`Insufficient balance. You have ${parseFloat(ethers.formatEther(userBalance)).toFixed(4)} ETH.`);
+  }
+
+  const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
+  const tx = await contract.deposit({ value: amountWei });
+  await tx.wait();
+  return tx.hash;
 }
