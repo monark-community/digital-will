@@ -191,7 +191,8 @@ export async function linkWallet(userId: string, walletAddress: string): Promise
 
   if (existingWallet && existingWallet.userId !== userId) {
     throw new ConflictError('This wallet is already linked to another account');
-
+  }
+  
   const user = await prisma.user.update({
     where: { userId },
     data: { walletAddress: walletAddress.toLowerCase() },
