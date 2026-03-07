@@ -37,64 +37,6 @@ export const getWillsByWalletAddress = async (walletAddress: string) => {
         include: { secondaryMembers: true },
     });
 };
-/* 
-export const createWill = async (input: CreateWillInput) => {
-    const { userWalletAddress, contractAddressInBlockchain, chainId, secondaryMembers } = input;
-
-    // Verify wallet exists
-    const wallet = await prisma.wallet.findUnique({
-        where: { address: userWalletAddress },
-    });
-
-    if (!wallet) {
-        throw new NotFoundError('Wallet not found');
-    }
-
-
-    // Validate each secondary member's fields before creating anything
-    for (const member of secondaryMembers) {
-        if (!REGEX.EMAIL.test(member.email)) {
-            throw new BadRequestError(`Invalid email format for member: ${member.email}`);
-        }
-
-        if (member.phoneNumber && !REGEX.PHONE.test(member.phoneNumber)) {
-            throw new BadRequestError(`Invalid phone number format for member: ${member.phoneNumber}`);
-        }
-
-        validateWalletAddress(member.walletAddress);
-    }
-
-    // Create the will first to get the willId
-    const will = await prisma.will.create({
-        data: {
-            walletAddress: userWalletAddress,
-            contractAddressInBlockchain,
-            chainId,
-            state,
-        },
-    });
-
-    // Create secondary members with the willId now available
-    await prisma.secondaryMember.createMany({
-        data: secondaryMembers.map((member) => ({
-            firstName: member.firstName,
-            lastName: member.lastName,
-            email: member.email,
-            phoneNumber: member.phoneNumber,
-            walletAddress: member.walletAddress,
-            willId: will.willId,
-            votingPower: member.votingPower,
-            state: member.state
-        })),
-
-    });
-
-    // Return the will with its secondary members
-    return await prisma.will.findUnique({
-        where: { willId: will.willId },
-        include: { secondaryMembers: true },
-    });
-}; */
 
 export const createDraftWill = async (input: {
     walletAddress: string;
@@ -158,17 +100,6 @@ export const createDraftWill = async (input: {
                 }
             }
 
-            if (member.firstName && member.lastName && member.email) {
-                await syncMemberWithContacts(tx, wallet.userId, {
-                    firstName: member.firstName,
-                    lastName: member.lastName,
-                    email: member.email,
-                    phoneNumber: member.phoneNumber,
-                    tempWalletAddress: member.tempWalletAddress,
-                    relationship: member.relationship,
-                });
-            }
-
             return {
                 firstName: member.firstName,
                 lastName: member.lastName,
@@ -177,7 +108,7 @@ export const createDraftWill = async (input: {
                 tempWalletAddress: tempWalletAddressToUse,
                 walletAddress: walletAddressToUse,
                 votingPower: member.votingPower || 1,
-                state: 'PENDING',
+                state: SMState.PENDING,
                 relationship: member.relationship,
                 willId: will.willId,
             };
@@ -256,44 +187,6 @@ export const updateDraftWill = async (
             });
 
             if (input.secondaryMembers.length > 0) {
-                for (const member of input.secondaryMembers) {
-                    if (member.firstName && member.lastName && member.email) {
-                        // Vérifier si un contact existe déjà avec cet email
-                        const existingContact = await tx.contact.findFirst({
-                            where: {
-                                userId,
-                                email: member.email,
-                            },
-                        });
-
-                        if (!existingContact) {
-                            // Créer un nouveau contact
-                            await tx.contact.create({
-                                data: {
-                                    userId,
-                                    firstName: member.firstName,
-                                    lastName: member.lastName,
-                                    email: member.email,
-                                    phoneNumber: member.phoneNumber,
-                                    walletAddress: member.tempWalletAddress || '',
-                                    relationship: member.relationship,  // ← AJOUTÉ
-                                },
-                            });
-                        } else {
-                            // Mettre à jour le contact existant
-                            await tx.contact.update({
-                                where: { contactId: existingContact.contactId },
-                                data: {
-                                    firstName: member.firstName,
-                                    lastName: member.lastName,
-                                    phoneNumber: member.phoneNumber,
-                                    walletAddress: member.tempWalletAddress || existingContact.walletAddress,
-                                    relationship: member.relationship,  // ← AJOUTÉ
-                                },
-                            });
-                        }
-                    }
-                }
                 const membersData = await Promise.all(input.secondaryMembers.map(async (member) => {
                     let walletAddressToUse = null;
                     let tempWalletAddressToUse = member.tempWalletAddress;
@@ -321,7 +214,7 @@ export const updateDraftWill = async (
                         tempWalletAddress: tempWalletAddressToUse,
                         walletAddress: walletAddressToUse,  // ← Sera null si wallet n'existe pas
                         votingPower: member.votingPower || 1,
-                        state: 'PENDING',
+                        state: SMState.PENDING,
                         relationship: member.relationship,
                         willId,
                     };
@@ -521,53 +414,4 @@ export const updateDeployedWillInDB = async (
             include: { secondaryMembers: true },
         });
     });
-};
-
-// Fonction pour synchroniser un membre avec les contacts
-const syncMemberWithContacts = async (
-    tx: Prisma.TransactionClient,
-    userId: string,
-    member: {
-        firstName: string;
-        lastName: string;
-        email: string;
-        phoneNumber?: string;
-        tempWalletAddress?: string;
-        relationship?: string;  // ← AJOUTÉ
-    }
-) => {
-    // Vérifier si un contact existe déjà avec cet email
-    const existingContact = await tx.contact.findFirst({
-        where: {
-            userId,
-            walletAddress: member.tempWalletAddress,
-        },
-    });
-
-    if (!existingContact) {
-        // Créer un nouveau contact AVEC relationship
-        await tx.contact.create({
-            data: {
-                userId,
-                firstName: member.firstName,
-                lastName: member.lastName,
-                email: member.email,
-                phoneNumber: member.phoneNumber,
-                walletAddress: member.tempWalletAddress || '',
-                relationship: member.relationship,  // ← AJOUTÉ
-            },
-        });
-    } else {
-        // Mettre à jour le contact existant AVEC relationship
-        await tx.contact.update({
-            where: { contactId: existingContact.contactId },
-            data: {
-                firstName: member.firstName,
-                lastName: member.lastName,
-                phoneNumber: member.phoneNumber,
-                walletAddress: member.tempWalletAddress || existingContact.walletAddress,
-                relationship: member.relationship,  // ← AJOUTÉ (met à jour si changé)
-            },
-        });
-    }
 };

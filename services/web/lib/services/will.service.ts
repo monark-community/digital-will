@@ -236,26 +236,6 @@ class WillService {
     };
   }
 
-  /* async saveWillToDB(params: SaveWillToDBParams): Promise<WillFromDB> {
-    try {
-      const response = await apiClient.post<{
-        success: boolean;
-        data: WillFromDB;
-      }>(API_ROUTES.WILLS.BASE, {
-        will: {
-          walletAddress: params.walletAddress,
-          contractAddressInBlockchain: params.contractAddressInBlockchain,
-          chainId: params.chainId,
-        },
-        secondaryMembers: params.secondaryMembers,
-      });
-      return response.data.data;
-    } catch (error: any) {
-      console.error("Error saving will to database:", error);
-      throw new Error("Failed to save will to database: " + (error.response?.data?.message || error.message));
-    }
-  } */
-
   // ============================================
   // OFFCHAIN (BASE DE DONNÉES)
   // ============================================
@@ -351,6 +331,22 @@ class WillService {
     } catch (error: any) {
       console.error("Error updating deployed will members:", error);
       throw new Error("Failed to update will: " + (error.response?.data?.message || error.message));
+    }
+  
+  }
+  async addMemberToContacts(contactData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber?: string;
+    walletAddress: string;
+    relationship?: string;
+  }): Promise<void> {
+    try {
+      await apiClient.post('/api/contacts', contactData);
+    } catch (error: any) {
+      console.error("Error adding contact:", error);
+      throw new Error(error.response?.data?.message || "Failed to add contact");
     }
   }
 }

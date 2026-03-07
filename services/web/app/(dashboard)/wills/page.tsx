@@ -77,6 +77,7 @@ export default function WillsPage() {
     { firstName: "", lastName: "", email: "", phoneNumber: "", address: "", power: 1 },
     { firstName: "", lastName: "", email: "", phoneNumber: "", address: "", power: 1 }
   ]);
+  const [addingToContacts, setAddingToContacts] = useState<{index: number, isLoading: boolean} | null>(null);
   const [minSecurityPeriod, setMinSecurityPeriod] = useState("");
   const [maxSecurityPeriod, setMaxSecurityPeriod] = useState("");
   const [showWalletDropdown, setShowWalletDropdown] = useState(false);
@@ -86,6 +87,7 @@ export default function WillsPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<string[]>([]);
+  const [canAddToContacts, setCanAddToContacts] = useState<boolean[]>([]);
   const [contractBalances, setContractBalances] = useState<Record<string, string>>({});
   const [fundModal, setFundModal] = useState<{ willId: string; contractAddress: string } | null>(null);
   const [fundAmount, setFundAmount] = useState("");
@@ -220,8 +222,9 @@ export default function WillsPage() {
   }, [wallets]);
 
 useEffect(() => {
-  const { errors } = validateDraftForm();
+  const { errors, canAddToContacts } = validateDraftForm();
   setFormErrors(errors);
+  setCanAddToContacts(canAddToContacts);
 }, [selectedWalletId, secondaryMembers, minSecurityPeriod, maxSecurityPeriod]);
 // Quand le min change, ajuster le max si nécessaire
 useEffect(() => {
@@ -380,41 +383,38 @@ useEffect(() => {
       console.error('Failed to copy address:', err);
     }
   };
+
+  const handleAddToContacts = async (memberIndex: number) => {
+  const member = secondaryMembers[memberIndex];
+  
+  setAddingToContacts({ index: memberIndex, isLoading: true });
+
+  try {
+    await willService.addMemberToContacts({
+      firstName: member.firstName,
+      lastName: member.lastName,
+      email: member.email,
+      phoneNumber: member.phoneNumber,
+      walletAddress: member.address,
+      relationship: member.relationship,
+    });
+
+    setSuccessMessage("Contact added successfully!");
+    setTimeout(() => setSuccessMessage(null), 3000);
+  } catch (error: any) {
+    setErrorMessage(error.message);
+  } finally {
+    setAddingToContacts(null);
+  }
+};
+
   const handleCreateDraft = async () => {
     const { isValid } = validateDraftForm();
     if (!isValid) return;
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    /* const trimmedFactoryAddress = factoryAddress.trim();
-    if (!trimmedFactoryAddress) {
-      setErrorMessage("Please enter a factory contract address");
-      return;
-    }
-
-    try {
-      ethers.getAddress(trimmedFactoryAddress);
-    } catch (error) {
-      setErrorMessage("Invalid factory contract address format");
-      return;
-    } */
-
-    /* if (!selectedWalletId) {
-      setErrorMessage("Please select a wallet");
-      return;
-    }
-
-    const selectedWallet = wallets?.find(w => w.walletId === selectedWalletId);
-    if (!selectedWallet) {
-      setErrorMessage("Selected wallet not found");
-      return;
-    } */
-
-    const validMembers = secondaryMembers.filter(m => m.firstName.trim() || m.lastName.trim() || m.email.trim() || m.address.trim());
-    /*if (validMembers.length < 2) {
-      setErrorMessage("Please add at least 2 secondary members (contract requirement)");
-      return;
-    } */
+   const validMembers = secondaryMembers.filter(m => m.firstName.trim() || m.lastName.trim() || m.email.trim() || m.address.trim());
 
     setIsSavingDraft(true);
     try{
@@ -464,130 +464,6 @@ useEffect(() => {
         }
       };
 
-
-    /* }
-    for (const member of validMembers) {
-      if (!member.firstName.trim()) {
-        setErrorMessage("Please provide first name for all secondary members");
-        return;
-      }
-      if (!member.lastName.trim()) {
-        setErrorMessage("Please provide last name for all secondary members");
-        return;
-      }
-      if (!member.email.trim()) {
-        setErrorMessage("Please provide email for all secondary members");
-        return;
-      }
-      // Basic email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(member.email)) {
-        setErrorMessage(`Invalid email format: ${member.email}`);
-        return;
-      }
-    }
-
-    for (const member of validMembers) {
-      try {
-        ethers.getAddress(member.address.trim());
-      } catch (error) {
-        setErrorMessage(`Invalid secondary member address: ${member.address}`);
-        return;
-      }
-    }
-
-    const addresses = validMembers.map(sm => sm.address.toLowerCase());
-    const uniqueAddresses = new Set(addresses);
-    if (addresses.length !== uniqueAddresses.size) {
-      setErrorMessage("Duplicate secondary member addresses are not allowed");
-      return;
-    }
-
-    const invalidPower = validMembers.find(sm => sm.power < 1 || sm.power > 255);
-    if (invalidPower) {
-      setErrorMessage("Power values must be between 1 and 255");
-      return;
-    }
-
-    const minPeriod = parseInt(minSecurityPeriod);
-    const maxPeriod = parseInt(maxSecurityPeriod);
-
-    if (isNaN(minPeriod) || minPeriod < 0) {
-      setErrorMessage("Please enter a valid minimum security period");
-      return;
-    }
-
-    if (isNaN(maxPeriod) || maxPeriod < 0) {
-      setErrorMessage("Please enter a valid maximum security period");
-      return;
-    }
-
-    if (minPeriod > maxPeriod) {
-      setErrorMessage("Minimum security period cannot be greater than maximum");
-      return;
-    }
-
-    setIsCreating(true);
-
-    try {
-      const params = willService.prepareCreateWillParams(
-        trimmedFactoryAddress,
-        selectedWallet.address,
-        validMembers.map(m => ({ address: m.address, power: m.power })),
-        minPeriod,
-        maxPeriod
-      );
-
-      const blockchainResult = await willService.createWillOnBlockchain(params);
-
-      try {
-        const provider = new ethers.BrowserProvider((window as any).ethereum);
-        const network = await provider.getNetwork();
-        
-        await willService.saveWillToDB({
-          walletAddress: selectedWallet.address,
-          contractAddressInBlockchain: blockchainResult.willAddress,
-          chainId: Number(network.chainId),
-          secondaryMembers: validMembers.map(m => ({
-            firstName: m.firstName,
-            lastName: m.lastName,
-            email: m.email,
-            phoneNumber: m.phoneNumber,
-            walletAddress: m.address,
-          })),
-        });
-
-        setSuccessMessage(
-          `Will created successfully! Will Address: ${blockchainResult.willAddress}`
-        );
-
-        setTimeout(() => {
-          resetForm();
-          window.location.reload(); // Refresh to show new will
-        }, 2000);
-      } catch (dbError: any) {
-        console.error("Database save error:", dbError);
-        setErrorMessage(
-          `Will created on blockchain (${blockchainResult.willAddress}) but failed to save to database. Please contact support.`
-        );
-      }
-    } catch (error: any) {
-      console.error("Will creation error:", error);
-      if (
-        error.code === 4001 || 
-        error.code === "ACTION_REJECTED" || 
-        error.reason === "rejected" ||
-        error.message?.includes("user rejected") ||
-        error.message?.includes("User denied")
-      ) {
-        setErrorMessage("Transaction cancelled. You rejected the transaction in MetaMask.");
-      } else {
-        setErrorMessage(error.message || "Failed to create will");
-      }
-    } finally {
-      setIsCreating(false);
-    }
-  }; */
 const validateForDeployment = (will: WillFromDB): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
 
@@ -643,8 +519,9 @@ const validateForDeployment = (will: WillFromDB): { isValid: boolean; errors: st
   };
 };
 
-const validateDraftForm = (): { isValid: boolean; errors: string[] } => {
+const validateDraftForm = (): { isValid: boolean; errors: string[]; canAddToContacts: boolean[] } => {
   const errors: string[] = [];
+  const canAddToContacts: boolean[] = [];
 
   // Vérifier qu'un wallet est sélectionné
   if (!selectedWalletId) {
@@ -658,7 +535,10 @@ const validateDraftForm = (): { isValid: boolean; errors: string[] } => {
 
   for (let i = 0; i < secondaryMembers.length; i++) {
   const member = secondaryMembers[i];
-  
+
+  // Valeurs par défaut pour ce membre
+    let canAddContact = false;
+
   // Vérifier si AU MOINS UN champ est rempli (sauf power qui a une valeur par défaut)
   const hasAnyField = member.firstName.trim() || member.lastName.trim() || 
                       member.email.trim() || member.address.trim() || 
@@ -668,55 +548,77 @@ const validateDraftForm = (): { isValid: boolean; errors: string[] } => {
     // Validation prénom
     if (!member.firstName.trim()) {
       errors.push(`Member ${i + 1}: First name is required`);
-      break;
     }
     
     // Validation nom
     if (!member.lastName.trim()) {
       errors.push(`Member ${i + 1}: Last name is required`);
-      break;
     }
     
     // Validation email
     if (!member.email.trim()) {
       errors.push(`Member ${i + 1}: Email is required`);
-      break;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(member.email)) {
       errors.push(`Member ${i + 1}: Invalid email format`);
-      break;
     }
 
     if (member.phoneNumber && member.phoneNumber.trim() !== '') {
       // Regex pour 10 chiffres (format 3-3-4)
       const phoneRegex = /^\d{10}$/;
-      
       if (!phoneRegex.test(member.phoneNumber)) {
         errors.push(`Member ${i + 1}: Phone number must be 10 digits (e.g., 5141234567)`);
-        break;
       }
     }
 
     if (!member.address.trim()) {
       errors.push(`Member ${i + 1}: Wallet address is required`);
-      break;
     } else {
       try {
         ethers.getAddress(member.address.trim());
       } catch (error) {
         errors.push(`Member ${i + 1}: Invalid wallet address format`);
-        break;
       }
     }
     
     // Validation power
     if (member.power < 1 || member.power > 255) {
       errors.push(`Member ${i + 1}: Power must be between 1 and 255`);
-      break;
     }
+
+    let contactValid = true;
+
+      if (!member.firstName.trim()) contactValid = false;
+      else if (!member.lastName.trim()) contactValid = false;
+      else if (!member.email.trim()) contactValid = false;
+      else {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(member.email)) contactValid = false;
+      }
+
+      if (contactValid && member.phoneNumber && member.phoneNumber.trim() !== '') {
+        const phoneRegex = /^\d{10}$/;
+        if (!phoneRegex.test(member.phoneNumber)) contactValid = false;
+      }
+
+      if (contactValid) {
+        if (!member.address.trim()) contactValid = false;
+        else {
+          try {
+            ethers.getAddress(member.address.trim());
+          } catch (error) {
+            contactValid = false;
+          }
+        }
+      }
+
+      // PAS de validation du power pour les contacts !
+      canAddContact = contactValid;
+    }
+
+    canAddToContacts[i] = canAddContact;
   }
-}
 
   // Validation des périodes (si fournies)
   const minPeriod = parseInt(minSecurityPeriod);
@@ -763,7 +665,8 @@ if (minSecurityPeriod.trim() && maxSecurityPeriod.trim() &&
 
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
+    canAddToContacts
   };
 };
 
@@ -790,7 +693,7 @@ const handleConfirmDeploy = async (fundEth?: string) => {
       return;
     }
   }
-
+  
   const will = deployModal;
 
   setErrorMessage(null);
@@ -1353,6 +1256,37 @@ const handleConfirmDeleteDraft = async () => {
                                   </div>
                                 )}
                               </div>
+                              <button
+                                type="button"
+                                onClick={() => handleAddToContacts(index)}
+                                disabled={addingToContacts?.index === index || !canAddToContacts[index]}
+                                className={`px-3 py-1 text-xs font-medium rounded transition-colors flex items-center gap-1 ${
+                                  canAddToContacts[index]
+                                    ? 'text-blue-500 border border-blue-500 hover:bg-blue-500/10'
+                                    : 'text-gray-400 border border-gray-400 cursor-not-allowed opacity-50'
+                                }`}
+                                title={canAddToContacts[index] 
+                                  ? "Add this person to your contacts" 
+                                  : "Complete all required fields (first name, last name, email, wallet address) to add to contacts"
+                                }
+                              >
+                                {addingToContacts?.index === index ? (
+                                  <>
+                                    <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                    </svg>
+                                    Adding...
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                    </svg>
+                                    Add to Contacts
+                                  </>
+                                )}
+                              </button>
                               {secondaryMembers.length > 2 && (
                                 <button
                                   onClick={() => removeSecondaryMember(index)}
