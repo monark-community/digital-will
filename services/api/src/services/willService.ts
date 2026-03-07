@@ -40,24 +40,31 @@ export const getWillsByWalletAddress = async (walletAddress: string) => {
 
 /**
  * Get all wills where the given user is listed as a secondary member.
- * Matches via the walletAddress field on SecondaryMember (requires the SM to have linked their account).
+ * Matches via walletAddress, tempWalletAddress, or email on SecondaryMember.
  */
 export const getAssociatedWills = async (userId: string) => {
-    const wallets = await prisma.wallet.findMany({
+    const user = await prisma.user.findUnique({
         where: { userId },
-        select: { address: true },
+        include: { wallets: { select: { address: true } } },
     });
 
-    if (wallets.length === 0) {
+    if (!user) {
         return [];
     }
 
-    const walletAddresses = wallets.map((w) => w.address);
+    const walletAddresses = user.wallets.map((w) => w.address);
+
+    const orConditions: any[] = [
+        { email: user.email },
+    ];
+
+    if (walletAddresses.length > 0) {
+        orConditions.push({ walletAddress: { in: walletAddresses } });
+        orConditions.push({ tempWalletAddress: { in: walletAddresses } });
+    }
 
     const secondaryMemberRecords = await prisma.secondaryMember.findMany({
-        where: {
-            walletAddress: { in: walletAddresses },
-        },
+        where: { OR: orConditions },
         include: {
             will: {
                 include: {
