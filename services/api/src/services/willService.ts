@@ -64,7 +64,12 @@ export const getAssociatedWills = async (userId: string) => {
     }
 
     const secondaryMemberRecords = await prisma.secondaryMember.findMany({
-        where: { OR: orConditions },
+        where: {
+            OR: orConditions,
+            will: {
+                state: { not: 'DRAFT' },
+            },
+        },
         include: {
             will: {
                 include: {
