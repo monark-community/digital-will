@@ -24,6 +24,27 @@ export const handleGetWills = asyncHandler(async (
 
 });
 
+/**
+ * Get all wills where the authenticated user is a secondary member
+ */
+export const handleGetAssociatedWills = asyncHandler(async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: 'Unauthorized' });
+        return;
+    }
+
+    const wills = await willService.getAssociatedWills(userId);
+
+    res.status(StatusCodes.OK).json({
+        success: true,
+        data: wills,
+    });
+});
+
 // 1. Créer un brouillon
 export const handleCreateDraft = async (
   req: Request,

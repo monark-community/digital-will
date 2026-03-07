@@ -1,10 +1,17 @@
 import { Router } from "express";
-import { handleGetWills, handleCreateDraft, handleUpdateDraft, handleDeployWill, handleDeleteDraft, handleCancelWillOnChain, handleUpdateDeployedWill } from "../controllers/willController";
+import { handleGetWills, handleGetAssociatedWills, handleCreateDraft, handleUpdateDraft, handleDeployWill, handleDeleteDraft, handleCancelWillOnChain, handleUpdateDeployedWill } from "../controllers/willController";
 import { verifyToken } from "../middlewares/authMiddleware";
 
 const router = Router();
 // Toutes les routes sont protégées par le token
 router.use(verifyToken);
+
+/**
+ * @route   GET /wills/associated
+ * @desc    Get all wills where the authenticated user is a secondary member
+ * @access  Private
+ */
+router.get("/associated", handleGetAssociatedWills);
 
 /**
  * @route   GET /wills/:walletAddress

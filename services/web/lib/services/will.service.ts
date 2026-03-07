@@ -62,6 +62,21 @@ export interface WillFromDB {
   }>;
 }
 
+export interface AssociatedWill extends WillFromDB {
+  myMembership: {
+    secondaryMemberId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber?: string | null;
+    votingPower: number;
+    state: 'PENDING' | 'VALIDATED' | 'DECLARED_DEATH';
+    relationship?: string | null;
+    walletAddress?: string | null;
+    tempWalletAddress?: string | null;
+  };
+}
+
 class WillService {
   // ============================================
   // BLOCKCHAIN
@@ -235,6 +250,22 @@ class WillService {
   // ============================================
   // OFFCHAIN (BASE DE DONNÉES)
   // ============================================
+  /**
+   * Get all wills where the authenticated user is a secondary member
+   */
+  async getAssociatedWills(): Promise<AssociatedWill[]> {
+    try {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: AssociatedWill[];
+      }>(API_ROUTES.WILLS.ASSOCIATED);
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error fetching associated wills:", error);
+      throw new Error("Failed to fetch associated wills: " + (error.response?.data?.message || error.message));
+    }
+  }
+
   async getWillsByWallet(walletAddress: string): Promise<WillFromDB[]> {
     try {
       const response = await apiClient.get<{

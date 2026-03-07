@@ -38,6 +38,7 @@ export const API_ROUTES = {
   WILLS: {
     BASE: "/api/wills",
     DRAFT: "/api/wills/draft",
+    ASSOCIATED: "/api/wills/associated",
     DEPLOY: (willId: string) => `/api/wills/${willId}/deploy`,
     CANCEL: (willId: string) => `/api/wills/${willId}/cancel`,
     UPDATE_MEMBERS: (willId: string) => `/api/wills/${willId}/members`,
