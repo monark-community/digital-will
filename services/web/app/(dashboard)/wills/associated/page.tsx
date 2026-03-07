@@ -201,6 +201,13 @@ export default function AssociatedWillsPage() {
 
                   <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
+                      <span className="text-xs text-[var(--text-muted)]">Created by</span>
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">
+                        {will.owner.firstName} {will.owner.lastName}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">{will.owner.email}</p>
+                    </div>
+                    <div>
                       <span className="text-xs text-[var(--text-muted)]">Owner wallet</span>
                       <p className="font-mono text-sm text-[var(--text-primary)] break-all">{will.walletAddress}</p>
                     </div>
@@ -224,70 +231,45 @@ export default function AssociatedWillsPage() {
                     </div>
                   </div>
 
-                  {/* My membership */}
-                  <div className="px-6 py-4 bg-[var(--accent)]/5 border-t border-[var(--accent)]/20">
-                    <h3 className="text-sm font-semibold text-[var(--accent)] mb-2">Your membership</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                      <div>
-                        <span className="text-xs text-[var(--text-muted)]">Name</span>
-                        <p className="text-[var(--text-primary)]">
-                          {will.myMembership.firstName} {will.myMembership.lastName}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-xs text-[var(--text-muted)]">Email</span>
-                        <p className="text-[var(--text-primary)]">{will.myMembership.email}</p>
-                      </div>
-                      <div>
-                        <span className="text-xs text-[var(--text-muted)]">Voting power</span>
-                        <p className="text-[var(--text-primary)]">{will.myMembership.votingPower}</p>
-                      </div>
-                      <div>
-                        <span className="text-xs text-[var(--text-muted)]">Status</span>
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${SM_STATE_COLORS[will.myMembership.state] ?? "bg-gray-100 text-gray-700"}`}>
-                          {will.myMembership.state}
-                        </span>
-                      </div>
-                      {will.myMembership.relationship && (
-                        <div>
-                          <span className="text-xs text-[var(--text-muted)]">Relationship</span>
-                          <p className="text-[var(--text-primary)]">{will.myMembership.relationship}</p>
-                        </div>
-                      )}
-                      {will.myMembership.walletAddress && (
-                        <div className="col-span-2">
-                          <span className="text-xs text-[var(--text-muted)]">Your wallet address</span>
-                          <p className="font-mono text-xs text-[var(--text-primary)] break-all">{will.myMembership.walletAddress}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
                   {will.secondaryMembers.length > 0 && (
                     <div className="px-6 py-4 border-t border-[var(--border-section)]">
                       <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
-                        All secondary members ({will.secondaryMembers.length})
+                        Secondary members ({will.secondaryMembers.length})
                       </h3>
                       <div className="space-y-2">
-                        {will.secondaryMembers.map((sm) => (
-                          <div
-                            key={sm.secondaryMemberId}
-                            className="flex items-center justify-between rounded-lg bg-[var(--bg-section)] px-4 py-2 text-sm"
-                          >
-                            <div>
-                              <span className="font-medium text-[var(--text-primary)]">
-                                {sm.firstName} {sm.lastName}
-                              </span>
-                              <span className="text-[var(--text-muted)] ml-2 text-xs">{sm.email}</span>
+                        {will.secondaryMembers.map((sm) => {
+                          const isMe = sm.secondaryMemberId === will.myMembership.secondaryMemberId;
+                          return (
+                            <div
+                              key={sm.secondaryMemberId}
+                              className={`flex items-center justify-between rounded-lg px-4 py-2 text-sm ${
+                                isMe
+                                  ? "bg-[var(--accent)]/10 border border-[var(--accent)]/30"
+                                  : "bg-[var(--bg-section)]"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div>
+                                  <span className={`font-medium ${ isMe ? "text-[var(--accent)]" : "text-[var(--text-primary)]" }`}>
+                                    {sm.firstName} {sm.lastName}
+                                  </span>
+                                  {isMe && (
+                                    <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--accent)] text-white">
+                                      You
+                                    </span>
+                                  )}
+                                  <span className="text-[var(--text-muted)] ml-2 text-xs">{sm.email}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[var(--text-muted)] text-xs">Power: {sm.votingPower}</span>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${SM_STATE_COLORS[sm.state] ?? "bg-gray-100 text-gray-700"}`}>
+                                  {sm.state}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-[var(--text-muted)] text-xs">Power: {sm.votingPower}</span>
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${SM_STATE_COLORS[sm.state] ?? "bg-gray-100 text-gray-700"}`}>
-                                {sm.state}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}

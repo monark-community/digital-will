@@ -63,6 +63,11 @@ export interface WillFromDB {
 }
 
 export interface AssociatedWill extends WillFromDB {
+  owner: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
   myMembership: {
     secondaryMemberId: string;
     firstName: string;

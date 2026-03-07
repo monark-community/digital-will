@@ -69,15 +69,31 @@ export const getAssociatedWills = async (userId: string) => {
             will: {
                 include: {
                     secondaryMembers: true,
+                    wallet: {
+                        include: {
+                            user: {
+                                select: { firstName: true, lastName: true, email: true },
+                            },
+                        },
+                    },
                 },
             },
         },
     });
 
-    const willsMap = new Map<string, typeof secondaryMemberRecords[0]['will'] & { myMembership: typeof secondaryMemberRecords[0] }>();
+    type WillWithOwner = Omit<typeof secondaryMemberRecords[0]['will'], 'wallet'> & {
+        owner: { firstName: string; lastName: string; email: string };
+        myMembership: typeof secondaryMemberRecords[0];
+    };
+    const willsMap = new Map<string, WillWithOwner>();
     for (const sm of secondaryMemberRecords) {
         if (!willsMap.has(sm.willId)) {
-            willsMap.set(sm.willId, { ...sm.will, myMembership: sm });
+            const { wallet, ...willData } = sm.will;
+            willsMap.set(sm.willId, {
+                ...willData,
+                owner: wallet?.user ?? { firstName: 'Unknown', lastName: '', email: '' },
+                myMembership: sm,
+            });
         }
     }
 
