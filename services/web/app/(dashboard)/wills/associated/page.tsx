@@ -42,6 +42,7 @@ export default function AssociatedWillsPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedFilterWalletId, setSelectedFilterWalletId] = useState<string>("all");
   const [showFilterWalletDropdown, setShowFilterWalletDropdown] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -85,15 +86,29 @@ export default function AssociatedWillsPage() {
     fetchAssociatedWills();
   }, [mounted]);
 
+  const copyToClipboard = async (address: string, identifier: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedAddress(identifier);
+      setTimeout(() => setCopiedAddress(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy address:', err);
+    }
+  };
+
   if (!mounted) return null;
 
   const selectedFilterWallet = wallets?.find(w => w.walletId === selectedFilterWalletId);
 
   const displayedWills = selectedFilterWalletId === "all"
     ? wills
-    : wills.filter(will =>
-        will.myMembership.walletAddress?.toLowerCase() === selectedFilterWallet?.address.toLowerCase()
-      );
+    : wills.filter(will => {
+        const addr = selectedFilterWallet?.address.toLowerCase();
+        return (
+          will.myMembership.walletAddress?.toLowerCase() === addr ||
+          will.myMembership.tempWalletAddress?.toLowerCase() === addr
+        );
+      });
 
   return (
     <div className="flex flex-col min-h-screen bg-[var(--bg-page)]">
@@ -209,7 +224,25 @@ export default function AssociatedWillsPage() {
                     </div>
                     <div>
                       <span className="text-xs text-[var(--text-muted)]">Owner wallet</span>
-                      <p className="font-mono text-sm text-[var(--text-primary)] break-all">{will.walletAddress}</p>
+                      <div className="flex items-start gap-1">
+                        <p className="font-mono text-sm text-[var(--text-primary)] break-all">{will.walletAddress}</p>
+                        <div className="relative flex-shrink-0">
+                          <button
+                            onClick={() => copyToClipboard(will.walletAddress, `owner-${will.willId}`)}
+                            className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                            title="Copy address"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                          {copiedAddress === `owner-${will.willId}` && (
+                            <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                              Copied!
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     {will.contractAddressInBlockchain && (
                       <div>
@@ -239,29 +272,53 @@ export default function AssociatedWillsPage() {
                       <div className="space-y-2">
                         {will.secondaryMembers.map((sm) => {
                           const isMe = sm.secondaryMemberId === will.myMembership.secondaryMemberId;
+                          const smWallet = sm.walletAddress || sm.tempWalletAddress;
                           return (
                             <div
                               key={sm.secondaryMemberId}
-                              className={`flex items-center justify-between rounded-lg px-4 py-2 text-sm ${
+                              className={`flex items-center justify-between rounded-lg px-4 py-3 text-sm ${
                                 isMe
                                   ? "bg-[var(--accent)]/10 border border-[var(--accent)]/30"
                                   : "bg-[var(--bg-section)]"
                               }`}
                             >
-                              <div className="flex items-center gap-2">
-                                <div>
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-2">
                                   <span className={`font-medium ${ isMe ? "text-[var(--accent)]" : "text-[var(--text-primary)]" }`}>
                                     {sm.firstName} {sm.lastName}
                                   </span>
                                   {isMe && (
-                                    <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--accent)] text-white">
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--accent)] text-white">
                                       You
                                     </span>
                                   )}
-                                  <span className="text-[var(--text-muted)] ml-2 text-xs">{sm.email}</span>
+                                  <span className="text-[var(--text-muted)] text-xs">{sm.email}</span>
                                 </div>
+                                {smWallet && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="font-mono text-[11px] text-[var(--text-muted)] break-all">
+                                      {smWallet}
+                                    </span>
+                                    <div className="relative flex-shrink-0">
+                                      <button
+                                        onClick={() => copyToClipboard(smWallet, `sm-${sm.secondaryMemberId}`)}
+                                        className="p-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                                        title="Copy address"
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                      </button>
+                                      {copiedAddress === `sm-${sm.secondaryMemberId}` && (
+                                        <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                                          Copied!
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3 ml-4 shrink-0">
                                 <span className="text-[var(--text-muted)] text-xs">Power: {sm.votingPower}</span>
                                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${SM_STATE_COLORS[sm.state] ?? "bg-gray-100 text-gray-700"}`}>
                                   {sm.state}
