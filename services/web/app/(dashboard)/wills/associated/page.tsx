@@ -1,11 +1,71 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { ethers } from "ethers";
 import Header from "@/app/components/ui/Header";
 import { willService, authService, type AssociatedWill } from "@/lib/services";
+import { WILL_ABI } from "@/lib/contracts/WillABI";
 import { useCurrentUser, useWallets } from "@/lib/hooks";
 import type { User } from "@/lib/types";
+
+type ActionId = 'validate' | 'desist' | 'declareDeath' | 'swapAssets';
+
+interface ActionDef {
+  id: ActionId;
+  label: string;
+  description: string;
+  disabledReason: (will: AssociatedWill) => string | null;
+  colorActive: string;
+}
+
+const SM_ACTIONS: ActionDef[] = [
+  {
+    id: 'validate',
+    label: 'Validate',
+    description: 'Accept your role to activate the will.',
+    disabledReason: (w) => {
+      if (w.state !== 'INACTIVE') return `Will must be INACTIVE (currently ${w.state})`;
+      if (w.myMembership.state !== 'PENDING') return 'You have already validated';
+      return null;
+    },
+    colorActive: 'bg-emerald-600 hover:bg-emerald-500 text-white',
+  },
+  {
+    id: 'desist',
+    label: 'Desist',
+    description: 'Withdraw your participation.',
+    disabledReason: (w) => {
+      if (w.state === 'CANCELED') return 'Will is canceled';
+      if (w.state === 'EXECUTED') return 'Will is already executed';
+      if (w.state === 'DRAFT')    return 'Will is not yet deployed';
+      if (w.myMembership.state === 'PENDING') return 'Validate first before desisting';
+      return null;
+    },
+    colorActive: 'bg-yellow-600 hover:bg-yellow-500 text-white',
+  },
+  {
+    id: 'declareDeath',
+    label: 'Declare Death',
+    description: 'Start the security period countdown.',
+    disabledReason: (w) => {
+      if (w.state !== 'ACTIVE') return `Will must be ACTIVE (currently ${w.state})`;
+      if (w.myMembership.state === 'DECLARED_DEATH') return 'You already declared death';
+      return null;
+    },
+    colorActive: 'bg-red-700 hover:bg-red-600 text-white',
+  },
+  {
+    id: 'swapAssets',
+    label: 'Execute Will',
+    description: 'Distribute assets after security period.',
+    disabledReason: (w) => {
+      if (w.state !== 'ACTIVE') return `Will must be ACTIVE (currently ${w.state})`;
+      return null;
+    },
+    colorActive: 'bg-purple-700 hover:bg-purple-600 text-white',
+  },
+];
 
 const STATE_COLORS: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-700",
@@ -29,6 +89,9 @@ const CHAIN_NAMES: Record<number, string> = {
   31337: "Anvil",
 };
 
+const WILL_STATES_ONCHAIN = ['CANCELED', 'INACTIVE', 'ACTIVE', 'EXECUTED'] as const;
+const SM_STATES_ONCHAIN   = ['PENDING', 'VALIDATED', 'DECLARED_DEATH'] as const;
+
 export default function AssociatedWillsPage() {
   const router = useRouter();
   const { data: currentUser } = useCurrentUser();
@@ -43,6 +106,11 @@ export default function AssociatedWillsPage() {
   const [selectedFilterWalletId, setSelectedFilterWalletId] = useState<string>("all");
   const [showFilterWalletDropdown, setShowFilterWalletDropdown] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+
+  // Per-will action state
+  const [actionLoading, setActionLoading] = useState<Record<string, ActionId | null>>({});
+  const [actionError,   setActionError]   = useState<Record<string, string | null>>({});
+  const [actionSuccess, setActionSuccess] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     setMounted(true);
@@ -67,24 +135,112 @@ export default function AssociatedWillsPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+
+  const enrichWithChainState = useCallback(async (wills: AssociatedWill[]): Promise<AssociatedWill[]> => {
+    if (typeof window === 'undefined' || !(window as any).ethereum) return wills;
+    const provider = new ethers.BrowserProvider((window as any).ethereum);
+
+    return Promise.all(wills.map(async (will) => {
+      if (!will.contractAddressInBlockchain) return will;
+
+      try {
+        const contract = new ethers.Contract(
+          ethers.getAddress(will.contractAddressInBlockchain),
+          WILL_ABI,
+          provider,
+        );
+
+        const stateNum: number = Number(await contract.getState());
+        const chainWillState = (WILL_STATES_ONCHAIN[stateNum] ?? will.state) as AssociatedWill['state'];
+
+        const enrichedMembers = await Promise.all(
+          will.secondaryMembers.map(async (sm) => {
+            const smWallet = sm.walletAddress || sm.tempWalletAddress;
+            if (!smWallet) return sm;
+            try {
+              const smInfo = await contract.getDetailedSm(ethers.getAddress(smWallet));
+              const chainSmState = (SM_STATES_ONCHAIN[Number(smInfo.state)] ?? sm.state) as typeof sm.state;
+              return { ...sm, state: chainSmState };
+            } catch {
+              return sm;
+            }
+          }),
+        );
+
+        const myEnriched = enrichedMembers.find(
+          (sm) => sm.secondaryMemberId === will.myMembership.secondaryMemberId,
+        );
+        const chainMyState = myEnriched?.state ?? will.myMembership.state;
+
+        return {
+          ...will,
+          state: chainWillState,
+          secondaryMembers: enrichedMembers,
+          myMembership: { ...will.myMembership, state: chainMyState },
+        };
+      } catch {
+        return will;
+      }
+    }));
+  }, []);
+
+  const fetchAssociatedWills = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await willService.getAssociatedWills();
+      const enriched = await enrichWithChainState(data);
+      setWills(enriched);
+    } catch (err: any) {
+      setError(err.message || "Failed to load associated wills");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [enrichWithChainState]);
+
+  const handleSmAction = useCallback(async (will: AssociatedWill, action: ActionDef) => {
+    if (!will.contractAddressInBlockchain) return;
+    const id = will.willId;
+    setActionError(prev  => ({ ...prev, [id]: null }));
+    setActionSuccess(prev => ({ ...prev, [id]: null }));
+    setActionLoading(prev => ({ ...prev, [id]: action.id }));
+    try {
+      if (typeof window === 'undefined' || !(window as any).ethereum) {
+        throw new Error('No Web3 provider found. Please install MetaMask.');
+      }
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer   = await provider.getSigner();
+      const contract = new ethers.Contract(
+        ethers.getAddress(will.contractAddressInBlockchain),
+        WILL_ABI,
+        signer
+      );
+      let tx: ethers.TransactionResponse;
+      switch (action.id) {
+        case 'validate':     tx = await contract.validateSm();   break;
+        case 'desist':       tx = await contract.desistSm();     break;
+        case 'declareDeath': tx = await contract.declareDeath(); break;
+        case 'swapAssets':   tx = await contract.swapAssets();  break;
+      }
+      await tx.wait();
+      setActionSuccess(prev => ({ ...prev, [id]: `"${action.label}" confirmed!` }));
+      await fetchAssociatedWills();
+    } catch (err: any) {
+      if (err.code === 4001 || err.code === 'ACTION_REJECTED' || err.reason === 'rejected') {
+        setActionError(prev => ({ ...prev, [id]: 'Transaction rejected by user.' }));
+      } else {
+        setActionError(prev => ({ ...prev, [id]: err.reason || err.message || 'Transaction failed.' }));
+      }
+    } finally {
+      setActionLoading(prev => ({ ...prev, [id]: null }));
+    }
+  }, [fetchAssociatedWills]);
+
   useEffect(() => {
     if (!mounted) return;
     if (!authService.isAuthenticated()) return;
-    const fetchAssociatedWills = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const data = await willService.getAssociatedWills();
-        setWills(data);
-      } catch (err: any) {
-        setError(err.message || "Failed to load associated wills");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchAssociatedWills();
-  }, [mounted]);
+  }, [mounted, fetchAssociatedWills]);
 
   const copyToClipboard = async (address: string, identifier: string) => {
     try {
@@ -263,6 +419,58 @@ export default function AssociatedWillsPage() {
                       </p>
                     </div>
                   </div>
+
+                  {will.contractAddressInBlockchain && (
+                    <div className="px-6 py-4 border-t border-[var(--border-section)]">
+                      <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Your Actions</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {SM_ACTIONS.map((action) => {
+                          const reason     = action.disabledReason(will);
+                          const isDisabled = reason !== null;
+                          const isLoading  = actionLoading[will.willId] === action.id;
+                          const anyLoading = !!actionLoading[will.willId];
+                          return (
+                            <div key={action.id} className="relative group">
+                              <button
+                                onClick={() => !isDisabled && !anyLoading && handleSmAction(will, action)}
+                                disabled={isDisabled || anyLoading}
+                                className={`w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                                  isDisabled || anyLoading
+                                    ? 'bg-[var(--bg-section)] text-[var(--text-muted-alt)] opacity-40 cursor-not-allowed'
+                                    : action.colorActive
+                                }`}
+                              >
+                                {isLoading ? (
+                                  <>
+                                    <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                    <span>Confirming…</span>
+                                  </>
+                                ) : action.label}
+                              </button>
+                              {isDisabled && reason && (
+                                <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 whitespace-nowrap rounded-lg bg-[var(--bg-section)] border border-[var(--border-section)] px-3 py-2 text-xs text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                                  {reason}
+                                </div>
+                              )}
+                              {!isDisabled && (
+                                <p className="mt-1 text-xs text-[var(--text-muted-alt)] text-center leading-snug">{action.description}</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {actionError[will.willId] && (
+                        <div className="mt-3 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
+                          {actionError[will.willId]}
+                        </div>
+                      )}
+                      {actionSuccess[will.willId] && (
+                        <div className="mt-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 text-sm text-emerald-400">
+                          {actionSuccess[will.willId]}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {will.secondaryMembers.length > 0 && (
                     <div className="px-6 py-4 border-t border-[var(--border-section)]">
