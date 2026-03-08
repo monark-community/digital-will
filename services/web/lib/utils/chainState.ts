@@ -21,14 +21,16 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
           provider,
         );
 
-        const [stateNum, rawExecTs, rawDeclTs] = await Promise.all([
+        const [stateNum, rawExecTs, rawDeclTs, rawCooldownTs] = await Promise.all([
           contract.getState(),
           contract.executionTimeStampS().catch(() => BigInt(0)),
           contract.deathDeclarationTimestampS().catch(() => BigInt(0)),
+          contract.cooldownTimeStampS().catch(() => BigInt(0)),
         ]);
         const chainWillState = (WILL_STATES_ONCHAIN[Number(stateNum)] ?? will.state) as T['state'];
         const executionTimestampOnChain = Number(rawExecTs);
         const deathDeclarationTimestampOnChain = Number(rawDeclTs);
+        const cooldownTimestampOnChain = Number(rawCooldownTs);
 
         const enrichedMembers = await Promise.all(
           will.secondaryMembers.map(async (sm) => {
@@ -44,7 +46,7 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
           }),
         );
 
-        return { ...will, state: chainWillState, secondaryMembers: enrichedMembers, executionTimestampOnChain, deathDeclarationTimestampOnChain };
+        return { ...will, state: chainWillState, secondaryMembers: enrichedMembers, executionTimestampOnChain, deathDeclarationTimestampOnChain, cooldownTimestampOnChain };
       } catch {
         return will;
       }

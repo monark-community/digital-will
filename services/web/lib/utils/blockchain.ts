@@ -125,6 +125,18 @@ export async function cancelWillContract(contractAddress: string): Promise<strin
 }
 
 /**
+ * Veto a death declaration via MetaMask. Resets all DECLARED_DEATH SMs to VALIDATED
+ * and starts a cooldown, preventing new declarations for COOLDOWN_PERIOD seconds.
+ */
+export async function vetoDeathContract(contractAddress: string): Promise<string> {
+  const signer = await getSigner();
+  const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
+  const tx = await contract.vetoDeath();
+  await tx.wait();
+  return tx.hash;
+}
+
+/**
  * Update a deployed will's SM list and/or security period via MetaMask.
  * Pass empty arrays for lists that are unchanged.
  * Pass { minSecurityPeriod: 0n, maxSecurityPeriod: 0n } to skip period update.

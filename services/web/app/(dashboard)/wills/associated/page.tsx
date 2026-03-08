@@ -9,7 +9,7 @@ import { WILL_ABI } from "@/lib/contracts/WillABI";
 import { enrichWillsWithChainState } from "@/lib/utils/chainState";
 import { useCurrentUser, useWallets } from "@/lib/hooks";
 import type { User } from "@/lib/types";
-import { SecurityPeriodCountdown } from "@/app/components/ui/SecurityPeriodCountdown";
+import { SecurityPeriodCountdown, CooldownCountdown } from "@/app/components/ui/SecurityPeriodCountdown";
 
 type ActionId = 'validate' | 'desist' | 'declareDeath' | 'swapAssets';
 
@@ -52,6 +52,19 @@ const SM_ACTIONS: ActionDef[] = [
     description: 'Start the security period countdown.',
     disabledReason: (w) => {
       if (w.state !== 'ACTIVE') return `Will must be ACTIVE (currently ${w.state})`;
+      const nowSec = Math.floor(Date.now() / 1000);
+      const cooldownEnd = w.cooldownTimestampOnChain ?? 0;
+      if (cooldownEnd > nowSec) {
+        const secsLeft = cooldownEnd - nowSec;
+        const d = Math.floor(secsLeft / 86400);
+        const h = Math.floor((secsLeft % 86400) / 3600);
+        const m = Math.floor((secsLeft % 3600) / 60);
+        const parts: string[] = [];
+        if (d > 0) parts.push(`${d}d`);
+        if (h > 0) parts.push(`${h}h`);
+        if (m > 0 || parts.length === 0) parts.push(`${m}m`);
+        return `On cooldown after PM veto — ${parts.join(' ')} remaining`;
+      }
       if (w.myMembership.state === 'DECLARED_DEATH') return 'You already declared death';
       return null;
     },
@@ -209,6 +222,12 @@ export default function AssociatedWillsPage() {
     } catch (err: any) {
       if (err.code === 4001 || err.code === 'ACTION_REJECTED' || err.reason === 'rejected') {
         setActionError(prev => ({ ...prev, [id]: 'Transaction rejected by user.' }));
+      } else if (
+        err.data === '0x46032016' ||
+        err.info?.error?.data === '0x46032016' ||
+        (typeof err.message === 'string' && err.message.includes('46032016'))
+      ) {
+        setActionError(prev => ({ ...prev, [id]: 'The will is on cooldown after the primary member vetoed. New declarations are blocked until the cooldown expires.' }));
       } else {
         setActionError(prev => ({ ...prev, [id]: err.reason || err.message || 'Transaction failed.' }));
       }
@@ -402,6 +421,15 @@ export default function AssociatedWillsPage() {
                   </div>
 
                   {(() => {
+                    const nowSec = Math.floor(Date.now() / 1000);
+                    const cooldownEnd = will.cooldownTimestampOnChain ?? 0;
+                    if (cooldownEnd > nowSec && will.state !== 'CANCELED' && will.state !== 'EXECUTED') {
+                      return (
+                        <div className="px-6 py-3 border-t border-orange-500/20">
+                          <CooldownCountdown endTs={cooldownEnd} />
+                        </div>
+                      );
+                    }
                     const startTs = will.deathDeclarationTimestampOnChain;
                     const endTs   = will.executionTimestampOnChain;
                     if (!startTs || startTs === 0 || !endTs || endTs === 0) return null;

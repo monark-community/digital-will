@@ -8,6 +8,13 @@ export const WILL_ABI = [
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "vetoDeath",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",

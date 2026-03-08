@@ -50,6 +50,7 @@ export interface WillFromDB {
   state: 'DRAFT' | 'INACTIVE' | 'ACTIVE' | 'CANCELED' | 'EXECUTED';
   executionTimestampOnChain?: number;
   deathDeclarationTimestampOnChain?: number;
+  cooldownTimestampOnChain?: number;     // unix seconds; 0 or undefined = not on cooldown
   secondaryMembers: Array<{
     secondaryMemberId: string;
     firstName: string;
