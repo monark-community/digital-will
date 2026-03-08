@@ -8,6 +8,21 @@ import type { Contact } from "@/lib/types";
 import { config } from "@/lib/config";
 import { ethers } from "ethers";
 import { getContractBalance, fundWillContract, withdrawWillContract, cancelWillContract, updateWillContract } from "@/lib/utils/blockchain";
+import { enrichWillsWithChainState } from "@/lib/utils/chainState";
+
+const WILL_STATE_COLORS: Record<string, string> = {
+  DRAFT:     'bg-gray-500/20 text-gray-400',
+  INACTIVE:  'bg-yellow-500/20 text-yellow-400',
+  ACTIVE:    'bg-emerald-500/20 text-emerald-400',
+  CANCELED:  'bg-red-500/20 text-red-400',
+  EXECUTED:  'bg-blue-500/20 text-blue-400',
+};
+
+const SM_STATE_COLORS: Record<string, string> = {
+  PENDING:        'bg-yellow-500/20 text-yellow-400',
+  VALIDATED:      'bg-emerald-500/20 text-emerald-400',
+  DECLARED_DEATH: 'bg-red-500/20 text-red-400',
+};
 
 function getMetaMaskErrorMessage(err: any): string | null {
   if (
@@ -198,9 +213,10 @@ export default function WillsPage() {
         );
         const willsArrays = await Promise.all(allWillsPromises);
         const allWills = willsArrays.flat();
-        setRealWills(allWills);
+        const enriched = await enrichWillsWithChainState(allWills);
+        setRealWills(enriched);
 
-        const deployedWills = allWills.filter(w => w.contractAddressInBlockchain && w.state !== 'DRAFT');
+        const deployedWills = enriched.filter(w => w.contractAddressInBlockchain && w.state !== 'DRAFT');
         const balanceEntries = await Promise.all(
           deployedWills.map(async (w) => {
             try {
@@ -1586,17 +1602,25 @@ const handleConfirmDeleteDraft = async () => {
                   <div key={will.willId} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="font-semibold text-[var(--text-primary)] mb-1">{will.willName}</h3>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-[var(--text-primary)]">
+                            {will.willName}
+                          </h3>
+
+                          {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-500">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                              </svg>
+                              Deployed
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-[var(--text-muted-alt)] font-mono">{will.contractAddressInBlockchain}</p>
                       </div>
-                      {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-500">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                          </svg>
-                          Deployed
-                        </span>
-                      )}
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${WILL_STATE_COLORS[will.state] ?? 'bg-gray-500/20 text-gray-400'}`}>
+                        {will.state}
+                      </span>
                       {will.state === 'DRAFT' && (
                       <>
                         <button
@@ -1707,10 +1731,17 @@ const handleConfirmDeleteDraft = async () => {
                               <span className="text-sm font-medium text-[var(--text-primary)]">
                                 {member.firstName} {member.lastName}
                               </span>
-                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-500/15 flex items-center gap-1">
-                                <span className="text-violet-400/70">Power</span>
-                                <span className="text-violet-300 font-semibold">{member.votingPower}</span>
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                {will.contractAddressInBlockchain && (
+                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${SM_STATE_COLORS[member.state] ?? 'bg-gray-500/20 text-gray-400'}`}>
+                                    {member.state}
+                                  </span>
+                                )}
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-500/15 flex items-center gap-1">
+                                  <span className="text-violet-400/70">Power</span>
+                                  <span className="text-violet-300 font-semibold">{member.votingPower}</span>
+                                </span>
+                              </div>
                             </div>
                             <div className="text-xs text-[var(--text-muted-alt)] space-y-1">
                               <div className="flex items-center gap-1">

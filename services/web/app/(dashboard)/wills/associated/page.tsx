@@ -6,6 +6,7 @@ import { ethers } from "ethers";
 import Header from "@/app/components/ui/Header";
 import { willService, authService, type AssociatedWill } from "@/lib/services";
 import { WILL_ABI } from "@/lib/contracts/WillABI";
+import { enrichWillsWithChainState } from "@/lib/utils/chainState";
 import { useCurrentUser, useWallets } from "@/lib/hooks";
 import type { User } from "@/lib/types";
 
@@ -89,9 +90,6 @@ const CHAIN_NAMES: Record<number, string> = {
   31337: "Anvil",
 };
 
-const WILL_STATES_ONCHAIN = ['CANCELED', 'INACTIVE', 'ACTIVE', 'EXECUTED'] as const;
-const SM_STATES_ONCHAIN   = ['PENDING', 'VALIDATED', 'DECLARED_DEATH'] as const;
-
 export default function AssociatedWillsPage() {
   const router = useRouter();
   const { data: currentUser } = useCurrentUser();
@@ -137,51 +135,16 @@ export default function AssociatedWillsPage() {
 
 
   const enrichWithChainState = useCallback(async (wills: AssociatedWill[]): Promise<AssociatedWill[]> => {
-    if (typeof window === 'undefined' || !(window as any).ethereum) return wills;
-    const provider = new ethers.BrowserProvider((window as any).ethereum);
-
-    return Promise.all(wills.map(async (will) => {
-      if (!will.contractAddressInBlockchain) return will;
-
-      try {
-        const contract = new ethers.Contract(
-          ethers.getAddress(will.contractAddressInBlockchain),
-          WILL_ABI,
-          provider,
-        );
-
-        const stateNum: number = Number(await contract.getState());
-        const chainWillState = (WILL_STATES_ONCHAIN[stateNum] ?? will.state) as AssociatedWill['state'];
-
-        const enrichedMembers = await Promise.all(
-          will.secondaryMembers.map(async (sm) => {
-            const smWallet = sm.walletAddress || sm.tempWalletAddress;
-            if (!smWallet) return sm;
-            try {
-              const smInfo = await contract.getDetailedSm(ethers.getAddress(smWallet));
-              const chainSmState = (SM_STATES_ONCHAIN[Number(smInfo.state)] ?? sm.state) as typeof sm.state;
-              return { ...sm, state: chainSmState };
-            } catch {
-              return sm;
-            }
-          }),
-        );
-
-        const myEnriched = enrichedMembers.find(
-          (sm) => sm.secondaryMemberId === will.myMembership.secondaryMemberId,
-        );
-        const chainMyState = myEnriched?.state ?? will.myMembership.state;
-
-        return {
-          ...will,
-          state: chainWillState,
-          secondaryMembers: enrichedMembers,
-          myMembership: { ...will.myMembership, state: chainMyState },
-        };
-      } catch {
-        return will;
-      }
-    }));
+    const enriched = await enrichWillsWithChainState(wills);
+    return enriched.map((will) => {
+      const myEnriched = will.secondaryMembers.find(
+        (sm) => sm.secondaryMemberId === will.myMembership.secondaryMemberId,
+      );
+      return {
+        ...will,
+        myMembership: { ...will.myMembership, state: myEnriched?.state ?? will.myMembership.state },
+      };
+    });
   }, []);
 
   const fetchAssociatedWills = useCallback(async () => {
