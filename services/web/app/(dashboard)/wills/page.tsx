@@ -9,6 +9,7 @@ import { config } from "@/lib/config";
 import { ethers } from "ethers";
 import { getContractBalance, fundWillContract, withdrawWillContract, cancelWillContract, updateWillContract } from "@/lib/utils/blockchain";
 import { enrichWillsWithChainState } from "@/lib/utils/chainState";
+import { SecurityPeriodCountdown } from "@/app/components/ui/SecurityPeriodCountdown";
 
 const WILL_STATE_COLORS: Record<string, string> = {
   DRAFT:     'bg-gray-500/20 text-gray-400',
@@ -1721,6 +1722,17 @@ const handleConfirmDeleteDraft = async () => {
                         </div>
                       )}
                     </div>
+
+                    {(() => {
+                      const startTs = will.deathDeclarationTimestampOnChain;
+                      const endTs   = will.executionTimestampOnChain;
+                      if (!startTs || startTs === 0 || !endTs || endTs === 0) return null;
+                      return (
+                        <div className="mt-3 border-t border-red-500/20 bg-red-500/5 rounded-lg">
+                          <SecurityPeriodCountdown startTs={startTs} endTs={endTs} />
+                        </div>
+                      );
+                    })()}
 
                     <div className="border-t border-[var(--border-section)] pt-3 mt-3">
                       <p className="text-xs text-[var(--text-muted-alt)] mb-2">Secondary Members:</p>

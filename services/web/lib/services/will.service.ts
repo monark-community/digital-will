@@ -48,6 +48,8 @@ export interface WillFromDB {
   minSecurityPeriod: number;
   maxSecurityPeriod: number;
   state: 'DRAFT' | 'INACTIVE' | 'ACTIVE' | 'CANCELED' | 'EXECUTED';
+  executionTimestampOnChain?: number;
+  deathDeclarationTimestampOnChain?: number;
   secondaryMembers: Array<{
     secondaryMemberId: string;
     firstName: string;

@@ -9,6 +9,7 @@ import { WILL_ABI } from "@/lib/contracts/WillABI";
 import { enrichWillsWithChainState } from "@/lib/utils/chainState";
 import { useCurrentUser, useWallets } from "@/lib/hooks";
 import type { User } from "@/lib/types";
+import { SecurityPeriodCountdown } from "@/app/components/ui/SecurityPeriodCountdown";
 
 type ActionId = 'validate' | 'desist' | 'declareDeath' | 'swapAssets';
 
@@ -62,6 +63,23 @@ const SM_ACTIONS: ActionDef[] = [
     description: 'Distribute assets after security period.',
     disabledReason: (w) => {
       if (w.state !== 'ACTIVE') return `Will must be ACTIVE (currently ${w.state})`;
+      const anyDeclared = w.secondaryMembers.some(sm => sm.state === 'DECLARED_DEATH');
+      if (!anyDeclared) return 'No SM has declared death yet. Security period not started';
+      const execTs = w.executionTimestampOnChain;
+      if (execTs === undefined) return 'Loading on-chain execution timestamp…';
+      if (execTs === 0) return 'Execution timestamp not set on chain';
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (nowSec < execTs) {
+        const secsLeft = execTs - nowSec;
+        const d = Math.floor(secsLeft / 86400);
+        const h = Math.floor((secsLeft % 86400) / 3600);
+        const m = Math.floor((secsLeft % 3600) / 60);
+        const parts = [];
+        if (d > 0) parts.push(`${d}d`);
+        if (h > 0) parts.push(`${h}h`);
+        if (m > 0 || parts.length === 0) parts.push(`${m}m`);
+        return `Security period not yet elapsed — ${parts.join(' ')} remaining`;
+      }
       return null;
     },
     colorActive: 'bg-purple-700 hover:bg-purple-600 text-white',
@@ -382,6 +400,17 @@ export default function AssociatedWillsPage() {
                       </p>
                     </div>
                   </div>
+
+                  {(() => {
+                    const startTs = will.deathDeclarationTimestampOnChain;
+                    const endTs   = will.executionTimestampOnChain;
+                    if (!startTs || startTs === 0 || !endTs || endTs === 0) return null;
+                    return (
+                      <div className="px-6 py-2 border-t border-red-500/20 bg-red-500/5">
+                        <SecurityPeriodCountdown startTs={startTs} endTs={endTs} />
+                      </div>
+                    );
+                  })()}
 
                   {will.contractAddressInBlockchain && (
                     <div className="px-6 py-4 border-t border-[var(--border-section)]">
