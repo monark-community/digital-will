@@ -387,7 +387,7 @@ useEffect(() => {
       await willService.cancelWill(cancelModal.willId);
       setRealWills(prev => prev.map(w =>
         w.willId === cancelModal.willId
-          ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null }
+          ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null, cooldownTimestampOnChain: null }
           : w
       ));
       setCancelModal(null);
@@ -426,7 +426,7 @@ useEffect(() => {
       } else {
         setRealWills(prev => prev.map(w =>
           w.willId === willId
-            ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null }
+            ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null, cooldownTimestampOnChain: null }
             : w
         ));
       }
