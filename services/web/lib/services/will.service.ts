@@ -21,12 +21,14 @@ export interface SecondaryMemberInput {
 
 export interface CreateDraftWillParams {
   walletAddress: string;
+  willName: string;
   secondaryMembers?: SecondaryMemberInput[];
   minSecurityPeriod?: number;
   maxSecurityPeriod?: number;
 }
 
 export interface UpdateDraftWillParams {
+  willName?: string;
   secondaryMembers?: SecondaryMemberInput[];
   minSecurityPeriod?: number;
   maxSecurityPeriod?: number;
@@ -37,15 +39,9 @@ export interface DeployWillParams {
   chainId: number;
 }
 
-/* export interface SaveWillToDBParams {
-  walletAddress: string;
-  contractAddressInBlockchain: string;
-  chainId: number;
-  secondaryMembers: SecondaryMemberInput[];
-} */
-
 export interface WillFromDB {
   willId: string;
+  willName: string;
   walletAddress: string;
   contractAddressInBlockchain?: string | null;  // Optionnel
   chainId?: number | null;                      // Optionnel
@@ -256,6 +252,7 @@ class WillService {
    * Create a new draft will (off-chain only)
    */
   async createDraftWill(params: CreateDraftWillParams): Promise<WillFromDB> {
+    console.log(params.willName);
     try {
       const response = await apiClient.post<{
         success: boolean;
