@@ -69,6 +69,7 @@ export default function WillsPage() {
   const [isLoadingWills, setIsLoadingWills] = useState(false);
   const [selectedFilterWalletId, setSelectedFilterWalletId] = useState<string>("all");
   const [showFilterWalletDropdown, setShowFilterWalletDropdown] = useState(false);
+  const [willName, setWillName] = useState("");
   const [editingWillId, setEditingWillId] = useState<string | null>(null); // Pour la modification
   const [deployingWillId, setDeployingWillId] = useState<string | null>(null); // Pour le déploiement
   const [factoryAddress, setFactoryAddress] = useState(config.blockchain.willFactoryAddress);
@@ -225,7 +226,7 @@ useEffect(() => {
   const { errors, canAddToContacts } = validateDraftForm();
   setFormErrors(errors);
   setCanAddToContacts(canAddToContacts);
-}, [selectedWalletId, secondaryMembers, minSecurityPeriod, maxSecurityPeriod]);
+}, [selectedWalletId, secondaryMembers, minSecurityPeriod, maxSecurityPeriod, willName, editingWillId]);
 // Quand le min change, ajuster le max si nécessaire
 useEffect(() => {
   const min = parseInt(minSecurityPeriod);
@@ -421,6 +422,7 @@ useEffect(() => {
       if (editingWillId) {
             // Mode édition : mettre à jour un draft existant
             await willService.updateDraftWill(editingWillId, {
+              willName: willName.trim(),
               secondaryMembers: validMembers.map(m => ({
                 firstName: m.firstName,
                 lastName: m.lastName,
@@ -435,9 +437,11 @@ useEffect(() => {
             });
             setSuccessMessage("Draft will updated successfully!");
           } else {
+            console.log("Will Name: ",willName);
             // Mode création : nouveau draft
             await willService.createDraftWill({
               walletAddress: selectedWallet.address,
+              willName: willName,
               secondaryMembers: validMembers.map(m => ({
                 firstName: m.firstName,
                 lastName: m.lastName,
@@ -462,7 +466,7 @@ useEffect(() => {
         } finally {
           setIsSavingDraft(false);
         }
-      };
+    };
 
 const validateForDeployment = (will: WillFromDB): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
@@ -523,9 +527,16 @@ const validateDraftForm = (): { isValid: boolean; errors: string[]; canAddToCont
   const errors: string[] = [];
   const canAddToContacts: boolean[] = [];
 
+  
   // Vérifier qu'un wallet est sélectionné
   if (!selectedWalletId) {
     errors.push("Please select a wallet");
+  }
+  
+  if (!willName.trim()) {
+    errors.push("Will name is required");
+  } else if (willName.length > 100) {
+    errors.push("Will name must be less than 100 characters");
   }
 
   // Filtrer les membres qui ont au moins un champ rempli
@@ -734,6 +745,7 @@ const handleConfirmDeploy = async (fundEth?: string) => {
 const handleEditDraft = (will: WillFromDB) => {
   // Pré-remplir le formulaire avec les données du will
   setSelectedWalletId(wallets?.find(w => w.address === will.walletAddress)?.walletId || "");
+  setWillName(will.willName);
   setSecondaryMembers(will.secondaryMembers.map(m => ({
     firstName: m.firstName,
     lastName: m.lastName,
@@ -1000,6 +1012,7 @@ const handleConfirmDeleteDraft = async () => {
   const resetForm = () => {
     setFactoryAddress(config.blockchain.willFactoryAddress);
     setSelectedWalletId("");
+    setWillName("");
     setSecondaryMembers([
       { firstName: "", lastName: "", email: "", phoneNumber: "", address: "", power: 1 },
       { firstName: "", lastName: "", email: "", phoneNumber: "", address: "", power: 1 }
@@ -1222,7 +1235,25 @@ const handleConfirmDeleteDraft = async () => {
                       )}
                     </div>
                   </div>
-
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                      Will Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={willName}
+                      onChange={(e) => {
+                        const value = e.target.value.slice(0, 100);
+                        setWillName(value);
+                      }}
+                      placeholder="e.g., My Primary Will, Emergency Will, etc."
+                      maxLength={100}
+                      className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    />
+                    <p className="mt-1 text-xs text-[var(--text-muted-alt)]">
+                      Give your will a descriptive name to easily identify it later
+                    </p>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                       Secondary Members (minimum 2 required)
@@ -1555,7 +1586,7 @@ const handleConfirmDeleteDraft = async () => {
                   <div key={will.willId} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="font-semibold text-[var(--text-primary)] mb-1">{will.state === 'DRAFT' ? 'Will Draft' : 'Deployed Will'}</h3>
+                        <h3 className="font-semibold text-[var(--text-primary)] mb-1">{will.willName}</h3>
                         <p className="text-xs text-[var(--text-muted-alt)] font-mono">{will.contractAddressInBlockchain}</p>
                       </div>
                       {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (

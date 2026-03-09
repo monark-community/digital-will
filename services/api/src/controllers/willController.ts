@@ -31,7 +31,7 @@ export const handleCreateDraft = async (
   next: NextFunction
 ) => {
   try {
-    const { walletAddress, secondaryMembers, minSecurityPeriod, maxSecurityPeriod } = req.body;
+    const { walletAddress, willName, secondaryMembers, minSecurityPeriod, maxSecurityPeriod } = req.body;
 
     if (!walletAddress) {
       throw new BadRequestError('Wallet address is required');
@@ -39,6 +39,7 @@ export const handleCreateDraft = async (
 
     const will = await willService.createDraftWill({
       walletAddress,
+      willName,
       secondaryMembers,
       minSecurityPeriod,
       maxSecurityPeriod
@@ -62,13 +63,14 @@ export const handleUpdateDraft = async (
 ) => {
   try {
     const { willId } = req.params;
-    const { secondaryMembers, minSecurityPeriod, maxSecurityPeriod } = req.body;
+    const { willName, secondaryMembers, minSecurityPeriod, maxSecurityPeriod } = req.body;
 
     if (!willId) {
       throw new BadRequestError('Will ID is required');
     }
 
     const will = await willService.updateDraftWill(willId, {
+      willName,
       secondaryMembers,
       minSecurityPeriod,
       maxSecurityPeriod

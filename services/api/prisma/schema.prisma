@@ -73,6 +73,7 @@ model Contact {
 model Will {
   willId                      String            @id @default(uuid())
   walletAddress               String
+  willName                    String
   contractAddressInBlockchain String?
   chainId                     Int?
   minSecurityPeriod           Int

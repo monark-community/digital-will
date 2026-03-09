@@ -40,6 +40,7 @@ export const getWillsByWalletAddress = async (walletAddress: string) => {
 
 export const createDraftWill = async (input: {
     walletAddress: string;
+    willName: string;
     secondaryMembers?: Array<{
         firstName: string;
         lastName: string;
@@ -52,12 +53,14 @@ export const createDraftWill = async (input: {
     minSecurityPeriod: number;
     maxSecurityPeriod: number;
 }) => {
-    const { 
+    const {
         walletAddress, 
+        willName,
         secondaryMembers = [],
         minSecurityPeriod = 28,        // Valeur par défaut
         maxSecurityPeriod = 154         // Valeur par défaut
     } = input;
+    console.log(willName);
 
     // Vérifier que le wallet existe
     const wallet = await prisma.wallet.findUnique({
@@ -73,6 +76,7 @@ export const createDraftWill = async (input: {
     const will = await tx.will.create({
         data: {
             walletAddress,
+            willName,
             state: 'DRAFT',
             minSecurityPeriod,
             maxSecurityPeriod
@@ -131,6 +135,7 @@ export const createDraftWill = async (input: {
 export const updateDraftWill = async (
     willId: string,
     input: {
+        willName?: string;
         secondaryMembers?: Array<{
             firstName?: string;
             lastName?: string;
@@ -169,6 +174,13 @@ export const updateDraftWill = async (
 
     // Mise à jour avec transaction
     return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        // Mettre à jour le nom si fourni
+        if (input.willName !== undefined) {
+            await tx.will.update({
+                where: { willId },
+                data: { willName: input.willName },
+            });
+        }
         // Mettre à jour les périodes si fournies
         if (input.minSecurityPeriod !== undefined || input.maxSecurityPeriod !== undefined) {
             await tx.will.update({
