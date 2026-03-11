@@ -48,6 +48,9 @@ export interface WillFromDB {
   minSecurityPeriod: number;
   maxSecurityPeriod: number;
   state: 'DRAFT' | 'INACTIVE' | 'ACTIVE' | 'CANCELED' | 'EXECUTED';
+  executionTimestampOnChain?: number;
+  deathDeclarationTimestampOnChain?: number;
+  cooldownTimestampOnChain?: number;     // unix seconds; 0 or undefined = not on cooldown
   secondaryMembers: Array<{
     secondaryMemberId: string;
     firstName: string;
@@ -60,6 +63,26 @@ export interface WillFromDB {
     state: 'PENDING' | 'VALIDATED' | 'DECLARED_DEATH';
     relationship?: string | null;
   }>;
+}
+
+export interface AssociatedWill extends WillFromDB {
+  owner: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  myMembership: {
+    secondaryMemberId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber?: string | null;
+    votingPower: number;
+    state: 'PENDING' | 'VALIDATED' | 'DECLARED_DEATH';
+    relationship?: string | null;
+    walletAddress?: string | null;
+    tempWalletAddress?: string | null;
+  };
 }
 
 class WillService {
@@ -235,6 +258,22 @@ class WillService {
   // ============================================
   // OFFCHAIN (BASE DE DONNÉES)
   // ============================================
+  /**
+   * Get all wills where the authenticated user is a secondary member
+   */
+  async getAssociatedWills(): Promise<AssociatedWill[]> {
+    try {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: AssociatedWill[];
+      }>(API_ROUTES.WILLS.ASSOCIATED);
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error fetching associated wills:", error);
+      throw new Error("Failed to fetch associated wills: " + (error.response?.data?.message || error.message));
+    }
+  }
+
   async getWillsByWallet(walletAddress: string): Promise<WillFromDB[]> {
     try {
       const response = await apiClient.get<{

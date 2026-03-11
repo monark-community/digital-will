@@ -38,6 +38,73 @@ export const getWillsByWalletAddress = async (walletAddress: string) => {
     });
 };
 
+/**
+ * Get all wills where the given user is listed as a secondary member.
+ * Matches via walletAddress, tempWalletAddress, or email on SecondaryMember.
+ */
+export const getAssociatedWills = async (userId: string) => {
+    const user = await prisma.user.findUnique({
+        where: { userId },
+        include: { wallets: { select: { address: true } } },
+    });
+
+    if (!user) {
+        return [];
+    }
+
+    const walletAddresses = user.wallets.map((w) => w.address);
+
+    const orConditions: any[] = [
+        { email: user.email },
+    ];
+
+    if (walletAddresses.length > 0) {
+        orConditions.push({ walletAddress: { in: walletAddresses } });
+        orConditions.push({ tempWalletAddress: { in: walletAddresses } });
+    }
+
+    const secondaryMemberRecords = await prisma.secondaryMember.findMany({
+        where: {
+            OR: orConditions,
+            will: {
+                state: { not: 'DRAFT' },
+            },
+        },
+        include: {
+            will: {
+                include: {
+                    secondaryMembers: true,
+                    wallet: {
+                        include: {
+                            user: {
+                                select: { firstName: true, lastName: true, email: true },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    type WillWithOwner = Omit<typeof secondaryMemberRecords[0]['will'], 'wallet'> & {
+        owner: { firstName: string; lastName: string; email: string };
+        myMembership: typeof secondaryMemberRecords[0];
+    };
+    const willsMap = new Map<string, WillWithOwner>();
+    for (const sm of secondaryMemberRecords) {
+        if (!willsMap.has(sm.willId)) {
+            const { wallet, ...willData } = sm.will;
+            willsMap.set(sm.willId, {
+                ...willData,
+                owner: wallet?.user ?? { firstName: 'Unknown', lastName: '', email: '' },
+                myMembership: sm,
+            });
+        }
+    }
+
+    return Array.from(willsMap.values());
+};
+
 export const createDraftWill = async (input: {
     walletAddress: string;
     willName: string;

@@ -103,7 +103,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
                     Wills
                   </a>
                   <a
-                    href="/associated-wills"
+                    href="/wills/associated"
                     className="text-[var(--text-muted)] hover:text-[var(--accent)] px-3 py-2 text-sm font-medium transition-colors"
                   >
                     Associated Wills

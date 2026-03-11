@@ -1,13 +1,29 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useCurrentUser, useWallets, useContacts } from "@/lib/hooks";
 import Header from "@/app/components/ui/Header";
 import { willService, type SecondaryMemberInput, type WillFromDB } from "@/lib/services";
 import type { Contact } from "@/lib/types";
 import { config } from "@/lib/config";
 import { ethers } from "ethers";
-import { getContractBalance, fundWillContract, withdrawWillContract, cancelWillContract, updateWillContract } from "@/lib/utils/blockchain";
+import { getContractBalance, fundWillContract, withdrawWillContract, cancelWillContract, vetoDeathContract, updateWillContract } from "@/lib/utils/blockchain";
+import { enrichWillsWithChainState } from "@/lib/utils/chainState";
+import { SecurityPeriodCountdown, CooldownCountdown } from "@/app/components/ui/SecurityPeriodCountdown";
+
+const WILL_STATE_COLORS: Record<string, string> = {
+  DRAFT:     'bg-gray-500/20 text-gray-400',
+  INACTIVE:  'bg-yellow-500/20 text-yellow-400',
+  ACTIVE:    'bg-emerald-500/20 text-emerald-400',
+  CANCELED:  'bg-red-500/20 text-red-400',
+  EXECUTED:  'bg-blue-500/20 text-blue-400',
+};
+
+const SM_STATE_COLORS: Record<string, string> = {
+  PENDING:        'bg-yellow-500/20 text-yellow-400',
+  VALIDATED:      'bg-emerald-500/20 text-emerald-400',
+  DECLARED_DEATH: 'bg-red-500/20 text-red-400',
+};
 
 function getMetaMaskErrorMessage(err: any): string | null {
   if (
@@ -103,6 +119,12 @@ export default function WillsPage() {
   const [cancelModal, setCancelModal] = useState<{ willId: string; contractAddress: string } | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [vetoModal, setVetoModal] = useState<{ willId: string; contractAddress: string } | null>(null);
+  const [vetoError, setVetoError] = useState<string | null>(null);
+  const [isVetoing, setIsVetoing] = useState(false);
+  const [canceledResolveModal, setCanceledResolveModal] = useState<{ willId: string; action: 'draft' | 'delete' } | null>(null);
+  const [canceledResolveError, setCanceledResolveError] = useState<string | null>(null);
+  const [isCanceledResolving, setIsCanceledResolving] = useState(false);
   const [deployModal, setDeployModal] = useState<WillFromDB | null>(null);
   const [deployFundAmount, setDeployFundAmount] = useState("");
   const [deployFundError, setDeployFundError] = useState<string | null>(null);
@@ -187,40 +209,41 @@ export default function WillsPage() {
     }
   }, [showWalletDropdown, showFilterWalletDropdown]);
 
-  useEffect(() => {
-    const fetchWills = async () => {
-      if (!wallets || wallets.length === 0) return;
+  const fetchWills = useCallback(async () => {
+    if (!wallets || wallets.length === 0) return;
 
-      setIsLoadingWills(true);
-      try {
-        const allWillsPromises = wallets.map(wallet => 
-          willService.getWillsByWallet(wallet.address)
-        );
-        const willsArrays = await Promise.all(allWillsPromises);
-        const allWills = willsArrays.flat();
-        setRealWills(allWills);
+    setIsLoadingWills(true);
+    try {
+      const allWillsPromises = wallets.map(wallet =>
+        willService.getWillsByWallet(wallet.address)
+      );
+      const willsArrays = await Promise.all(allWillsPromises);
+      const allWills = willsArrays.flat();
+      const enriched = await enrichWillsWithChainState(allWills);
+      setRealWills(enriched);
 
-        const deployedWills = allWills.filter(w => w.contractAddressInBlockchain && w.state !== 'DRAFT');
-        const balanceEntries = await Promise.all(
-          deployedWills.map(async (w) => {
-            try {
-              const balance = await getContractBalance(w.contractAddressInBlockchain!);
-              return [w.willId, balance] as [string, string];
-            } catch {
-              return [w.willId, '—'] as [string, string];
-            }
-          })
-        );
-        setContractBalances(Object.fromEntries(balanceEntries));
-      } catch (error) {
-        console.error("Error fetching wills:", error);
-      } finally {
-        setIsLoadingWills(false);
-      }
-    };
-
-    fetchWills();
+      const deployedWills = enriched.filter(w => w.contractAddressInBlockchain && w.state !== 'DRAFT');
+      const balanceEntries = await Promise.all(
+        deployedWills.map(async (w) => {
+          try {
+            const balance = await getContractBalance(w.contractAddressInBlockchain!);
+            return [w.willId, balance] as [string, string];
+          } catch {
+            return [w.willId, '—'] as [string, string];
+          }
+        })
+      );
+      setContractBalances(Object.fromEntries(balanceEntries));
+    } catch (error) {
+      console.error("Error fetching wills:", error);
+    } finally {
+      setIsLoadingWills(false);
+    }
   }, [wallets]);
+
+  useEffect(() => {
+    fetchWills();
+  }, [fetchWills]);
 
 useEffect(() => {
   const { errors, canAddToContacts } = validateDraftForm();
@@ -364,7 +387,7 @@ useEffect(() => {
       await willService.cancelWill(cancelModal.willId);
       setRealWills(prev => prev.map(w =>
         w.willId === cancelModal.willId
-          ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null }
+          ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null, cooldownTimestampOnChain: null }
           : w
       ));
       setCancelModal(null);
@@ -372,6 +395,46 @@ useEffect(() => {
       setCancelError(getMetaMaskErrorMessage(err) ?? err.message ?? "Transaction failed.");
     } finally {
       setIsCanceling(false);
+    }
+  };
+
+  const handleVetoDeath = async () => {
+    if (!vetoModal) return;
+    setVetoError(null);
+    setIsVetoing(true);
+    try {
+      await vetoDeathContract(vetoModal.contractAddress);
+      setVetoModal(null);
+      await fetchWills();
+    } catch (err: any) {
+      setVetoError(getMetaMaskErrorMessage(err) ?? err.message ?? "Transaction failed.");
+    } finally {
+      setIsVetoing(false);
+    }
+  };
+
+  const handleConfirmCanceledResolve = async () => {
+    if (!canceledResolveModal) return;
+    setCanceledResolveError(null);
+    setIsCanceledResolving(true);
+    const { willId, action } = canceledResolveModal;
+    try {
+      await willService.cancelWill(willId);
+      if (action === 'delete') {
+        await willService.deleteDraftWill(willId);
+        setRealWills(prev => prev.filter(w => w.willId !== willId));
+      } else {
+        setRealWills(prev => prev.map(w =>
+          w.willId === willId
+            ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null, cooldownTimestampOnChain: null }
+            : w
+        ));
+      }
+      setCanceledResolveModal(null);
+    } catch (err: any) {
+      setCanceledResolveError(err.message ?? 'Action failed.');
+    } finally {
+      setIsCanceledResolving(false);
     }
   };
 
@@ -1586,30 +1649,38 @@ const handleConfirmDeleteDraft = async () => {
                   <div key={will.willId} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="font-semibold text-[var(--text-primary)] mb-1">{will.willName}</h3>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-[var(--text-primary)]">
+                            {will.willName}
+                          </h3>
+
+                          {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-500">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                              </svg>
+                              Deployed
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-[var(--text-muted-alt)] font-mono">{will.contractAddressInBlockchain}</p>
                       </div>
-                      {will.state !== 'DRAFT' && will.contractAddressInBlockchain && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-500">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                          </svg>
-                          Deployed
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${WILL_STATE_COLORS[will.state] ?? 'bg-gray-500/20 text-gray-400'}`}>
+                          {will.state}
                         </span>
-                      )}
-                      {will.state === 'DRAFT' && (
-                      <>
-                        <button
-                          onClick={() => handleDeleteDraft(will.willId)}
-                          className="px-2.5 py-1 text-xs font-medium rounded-md border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-1.5"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          Delete
-                        </button>
-                      </>
-                    )}
+                        {will.state === 'DRAFT' && (
+                          <button
+                            onClick={() => handleDeleteDraft(will.willId)}
+                            className="px-2.5 py-1 text-xs font-medium rounded-md border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-1.5"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="grid grid-cols-1 gap-3 mb-3">
@@ -1698,6 +1769,26 @@ const handleConfirmDeleteDraft = async () => {
                       )}
                     </div>
 
+                    {(() => {
+                      const nowSec = Math.floor(Date.now() / 1000);
+                      const cooldownEnd = will.cooldownTimestampOnChain ?? 0;
+                      if (cooldownEnd > nowSec && will.state !== 'CANCELED' && will.state !== 'EXECUTED') {
+                        return (
+                          <div className="mt-3">
+                            <CooldownCountdown endTs={cooldownEnd} role="pm" />
+                          </div>
+                        );
+                      }
+                      const startTs = will.deathDeclarationTimestampOnChain;
+                      const endTs   = will.executionTimestampOnChain;
+                      if (!startTs || startTs === 0 || !endTs || endTs === 0) return null;
+                      return (
+                        <div className="mt-3 border-t border-red-500/20 bg-red-500/5 rounded-lg">
+                          <SecurityPeriodCountdown startTs={startTs} endTs={endTs} />
+                        </div>
+                      );
+                    })()}
+
                     <div className="border-t border-[var(--border-section)] pt-3 mt-3">
                       <p className="text-xs text-[var(--text-muted-alt)] mb-2">Secondary Members:</p>
                       <div className="space-y-2">
@@ -1707,10 +1798,17 @@ const handleConfirmDeleteDraft = async () => {
                               <span className="text-sm font-medium text-[var(--text-primary)]">
                                 {member.firstName} {member.lastName}
                               </span>
-                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-500/15 flex items-center gap-1">
-                                <span className="text-violet-400/70">Power</span>
-                                <span className="text-violet-300 font-semibold">{member.votingPower}</span>
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                {will.contractAddressInBlockchain && (
+                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${SM_STATE_COLORS[member.state] ?? 'bg-gray-500/20 text-gray-400'}`}>
+                                    {member.state}
+                                  </span>
+                                )}
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-500/15 flex items-center gap-1">
+                                  <span className="text-violet-400/70">Power</span>
+                                  <span className="text-violet-300 font-semibold">{member.votingPower}</span>
+                                </span>
+                              </div>
                             </div>
                             <div className="text-xs text-[var(--text-muted-alt)] space-y-1">
                               <div className="flex items-center gap-1">
@@ -1770,6 +1868,22 @@ const handleConfirmDeleteDraft = async () => {
                     </div>
 
                     <div className="flex gap-2 mt-4">
+                      {will.state === 'CANCELED' && (
+                        <>
+                          <button
+                            onClick={() => { setCanceledResolveModal({ willId: will.willId, action: 'draft' }); setCanceledResolveError(null); }}
+                            className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+                          >
+                            Keep as Draft
+                          </button>
+                          <button
+                            onClick={() => { setCanceledResolveModal({ willId: will.willId, action: 'delete' }); setCanceledResolveError(null); }}
+                            className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
                       {will.state === 'DRAFT' ? (
                         <button
                           onClick={() => handleEditDraft(will)}
@@ -1793,6 +1907,34 @@ const handleConfirmDeleteDraft = async () => {
                           Cancel Will
                         </button>
                       )}
+                      {(() => {
+                        const canVeto = will.state === 'ACTIVE' &&
+                          !!will.contractAddressInBlockchain &&
+                          !!will.deathDeclarationTimestampOnChain &&
+                          will.deathDeclarationTimestampOnChain > 0;
+                        return (
+                          <div className="relative group flex-1">
+                            <button
+                              onClick={() => canVeto && (setVetoModal({ willId: will.willId, contractAddress: will.contractAddressInBlockchain! }), setVetoError(null))}
+                              disabled={!canVeto}
+                              className={`w-full px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                                canVeto
+                                  ? 'border-orange-500/50 text-orange-400 hover:bg-orange-500/10'
+                                  : 'border-[var(--border-section)] text-[var(--text-muted-alt)] opacity-40 cursor-not-allowed'
+                              }`}
+                            >
+                              Veto Death
+                            </button>
+                            {!canVeto && (
+                              <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 whitespace-nowrap rounded-lg bg-[var(--bg-section)] border border-[var(--border-section)] px-3 py-2 text-xs text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                                {will.state !== 'ACTIVE'
+                                  ? `Will must be ACTIVE (currently ${will.state})`
+                                  : 'No death has been declared yet'}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                     {will.state === 'DRAFT' && (
                     <div className="mt-4">
@@ -2013,6 +2155,116 @@ const handleConfirmDeleteDraft = async () => {
                 {isCanceling ? (
                   <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Canceling...</>
                 ) : 'Yes, Cancel Will'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {vetoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-orange-500/15 flex items-center justify-center">
+                <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Veto Death Declaration</h2>
+                <p className="text-xs text-[var(--text-muted-alt)]">Confirm you are still alive</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-[var(--text-muted-alt)] mb-3">
+              This will cancel the current death declaration, reset all secondary members back to <span className="font-medium text-[var(--text-primary)]">VALIDATED</span>, and start a cooldown period during which no new declarations can be made.
+            </p>
+
+            <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 py-3 mb-5 text-xs text-orange-300">
+              ⚠ The security period countdown will be reset. SMs will need to re-declare death to restart it.
+            </div>
+
+            <p className="text-xs text-[var(--text-muted-alt)] font-mono break-all mb-5 opacity-60">{vetoModal.contractAddress}</p>
+
+            {vetoError && (
+              <p className="text-red-400 text-xs mb-4">{vetoError}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setVetoModal(null); setVetoError(null); }}
+                disabled={isVetoing}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Keep Declaration
+              </button>
+              <button
+                onClick={handleVetoDeath}
+                disabled={isVetoing}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isVetoing ? (
+                  <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Vetoing...</>
+                ) : 'Yes, Veto Death'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {canceledResolveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${canceledResolveModal.action === 'delete' ? 'bg-red-500/15' : 'bg-[var(--accent)]/15'}`}>
+                {canceledResolveModal.action === 'delete' ? (
+                  <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-[var(--accent)]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)]">
+                  {canceledResolveModal.action === 'delete' ? 'Delete Will' : 'Keep as Draft'}
+                </h2>
+                <p className="text-xs text-[var(--text-muted-alt)]">
+                  {canceledResolveModal.action === 'delete' ? 'This cannot be undone' : 'Revert canceled will to draft'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-[var(--text-muted-alt)] mb-5">
+              {canceledResolveModal.action === 'delete'
+                ? 'This will permanently delete the will and all its data. This action cannot be reversed.'
+                : 'The will will be reset to draft state. You can edit and re-deploy it later.'}
+            </p>
+
+            {canceledResolveError && (
+              <p className="text-red-400 text-xs mb-4">{canceledResolveError}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setCanceledResolveModal(null); setCanceledResolveError(null); }}
+                disabled={isCanceledResolving}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmCanceledResolve}
+                disabled={isCanceledResolving}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                  canceledResolveModal.action === 'delete'
+                    ? 'bg-red-500 text-white hover:bg-red-600'
+                    : 'bg-[var(--accent)] text-white hover:bg-[var(--accent)]/80'
+                }`}
+              >
+                {isCanceledResolving ? (
+                  <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Processing...</>
+                ) : canceledResolveModal.action === 'delete' ? 'Yes, Delete' : 'Keep as Draft'}
               </button>
             </div>
           </div>
