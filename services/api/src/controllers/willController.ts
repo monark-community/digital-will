@@ -41,10 +41,12 @@ export const handleGetAssociatedWills = asyncHandler(async (
     }
 
     const wills = await willService.getAssociatedWills(userId);
+    
+    const enrichedWills = await enrichWillsWithChainState(wills);
 
     res.status(StatusCodes.OK).json({
         success: true,
-        data: wills,
+        data: enrichedWills,
     });
 });
 

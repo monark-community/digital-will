@@ -6,7 +6,6 @@ import { ethers } from "ethers";
 import Header from "@/app/components/ui/Header";
 import { willService, authService, type AssociatedWill } from "@/lib/services";
 import { WILL_ABI } from "@/lib/contracts/WillABI";
-import { enrichWillsWithChainState } from "@/lib/utils/chainState";
 import { useCurrentUser, useWallets } from "@/lib/hooks";
 import type { User } from "@/lib/types";
 import { SecurityPeriodCountdown, CooldownCountdown } from "@/app/components/ui/SecurityPeriodCountdown";
@@ -165,32 +164,29 @@ export default function AssociatedWillsPage() {
   }, []);
 
 
-  const enrichWithChainState = useCallback(async (wills: AssociatedWill[]): Promise<AssociatedWill[]> => {
-    const enriched = await enrichWillsWithChainState(wills);
-    return enriched.map((will) => {
-      const myEnriched = will.secondaryMembers.find(
-        (sm) => sm.secondaryMemberId === will.myMembership.secondaryMemberId,
-      );
-      return {
-        ...will,
-        myMembership: { ...will.myMembership, state: myEnriched?.state ?? will.myMembership.state },
-      };
-    });
-  }, []);
-
   const fetchAssociatedWills = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await willService.getAssociatedWills();
-      const enriched = await enrichWithChainState(data);
-      setWills(enriched);
+      const enrichedWills = await willService.getAssociatedWills();
+      
+      const willsWithUpdatedMembership = enrichedWills.map((will) => {
+        const myEnriched = will.secondaryMembers.find(
+          (sm) => sm.secondaryMemberId === will.myMembership.secondaryMemberId,
+        );
+        return {
+          ...will,
+          myMembership: { ...will.myMembership, state: myEnriched?.state ?? will.myMembership.state },
+        };
+      });
+      
+      setWills(willsWithUpdatedMembership);
     } catch (err: any) {
       setError(err.message || "Failed to load associated wills");
     } finally {
       setIsLoading(false);
     }
-  }, [enrichWithChainState]);
+  }, []);
 
   const handleSmAction = useCallback(async (will: AssociatedWill, action: ActionDef) => {
     if (!will.contractAddressInBlockchain) return;
