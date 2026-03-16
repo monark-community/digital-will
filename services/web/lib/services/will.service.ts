@@ -43,14 +43,15 @@ export interface WillFromDB {
   willId: string;
   willName: string;
   walletAddress: string;
-  contractAddressInBlockchain?: string | null;  // Optionnel
-  chainId?: number | null;                      // Optionnel
+  contractAddressInBlockchain?: string | null;
+  chainId?: number | null;
   minSecurityPeriod: number;
   maxSecurityPeriod: number;
   state: 'DRAFT' | 'INACTIVE' | 'ACTIVE' | 'CANCELED' | 'EXECUTED';
   executionTimestampOnChain?: number;
   deathDeclarationTimestampOnChain?: number;
-  cooldownTimestampOnChain?: number;     // unix seconds; 0 or undefined = not on cooldown
+  cooldownTimestampOnChain?: number;
+  contractBalance?: string;
   secondaryMembers: Array<{
     secondaryMemberId: string;
     firstName: string;

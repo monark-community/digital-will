@@ -220,15 +220,13 @@ export default function WillsPage() {
       const allWills = willsArrays.flat();
       setRealWills(allWills);
 
-      // Fetch balances from backend
-      const deployedWills = allWills.filter(w => w.contractAddressInBlockchain && w.state !== 'DRAFT');
-      const balanceEntries = await Promise.all(
-        deployedWills.map(async (w) => {
-          const balance = await willService.getContractBalance(w.contractAddressInBlockchain!);
-          return [w.willId, balance] as [string, string];
-        })
-      );
-      setContractBalances(Object.fromEntries(balanceEntries));
+      const balanceMap: Record<string, string> = {};
+      allWills.forEach(w => {
+        if (w.contractBalance !== undefined) {
+          balanceMap[w.willId] = w.contractBalance;
+        }
+      });
+      setContractBalances(balanceMap);
     } catch (error) {
       console.error("Error fetching wills:", error);
     } finally {

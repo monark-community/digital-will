@@ -28,6 +28,7 @@ export interface WillFromDB {
   executionTimestampOnChain?: number;
   deathDeclarationTimestampOnChain?: number;
   cooldownTimestampOnChain?: number;
+  contractBalance?: string;
   secondaryMembers: Array<{
     secondaryMemberId: string;
     firstName: string;
@@ -68,17 +69,19 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
             provider,
           );
 
-          const [stateNum, rawExecTs, rawDeclTs, rawCooldownTs] = await Promise.all([
+          const [stateNum, rawExecTs, rawDeclTs, rawCooldownTs, balanceWei] = await Promise.all([
             contract.getState(),
             contract.executionTimeStampS().catch(() => BigInt(0)),
             contract.deathDeclarationTimestampS().catch(() => BigInt(0)),
             contract.cooldownTimeStampS().catch(() => BigInt(0)),
+            provider.getBalance(will.contractAddressInBlockchain),
           ]);
 
           const chainWillState = (WILL_STATES_ONCHAIN[Number(stateNum)] ?? will.state) as T['state'];
           const executionTimestampOnChain = Number(rawExecTs);
           const deathDeclarationTimestampOnChain = Number(rawDeclTs);
           const cooldownTimestampOnChain = Number(rawCooldownTs);
+          const contractBalance = ethers.formatEther(balanceWei);
 
           const enrichedMembers = await Promise.all(
             will.secondaryMembers.map(async (sm) => {
@@ -98,9 +101,10 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
             ...will, 
             state: chainWillState, 
             secondaryMembers: enrichedMembers, 
-            executionTimestampOnChain, 
+            executionTimestampOnChain,
             deathDeclarationTimestampOnChain, 
-            cooldownTimestampOnChain 
+            cooldownTimestampOnChain,
+            contractBalance
           };
         } catch (error) {
           console.error(`Error enriching will ${will.willId}:`, error);
