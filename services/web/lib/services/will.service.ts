@@ -286,6 +286,54 @@ class WillService {
       throw new Error("Failed to fetch wills: " + (error.response?.data?.message || error.message));
     }
   }
+
+  /**
+   * Get wills enriched with blockchain state
+   */
+  async getEnrichedWillsByWallet(walletAddress: string): Promise<WillFromDB[]> {
+    try {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: WillFromDB[];
+      }>(API_ROUTES.WILLS.ENRICHED(walletAddress));
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error fetching enriched wills:", error);
+      throw new Error("Failed to fetch enriched wills: " + (error.response?.data?.message || error.message));
+    }
+  }
+
+  /**
+   * Validate a will for deployment readiness
+   */
+  async validateForDeployment(willId: string): Promise<{ isValid: boolean; errors: string[] }> {
+    try {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: { isValid: boolean; errors: string[] };
+      }>(API_ROUTES.WILLS.VALIDATE(willId));
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error validating will:", error);
+      throw new Error("Failed to validate will: " + (error.response?.data?.message || error.message));
+    }
+  }
+
+  /**
+   * Get contract balance
+   */
+  async getContractBalance(contractAddress: string): Promise<string> {
+    try {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: { balance: string };
+      }>(API_ROUTES.WILLS.BALANCE(contractAddress));
+      return response.data.data.balance;
+    } catch (error: any) {
+      console.error("Error fetching contract balance:", error);
+      return '—';
+    }
+  }
   
   /*
    * Create a new draft will (off-chain only)

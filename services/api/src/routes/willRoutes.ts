@@ -1,5 +1,17 @@
 import { Router } from "express";
-import { handleGetWills, handleGetAssociatedWills, handleCreateDraft, handleUpdateDraft, handleDeployWill, handleDeleteDraft, handleCancelWillOnChain, handleUpdateDeployedWill } from "../controllers/willController";
+import { 
+  handleGetWills, 
+  handleGetAssociatedWills, 
+  handleCreateDraft, 
+  handleUpdateDraft, 
+  handleDeployWill, 
+  handleDeleteDraft, 
+  handleCancelWillOnChain, 
+  handleUpdateDeployedWill,
+  handleValidateForDeployment,
+  handleGetContractBalance,
+  handleGetEnrichedWills
+} from "../controllers/willController";
 import { verifyToken } from "../middlewares/authMiddleware";
 
 const router = Router();
@@ -19,6 +31,27 @@ router.get("/associated", handleGetAssociatedWills);
  * @access  Private
  */
 router.get("/:walletAddress", handleGetWills);
+
+/**
+ * @route   GET /wills/:walletAddress/enriched
+ * @desc    Get all wills enriched with blockchain state
+ * @access  Private
+ */
+router.get("/:walletAddress/enriched", handleGetEnrichedWills);
+
+/**
+ * @route   GET /wills/validate/:willId
+ * @desc    Validate a will for deployment readiness
+ * @access  Private
+ */
+router.get("/validate/:willId", handleValidateForDeployment);
+
+/**
+ * @route   GET /wills/balance/:contractAddress
+ * @desc    Get contract balance
+ * @access  Private
+ */
+router.get("/balance/:contractAddress", handleGetContractBalance);
 
 /**
  * @route   POST /wills/draft

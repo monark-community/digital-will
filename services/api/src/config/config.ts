@@ -3,6 +3,10 @@
  * Loads and provides type-safe access to environment variables
  */
 
+import { loadEnvironment } from './env';
+
+loadEnvironment();
+
 export const config = {
   // Environment
   env: process.env.NODE_ENV || 'local',
@@ -45,5 +49,10 @@ export const config = {
     port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : undefined,
     user: process.env.SMTP_USER,
     password: process.env.SMTP_PASSWORD,
+  },
+
+  blockchain: {
+    rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || process.env.RPC_URL || 'http://localhost:8545',
+    chainId: process.env.CHAIN_ID ? parseInt(process.env.CHAIN_ID, 10) : undefined,
   },
 };

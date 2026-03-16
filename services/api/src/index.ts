@@ -64,5 +64,7 @@ app.listen(config.port, config.hostname, () => {
   console.log(`  URL: http://${config.hostname}:${config.port}`);
   console.log(`  Environment: ${config.env}`);
   console.log(`  Database: ${config.database.host}:${config.database.port}`);
-  console.log(`  Log Level: ${config.logLevel}\n`);
+  console.log(`  Log Level: ${config.logLevel}`);
+  console.log(`  Blockchain RPC: ${config.blockchain.rpcUrl}`);
+  console.log(`  Chain ID: ${config.blockchain.chainId || 'auto-detect'}\n`);
 });

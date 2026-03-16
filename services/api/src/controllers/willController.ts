@@ -4,6 +4,9 @@ import { AppError } from "../utils/errors";
 import { asyncHandler } from "../middlewares/errorMiddleware";
 import { StatusCodes } from "http-status-codes";
 import { BadRequestError } from '../utils/errors';
+import { validateForDeployment } from '../utils/willValidation';
+import { getContractBalance } from '../utils/blockchain';
+import { enrichWillsWithChainState } from '../services/chainStateService';
 
 /**
  * Get wills by wallet address
@@ -216,3 +219,74 @@ export const handleUpdateDeployedWill = async (
     next(error);
   }
 };
+
+/**
+ * Validate a will for deployment readiness
+ */
+export const handleValidateForDeployment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { willId } = req.params;
+    if (!willId) throw new BadRequestError('Will ID is required');
+
+    const will = await willService.getWillById(willId);
+    if (!will) throw new BadRequestError('Will not found');
+
+    const validation = validateForDeployment({
+      secondaryMembers: will.secondaryMembers,
+      minSecurityPeriod: will.minSecurityPeriod,
+      maxSecurityPeriod: will.maxSecurityPeriod,
+    });
+
+    res.json({
+      success: true,
+      data: validation,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get contract balance for a will
+ */
+export const handleGetContractBalance = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { contractAddress } = req.params;
+    if (!contractAddress) throw new BadRequestError('Contract address is required');
+
+    const balance = await getContractBalance(contractAddress);
+
+    res.json({
+      success: true,
+      data: { balance },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get wills enriched with blockchain state
+ */
+export const handleGetEnrichedWills = asyncHandler(async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { walletAddress } = req.params;
+
+  const wills = await willService.getWillsByWalletAddress(walletAddress);
+  const enrichedWills = await enrichWillsWithChainState(wills);
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    data: enrichedWills,
+  });
+});

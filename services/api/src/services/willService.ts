@@ -39,6 +39,16 @@ export const getWillsByWalletAddress = async (walletAddress: string) => {
 };
 
 /**
+ * Get a single will by ID
+ */
+export const getWillById = async (willId: string) => {
+    return await prisma.will.findUnique({
+        where: { willId },
+        include: { secondaryMembers: true },
+    });
+};
+
+/**
  * Get all wills where the given user is listed as a secondary member.
  * Matches via walletAddress, tempWalletAddress, or email on SecondaryMember.
  */
@@ -366,8 +376,8 @@ export const cancelWillOnChain = async (willId: string) => {
         where: { willId },
         data: {
             state: WillState.DRAFT,
-            contractAddressInBlockchain: null,
-            chainId: null,
+            contractAddressInBlockchain: undefined,
+            chainId: undefined,
         },
         include: { secondaryMembers: true },
     });
