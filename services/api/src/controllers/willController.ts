@@ -1,12 +1,15 @@
 import { Request, Response, NextFunction } from "express";
 import * as willService from '../services/willService';
-import { AppError } from "../utils/errors";
+import { AppError, UnauthorizedError } from "../utils/errors";
 import { asyncHandler } from "../middlewares/errorMiddleware";
 import { StatusCodes } from "http-status-codes";
 import { BadRequestError } from '../utils/errors';
 import { validateForDeployment } from '../utils/willValidation';
 import { getContractBalance } from '../utils/blockchain';
 import { enrichWillsWithChainState } from '../services/chainStateService';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 /**
  * Get wills by wallet address
@@ -17,6 +20,22 @@ export const handleGetWills = asyncHandler(async (
 ): Promise<void> => {
 
     const { walletAddress } = req.params;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        throw new UnauthorizedError('User not authenticated');
+    }
+
+    const wallet = await prisma.wallet.findFirst({
+        where: {
+            address: walletAddress,
+            userId: userId
+        }
+    });
+
+    if (!wallet) {
+        throw new UnauthorizedError('You do not own this wallet');
+    }
 
     const wills = await willService.getWillsByWalletAddress(walletAddress);
 
@@ -283,6 +302,22 @@ export const handleGetEnrichedWills = asyncHandler(async (
   res: Response,
 ): Promise<void> => {
   const { walletAddress } = req.params;
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    throw new UnauthorizedError('User not authenticated');
+  }
+
+  const wallet = await prisma.wallet.findFirst({
+    where: {
+      address: walletAddress,
+      userId: userId
+    }
+  });
+
+  if (!wallet) {
+    throw new UnauthorizedError('You do not own this wallet');
+  }
 
   const wills = await willService.getWillsByWalletAddress(walletAddress);
   const enrichedWills = await enrichWillsWithChainState(wills);
