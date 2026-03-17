@@ -51,6 +51,7 @@ const SM_ACTIONS: ActionDef[] = [
     description: 'Start the security period countdown.',
     disabledReason: (w) => {
       if (w.state !== 'ACTIVE') return `Will must be ACTIVE (currently ${w.state})`;
+      if (w.myMembership.state !== 'VALIDATED') return 'You must be a validated member to declare death';
       const nowSec = Math.floor(Date.now() / 1000);
       const cooldownEnd = w.cooldownTimestampOnChain ?? 0;
       if (cooldownEnd > nowSec) {
@@ -75,6 +76,7 @@ const SM_ACTIONS: ActionDef[] = [
     description: 'Distribute assets after security period.',
     disabledReason: (w) => {
       if (w.state !== 'ACTIVE') return `Will must be ACTIVE (currently ${w.state})`;
+      if (w.myMembership.state === 'PENDING') return 'You must be validated to execute the will';
       const anyDeclared = w.secondaryMembers.some(sm => sm.state === 'DECLARED_DEATH');
       if (!anyDeclared) return 'No SM has declared death yet. Security period not started';
       const execTs = w.executionTimestampOnChain;
