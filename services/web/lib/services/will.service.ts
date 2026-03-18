@@ -6,7 +6,7 @@ import { ethers } from "ethers";
 import { config, API_ROUTES } from "@/lib/config";
 import { apiClient } from "@/lib/api-client";
 import { WILL_FACTORY_ABI } from "@/lib/contracts/WillFactoryABI";
-import { getSigner, daysToSeconds, waitForTransaction } from "@/lib/utils/blockchain";
+import { getSigner, daysToSeconds } from "@/lib/utils/blockchain";
 import type { CreateWillParams, CreateWillResult, SMPartialInfo, SecurityPeriodConfig } from "@/lib/types/contracts";
 
 export interface SecondaryMemberInput {

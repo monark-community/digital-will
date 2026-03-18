@@ -3,15 +3,8 @@
  */
 
 import { ethers } from "ethers";
-import { config } from "@/lib/config";
 import { WILL_ABI } from "@/lib/contracts/WillABI";
-
-/**
- * Get the JSON-RPC provider for the blockchain
- */
-export function getProvider(): ethers.JsonRpcProvider {
-  return new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
-}
+import { willService} from "@/lib/services";
 
 /**
  * Get a signer from MetaMask
@@ -38,23 +31,6 @@ export function daysToSeconds(days: number): bigint {
  */
 export function secondsToDays(seconds: bigint): number {
   return Number(seconds) / (24 * 60 * 60);
-}
-
-/**
- * Wait for a transaction to be mined
- */
-export async function waitForTransaction(hash: string): Promise<ethers.TransactionReceipt | null> {
-  const provider = getProvider();
-  return await provider.waitForTransaction(hash);
-}
-
-/**
- * Get the ETH balance of a contract address, returned as a formatted string (e.g. "0.05")
- */
-export async function getContractBalance(contractAddress: string): Promise<string> {
-  const provider = getProvider();
-  const balanceWei = await provider.getBalance(contractAddress);
-  return ethers.formatEther(balanceWei);
 }
 
 /**
@@ -94,10 +70,9 @@ export async function withdrawWillContract(
   contractAddress: string,
   amountEth: string
 ): Promise<string> {
-  const provider = getProvider();
   const amountWei = ethers.parseEther(amountEth);
 
-  const contractBalance = await provider.getBalance(contractAddress);
+  const contractBalance = await willService.getContractBalance(contractAddress).then(balanceStr => ethers.parseEther(balanceStr));
   if (contractBalance < amountWei) {
     throw new Error(
       `Insufficient contract balance. Contract holds ${parseFloat(ethers.formatEther(contractBalance)).toFixed(4)} ETH.`
