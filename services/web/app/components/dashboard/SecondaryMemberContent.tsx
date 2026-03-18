@@ -129,7 +129,7 @@ function WillCard({ will, onRefresh }: WillCardProps) {
         case 'swapAssets':   tx = await contract.swapAssets();    break;
       }
 
-      await tx.wait();
+      await tx.wait(2);
       setSuccess(`"${action.label}" transaction confirmed!`);
       onRefresh();
     } catch (err: any) {

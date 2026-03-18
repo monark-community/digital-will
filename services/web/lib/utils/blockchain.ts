@@ -57,7 +57,7 @@ export async function fundWillContract(
 
   const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
   const tx = await contract.deposit({ value: amountWei });
-  await tx.wait();
+  await tx.wait(2);
   return tx.hash;
 }
 
@@ -82,7 +82,7 @@ export async function withdrawWillContract(
   const signer = await getSigner();
   const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
   const tx = await contract.withdraw(amountWei);
-  await tx.wait();
+  await tx.wait(2);
   return tx.hash;
 }
 
@@ -107,7 +107,7 @@ export async function vetoDeathContract(contractAddress: string): Promise<string
   const signer = await getSigner();
   const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
   const tx = await contract.vetoDeath();
-  await tx.wait();
+  await tx.wait(2);
   return tx.hash;
 }
 

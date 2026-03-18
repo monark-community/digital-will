@@ -1741,7 +1741,7 @@ const handleConfirmDeleteDraft = async () => {
                                 <path d="M16 21.5L6 16.5L16 30L26 16.5L16 21.5Z" fillOpacity="0.7" />
                               </svg>
                               {contractBalances[will.willId] !== undefined
-                                ? `${parseFloat(contractBalances[will.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[will.willId]).toFixed(4)).toString()} ETH`
+                                ? `${parseFloat(contractBalances[will.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[will.willId]).toFixed(6)).toString()} ETH`
                                 : '...'}
                             </span>
                             <div className="flex items-center gap-1 ml-2">
@@ -2067,7 +2067,7 @@ const handleConfirmDeleteDraft = async () => {
               <span className="text-xs text-[var(--text-muted-alt)]">Contract balance</span>
               <span className="text-sm font-semibold text-[var(--text-primary)] font-mono">
                 {contractBalances[withdrawModal.willId] !== undefined
-                  ? `${parseFloat(contractBalances[withdrawModal.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[withdrawModal.willId]).toFixed(4)).toString()} ETH`
+                  ? `${parseFloat(contractBalances[withdrawModal.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[withdrawModal.willId]).toFixed(6)).toString()} ETH`
                   : '—'}
               </span>
             </div>

@@ -214,7 +214,7 @@ export default function AssociatedWillsPage() {
         case 'declareDeath': tx = await contract.declareDeath(); break;
         case 'swapAssets':   tx = await contract.swapAssets();  break;
       }
-      await tx.wait();
+      await tx.wait(2);
       setActionSuccess(prev => ({ ...prev, [id]: `"${action.label}" confirmed!` }));
       await fetchAssociatedWills();
     } catch (err: any) {
