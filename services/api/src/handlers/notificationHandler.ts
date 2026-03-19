@@ -233,7 +233,23 @@ async function notifySpecificSm(
 
   const userId = await findUserIdByWalletAddress(smAddress);
   if (!userId) return;
-  await broadcastSmsOnly(will.willId, will.willName, [userId], type);
+
+  await createAppNotification(type, will.willId, userId);
+  emitUserNotification(
+    userId,
+    buildUserNotif(
+      type,
+      will.willName,
+      will.willId,
+      NotificationRecipientRole.SM_TARGET,
+    ),
+  );
+  await sendEmailNotification(
+    type,
+    will.willName,
+    userId,
+    NotificationRecipientRole.SM_TARGET,
+  );
 }
 
 /** Notify all other SMs + the target SM with a differentiated email. */
@@ -339,7 +355,7 @@ export const notifySmUpdated = (
   smartContractAddress: string,
   smAddress: string,
 ) =>
-  notifyOthersAndTarget(
+  notifySpecificSm(
     smartContractAddress,
     smAddress,
     NotificationType.SM_UPDATED,
