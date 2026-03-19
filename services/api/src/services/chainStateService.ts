@@ -77,7 +77,7 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
             contract.deathDeclarationTimestampS().catch(() => BigInt(0)),
             contract.cooldownTimeStampS().catch(() => BigInt(0)),
             provider.getBalance(will.contractAddressInBlockchain!),
-            contract.getSecurityPeriodConfig(),
+            contract.getSecurityPeriodConfig().catch(() => ({ minSecurityPeriod: BigInt(0), maxSecurityPeriod: BigInt(0) })),
           ]);
 
           const chainWillState = (WILL_STATES_ONCHAIN[Number(stateNum)] ?? will.state) as T['state'];

@@ -69,7 +69,7 @@ router.put("/draft/:willId", handleUpdateDraft);
 
 /**
  * @route   POST /wills/:willId/deploy
- * @desc    Deploy a will to blockchain and mark as INACTIVE
+ * @desc    Deploy a will to blockchain, delete draft and create will
  * @access  Private
  */
 router.post("/:willId/deploy", handleDeployWill);

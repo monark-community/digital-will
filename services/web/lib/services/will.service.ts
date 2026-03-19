@@ -138,7 +138,7 @@ class WillService {
         securityConfig,
         txOverrides
       );
-      const receipt = await tx.wait();
+      const receipt = await tx.wait(2);
 
       if (!receipt) {
         throw new Error("Transaction failed: no receipt received");
