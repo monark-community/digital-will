@@ -1,7 +1,7 @@
-export { 
-  useSignIn, 
-  useSignUp, 
-  useLogout, 
+export {
+  useSignIn,
+  useSignUp,
+  useLogout,
   useCurrentUser,
   useCheckWallet,
   useWalletSignIn,
@@ -21,3 +21,5 @@ export {
   useRemoveContact,
   useUpdateContact,
 } from "./useContacts";
+
+export { useNotifications } from "./useNotifications";

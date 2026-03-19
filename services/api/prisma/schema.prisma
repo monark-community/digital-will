@@ -9,6 +9,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum NotificationType {
+  SIGNATURE_REQUEST
+  WILL_ACTIVATED
+  WILL_CANCELED
+  SM_ADDED
+  SM_UPDATED
+  SM_REMOVED
+  SM_DESISTED
+  SECURITY_PERIOD_UPDATED
+  DEATH_DECLARED
+  DEATH_CONFIRMED
+  VETO_EXERCISED
+  ASSETS_SWAPPED
+}
+
 model User {
   userId        String          @id @default(uuid())
   firstName     String
@@ -16,6 +31,7 @@ model User {
   email         String          @unique
   phoneNo       String?
   passwordHash  String
+  wantToReceiveMails Boolean    @default(true)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   wallets       Wallet[]
@@ -117,14 +133,16 @@ model draftSecondaryMember {
 model WillFactory {
   willFactoryId               String @id @default(uuid())
   contractAddressInBlockchain String
-  chainId                     Int
-
+  chainId                     Int    @unique
+  blockDeployed               Int    // the block where the willFactory contract has been deployed
+  lastProcessedCursor         String // given by the stream
+  
   @@map("willfactories")
 }
 
 model Notifications {
   notifId    String  @id @default(uuid())
-  content    String
+  notifType    NotificationType @default(WILL_ACTIVATED)
   willId     String
   userId     String
   readStatus Boolean

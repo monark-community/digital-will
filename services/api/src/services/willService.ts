@@ -86,6 +86,28 @@ export const getWillById = async (willId: string) => {
 };
 
 /**
+ * Get a single will by contract address
+ */
+export async function getWillByContractAddress(
+  contractAddress: string,
+): Promise<Prisma.WillGetPayload<{
+  include: {
+    wallet: {
+      include: { user: true };
+    };
+  };
+}> | null> {
+  return prisma.will.findFirst({
+    where: { contractAddressInBlockchain: contractAddress },
+    include: {
+      wallet: {
+        include: { user: true },
+      },
+    },
+  });
+}
+
+/**
  * Get a single draft will by ID
  */
 export const getDraftWillById = async (draftWillId: string) => {

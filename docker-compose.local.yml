@@ -39,6 +39,8 @@ services:
       target: local
     container_name: backend
     restart: unless-stopped
+    env_file:
+      - ./services/api/.env
     environment:
       NODE_ENV: local
       PORT: 4000
@@ -58,6 +60,8 @@ services:
       # Mount source code for hot reload
       - ./services/api/src:/app/src:delegated
       - ./services/api/tsconfig.json:/app/tsconfig.json:ro
+      # Mount the substream package
+      - ./packages/substreams/willchain_events/willchain-events-v0.1.0.spkg:/app/spkg/willchain-events-v0.1.0.spkg:ro
       # Prevent overwriting node_modules with host's node_modules
       - /app/node_modules
     depends_on:

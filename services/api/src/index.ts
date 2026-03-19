@@ -1,4 +1,5 @@
 import express from "express";
+import { createServer } from "http";
 import cors from "cors";
 import { StatusCodes } from "http-status-codes";
 import { loadEnvironment, validateEnvironment } from "./config/env";
@@ -7,6 +8,8 @@ import router from "./routes/router";
 import { errorHandler } from "./middlewares/errorMiddleware";
 import { NotFoundError } from "./utils/errors";
 import { ROUTES } from "./utils/constants";
+import { startSubstreamsListener } from "./substreams/substreams";
+import { initGateway } from "./gateways/userNotificationGateway";
 
 // Load environment variables
 loadEnvironment();
@@ -59,12 +62,21 @@ app.use((_req, _res, next) => {
 // Global error handler - must be last
 app.use(errorHandler);
 
-app.listen(config.port, config.hostname, () => {
+const httpServer = createServer(app);
+initGateway(httpServer);
+
+httpServer.listen(config.port, config.hostname, () => {
   console.log(`\n✓ API Server Started`);
   console.log(`  URL: http://${config.hostname}:${config.port}`);
   console.log(`  Environment: ${config.env}`);
   console.log(`  Database: ${config.database.host}:${config.database.port}`);
   console.log(`  Log Level: ${config.logLevel}`);
   console.log(`  Blockchain RPC: ${config.blockchain.rpcUrl}`);
-  console.log(`  Chain ID: ${config.blockchain.chainId || 'auto-detect'}\n`);
+  console.log(`  Chain ID: ${config.blockchain.chainId || "auto-detect"}\n`);
+  console.log(`  Log Level: ${config.logLevel}\n`);
+
+  // Start the Substreams listener in the background (non-blocking)
+  // startSubstreamsListener().catch((error) => {
+  //   console.error("[Substreams] Listener crashed:", error);
+  // });
 });
