@@ -349,3 +349,44 @@ export const handleGetEnrichedWills = asyncHandler(
     });
   },
 );
+
+/**
+ * Remove current user as a secondary member from a will (after desist)
+ */
+export const handleRemoveSecondaryMember = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { willId } = req.params;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      throw new UnauthorizedError("User not authenticated");
+    }
+
+    // Get user's wallet addresses
+    const user = await prisma.user.findUnique({
+      where: { userId },
+      include: { wallets: { select: { address: true } } },
+    });
+
+    if (!user) {
+      throw new UnauthorizedError("User not found");
+    }
+
+    const walletAddresses = user.wallets.map((w) => w.address);
+
+    if (walletAddresses.length === 0) {
+      throw new BadRequestError("No wallet addresses found for user");
+    }
+
+    // Remove the secondary member
+    const result = await willService.removeSecondaryMemberByAddress(
+      willId,
+      walletAddresses
+    );
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: result.message,
+    });
+  },
+);

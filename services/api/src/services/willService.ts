@@ -619,3 +619,39 @@ export const updateDeployedWillInDB = async (
     });
   });
 };
+
+/**
+ * Remove a secondary member from a will after they desist
+ * Matches by wallet address (walletAddress or tempWalletAddress)
+ */
+export const removeSecondaryMemberByAddress = async (
+  willId: string,
+  userWalletAddresses: string[]
+) => {
+  const will = await prisma.will.findUnique({ where: { willId } });
+  if (!will) {
+    throw new NotFoundError("Will not found");
+  }
+
+  // Find the secondary member by matching any of the user's wallet addresses
+  const secondaryMember = await prisma.secondaryMember.findFirst({
+    where: {
+      willId,
+      OR: [
+        { walletAddress: { in: userWalletAddresses } },
+        { tempWalletAddress: { in: userWalletAddresses } },
+      ],
+    },
+  });
+
+  if (!secondaryMember) {
+    throw new NotFoundError("You are not a secondary member of this will");
+  }
+
+  // Delete the secondary member record
+  await prisma.secondaryMember.delete({
+    where: { secondaryMemberId: secondaryMember.secondaryMemberId },
+  });
+
+  return { success: true, message: "Successfully removed from will" };
+};

@@ -123,13 +123,39 @@ function WillCard({ will, onRefresh }: WillCardProps) {
       let tx: ethers.TransactionResponse;
 
       switch (action.id) {
-        case 'validate':     tx = await contract.validateSm();    break;
-        case 'desist':       tx = await contract.desistSm();      break;
-        case 'declareDeath': tx = await contract.declareDeath();  break;
-        case 'swapAssets':   tx = await contract.swapAssets();    break;
+        case 'validate':
+          tx = await contract.validateSm();
+          break;
+        case 'desist':
+          tx = await contract.desistSm();
+          break;
+        case 'declareDeath':
+          tx = await contract.declareDeath();
+          break;
+        case 'swapAssets':
+          tx = await contract.swapAssets();
+          break;
+        default:
+          throw new Error(`Unknown action: ${action.id}`);
       }
 
-      await tx.wait(2);
+      console.log('Transaction sent:', tx.hash);
+      const receipt = await tx.wait(2);
+      console.log('Transaction confirmed:', receipt?.hash);
+
+      if (action.id === 'desist') {
+        console.log('Desist confirmed, removing from database...');
+        try {
+          await willService.removeSecondaryMember(will.willId);
+          console.log('Successfully removed from database');
+        } catch (dbError: any) {
+          console.error('Failed to remove from database:', dbError);
+          setError('Blockchain transaction succeeded, but failed to update database. Please refresh.');
+          setLoadingAction(null);
+          return;
+        }
+      }
+
       setSuccess(`"${action.label}" transaction confirmed!`);
       onRefresh();
     } catch (err: any) {
@@ -172,7 +198,7 @@ function WillCard({ will, onRefresh }: WillCardProps) {
       <div className="grid grid-cols-2 gap-2 text-xs mb-5">
         <div>
           <p className="text-[var(--text-muted-alt)]">Your vote power</p>
-          <p className="font-medium text-[var(--text-primary)]">{will.myMembership.votePower}</p>
+          <p className="font-medium text-[var(--text-primary)]">{will.myMembership.votingPower}</p>
         </div>
         <div>
           <p className="text-[var(--text-muted-alt)]">Security period</p>
@@ -189,10 +215,29 @@ function WillCard({ will, onRefresh }: WillCardProps) {
           const isLoading  = loadingAction === action.id;
           const anyLoading = loadingAction !== null;
 
+          if (action.id === 'desist') {
+            console.log('Desist button state:', {
+              willState: will.state,
+              membershipState: will.myMembership.state,
+              contractAddress: will.contractAddressInBlockchain,
+              disabledReason: reason,
+              isDisabled,
+              isLoading,
+              anyLoading
+            });
+          }
+
           return (
             <div key={action.id} className="relative group">
               <button
-                onClick={() => !isDisabled && !anyLoading && handleAction(action)}
+                onClick={() => {
+                  console.log('Button clicked:', action.id, 'disabled:', isDisabled, 'anyLoading:', anyLoading);
+                  if (!isDisabled && !anyLoading) {
+                    handleAction(action);
+                  } else {
+                    console.log('Button click blocked - isDisabled:', isDisabled, 'anyLoading:', anyLoading);
+                  }
+                }}
                 disabled={isDisabled || anyLoading}
                 className={`
                   w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors

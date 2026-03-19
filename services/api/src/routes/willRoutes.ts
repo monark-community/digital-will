@@ -10,7 +10,8 @@ import {
   handleUpdateDeployedWill,
   handleValidateForDeployment,
   handleGetContractBalance,
-  handleGetEnrichedWills
+  handleGetEnrichedWills,
+  handleRemoveSecondaryMember
 } from "../controllers/willController";
 import { verifyToken } from "../middlewares/authMiddleware";
 
@@ -94,5 +95,12 @@ router.post("/:willId/cancel", handleCancelWillOnChain);
  * @access  Private
  */
 router.put("/:willId/members", handleUpdateDeployedWill);
+
+/**
+ * @route   DELETE /wills/:willId/secondary-member
+ * @desc    Remove the authenticated user as a secondary member from a will (after desist)
+ * @access  Private
+ */
+router.delete("/:willId/secondary-member", handleRemoveSecondaryMember);
 
 export default router;

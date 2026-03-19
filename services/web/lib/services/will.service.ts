@@ -426,6 +426,20 @@ class WillService {
     }
   
   }
+
+  /**
+   * Remove the current user as a secondary member from a will (after desist)
+   */
+  async removeSecondaryMember(willId: string): Promise<void> {
+    try {
+      const response = await apiClient.delete(API_ROUTES.WILLS.REMOVE_SECONDARY_MEMBER(willId));
+      console.log('Successfully removed secondary member from database:', response.data);
+    } catch (error: any) {
+      console.error("Error removing secondary member:", error);
+      throw new Error(error.response?.data?.message || "Failed to remove secondary member from database");
+    }
+  }
+
   async addMemberToContacts(contactData: {
     firstName: string;
     lastName: string;

@@ -214,7 +214,21 @@ export default function AssociatedWillsPage() {
         case 'declareDeath': tx = await contract.declareDeath(); break;
         case 'swapAssets':   tx = await contract.swapAssets();  break;
       }
-      await tx.wait(2);
+      const receipt = await tx.wait(2);
+
+      if (action.id === 'desist') {
+        console.log('🔵 Desist confirmed, removing from database...');
+        try {
+          await willService.removeSecondaryMember(will.willId);
+          console.log('🔵 Successfully removed from database');
+        } catch (dbError: any) {
+          console.error('🔴 Failed to remove from database:', dbError);
+          setActionError(prev => ({ ...prev, [id]: 'Blockchain transaction succeeded, but failed to update database. Please refresh.' }));
+          setActionLoading(prev => ({ ...prev, [id]: null }));
+          return;
+        }
+      }
+
       setActionSuccess(prev => ({ ...prev, [id]: `"${action.label}" confirmed!` }));
       await fetchAssociatedWills();
     } catch (err: any) {
