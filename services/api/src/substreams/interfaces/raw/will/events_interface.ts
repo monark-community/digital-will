@@ -33,14 +33,6 @@ export interface Will_EvtWillChainAssetsSwapped {
   evtAddress: string;
   smAddress: string;
 }
-export interface Will_EvtWillChainAssetsWithdrawn {
-  evtTxHash: string;
-  evtIndex: number;
-  evtBlockTime: string;
-  evtBlockNumber: string;
-  evtAddress: string;
-  amount: string;
-}
 
 export interface Will_EvtWillChainDeathConfirmed {
   evtTxHash: string;

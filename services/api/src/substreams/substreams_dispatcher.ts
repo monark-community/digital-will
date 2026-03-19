@@ -5,7 +5,6 @@
 import { handleCreateWillCall } from "./handlers/call_handlers";
 import {
   handleAssetsSwapped,
-  handleAssetsWithdrawn,
   handleDeathConfirmed,
   handleDeathDeclared,
   handleSmAdded,
@@ -61,9 +60,6 @@ export async function eventsCallsDispatcher(
       switch (events_type) {
         case EventKey.WillEvtWillChainAssetsSwappeds:
           await handleAssetsSwapped(event, chainId);
-          break;
-        case EventKey.WillEvtWillChainAssetsWithdrawns:
-          await handleAssetsWithdrawn(event, chainId);
           break;
         case EventKey.WillEvtWillChainDeathConfirmeds:
           await handleDeathConfirmed(event, chainId);

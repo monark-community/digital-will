@@ -85,12 +85,6 @@ export interface Event_WillAssetsSwapped {
   smAddress: string; // hex 0x
 }
 
-/** Fired when ETH is partially withdrawn from the will contract. */
-export interface Event_WillAssetsWithdrawn {
-  willAddress: string; // hex 0x
-  amount: number; // in the native token of the network (converted from wei)
-}
-
 /** Fired when a death declaration is confirmed by a secondary member. */
 export interface Event_WillDeathConfirmed {
   willAddress: string; // hex 0x

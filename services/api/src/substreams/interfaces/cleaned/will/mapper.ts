@@ -1,6 +1,5 @@
 import {
   Will_EvtWillChainAssetsSwapped,
-  Will_EvtWillChainAssetsWithdrawn,
   Will_EvtWillChainDeathConfirmed,
   Will_EvtWillChainDeathDeclared,
   Will_EvtWillChainSecurityPeriodUpdated,
@@ -16,7 +15,6 @@ import {
 import {
   Event_WillActivated,
   Event_WillAssetsSwapped,
-  Event_WillAssetsWithdrawn,
   Event_WillCanceled,
   Event_WillDeathConfirmed,
   Event_WillDeathDeclared,
@@ -64,19 +62,6 @@ export function mapWillActivated(
   };
 }
 
-/**
- * Maps a raw AssetsWithdrawn event to a cleaned object.
- * @param chainId - provided by the dispatcher, determines the native token conversion
- */
-export function mapAssetsWithdrawn(
-  raw: Will_EvtWillChainAssetsWithdrawn,
-  chainId: ChainId,
-): Event_WillAssetsWithdrawn {
-  return {
-    willAddress: addHexPrefix(raw.evtAddress),
-    amount: weiToNativeToken(raw.amount, chainId),
-  };
-}
 
 /**
  * Maps a raw SmAdded event to a cleaned object.

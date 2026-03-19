@@ -5,7 +5,6 @@
 import { Willfactory_CreateWillCall } from "./factory/calls_interface";
 import {
   Will_EvtWillChainAssetsSwapped,
-  Will_EvtWillChainAssetsWithdrawn,
   Will_EvtWillChainDeathConfirmed,
   Will_EvtWillChainDeathDeclared,
   Will_EvtWillChainSmAdded,
@@ -21,7 +20,6 @@ import {
 
 export interface Events {
   willEvtWillChainAssetsSwappeds: Will_EvtWillChainAssetsSwapped[];
-  willEvtWillChainAssetsWithdrawns: Will_EvtWillChainAssetsWithdrawn[];
   willEvtWillChainDeathConfirmeds: Will_EvtWillChainDeathConfirmed[];
   willEvtWillChainDeathDeclareds: Will_EvtWillChainDeathDeclared[];
   willEvtWillChainSmAddeds: Will_EvtWillChainSmAdded[];
@@ -50,7 +48,6 @@ export interface EventsCalls {
 
 export enum EventKey {
   WillEvtWillChainAssetsSwappeds = "willEvtWillChainAssetsSwappeds",
-  WillEvtWillChainAssetsWithdrawns = "willEvtWillChainAssetsWithdrawns",
   WillEvtWillChainDeathConfirmeds = "willEvtWillChainDeathConfirmeds",
   WillEvtWillChainDeathDeclareds = "willEvtWillChainDeathDeclareds",
   WillEvtWillChainSmAddeds = "willEvtWillChainSmAddeds",

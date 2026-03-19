@@ -5,7 +5,6 @@
 import { parseChainId } from "../interfaces/cleaned/utils/network";
 import {
   mapAssetsSwapped,
-  mapAssetsWithdrawn,
   mapDeathConfirmed,
   mapDeathDeclared,
   mapSecurityPeriodUpdated,
@@ -20,7 +19,6 @@ import {
 } from "../interfaces/cleaned/will/mapper";
 import {
   Will_EvtWillChainAssetsSwapped,
-  Will_EvtWillChainAssetsWithdrawn,
   Will_EvtWillChainDeathConfirmed,
   Will_EvtWillChainDeathDeclared,
   Will_EvtWillChainSecurityPeriodUpdated,
@@ -61,18 +59,6 @@ export async function handleAssetsSwapped(
   await notifyAssetsSwapped(
     event_WillAssetsSwapped.willAddress,
     event_WillAssetsSwapped.smAddress,
-  );
-}
-
-export async function handleAssetsWithdrawn(
-  evt: Will_EvtWillChainAssetsWithdrawn,
-  chainId: string,
-): Promise<void> {
-  const chainId_parsed = parseChainId(chainId);
-  const event_WillAssetsWithdrawn = mapAssetsWithdrawn(evt, chainId_parsed);
-  console.dir(
-    { fn: "handleAssetsWithdrawn", event_WillAssetsWithdrawn },
-    { depth: null, colors: true },
   );
 }
 
