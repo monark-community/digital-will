@@ -97,7 +97,6 @@ class WillService {
       const signer = await getSigner();
 
       const checksummedFactoryAddress = ethers.getAddress(params.factoryAddress);
-      const checksummedOwner = ethers.getAddress(params.owner);
 
       const factoryContract = new ethers.Contract(
         checksummedFactoryAddress,
@@ -132,7 +131,6 @@ class WillService {
 
       // Send the transaction
       const tx = await factoryContract.createWill(
-        checksummedOwner,
         smList,
         securityConfig,
         txOverrides
@@ -187,7 +185,6 @@ class WillService {
    */
   async deployWill(willId: string, params: {
     factoryAddress: string;
-    ownerAddress: string;
     secondaryMembers: Array<{ address: string; power: number }>;
     minSecurityPeriodDays: number;
     maxSecurityPeriodDays: number;
@@ -198,7 +195,6 @@ class WillService {
       // 1. Préparer les paramètres pour la blockchain
       const blockchainParams = this.prepareCreateWillParams(
         params.factoryAddress,
-        params.ownerAddress,
         params.secondaryMembers.map(m => ({ 
           address: m.address, 
           power: m.power 
@@ -234,7 +230,6 @@ class WillService {
    */
   prepareCreateWillParams(
     factoryAddress: string,
-    ownerAddress: string,
     secondaryMembers: Array<{ address: string; power: number }>,
     minSecurityPeriodDays: number,
     maxSecurityPeriodDays: number,
@@ -242,7 +237,6 @@ class WillService {
   ): CreateWillParams {
     return {
       factoryAddress,
-      owner: ownerAddress,
       secondaryMembers: secondaryMembers.map((sm) => ({
         smAddress: sm.address,
         votePower: sm.power,

@@ -785,7 +785,6 @@ const handleConfirmDeploy = async (fundEth?: string) => {
 
     const deployedWill = await willService.deployWill(will.willId, {
       factoryAddress: config.blockchain.willFactoryAddress,
-      ownerAddress: will.walletAddress,
       secondaryMembers: blockchainMembers,
       minSecurityPeriodDays: will.minSecurityPeriod,
       maxSecurityPeriodDays: will.maxSecurityPeriod,
