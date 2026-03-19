@@ -10,6 +10,7 @@ const WILL_ABI = [
   "function executionTimeStampS() view returns (uint256)",
   "function deathDeclarationTimestampS() view returns (uint256)",
   "function cooldownTimeStampS() view returns (uint256)",
+  "function getSecurityPeriodConfig() view returns (tuple(uint256 minSecurityPeriod, uint256 maxSecurityPeriod))",
   "function getDetailedSm(address) view returns (tuple(uint8 state, uint8 votePower))"
 ];
 
@@ -70,12 +71,13 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
             provider,
           );
 
-          const [stateNum, rawExecTs, rawDeclTs, rawCooldownTs, balanceWei] = await Promise.all([
+          const [stateNum, rawExecTs, rawDeclTs, rawCooldownTs, balanceWei, securityPeriodConfig] = await Promise.all([
             contract.getState(),
             contract.executionTimeStampS().catch(() => BigInt(0)),
             contract.deathDeclarationTimestampS().catch(() => BigInt(0)),
             contract.cooldownTimeStampS().catch(() => BigInt(0)),
             provider.getBalance(will.contractAddressInBlockchain!),
+            contract.getSecurityPeriodConfig(),
           ]);
 
           const chainWillState = (WILL_STATES_ONCHAIN[Number(stateNum)] ?? will.state) as T['state'];
@@ -91,7 +93,8 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
               try {
                 const smInfo = await contract.getDetailedSm(ethers.getAddress(smWallet));
                 const chainSmState = SM_STATES_ONCHAIN[Number(smInfo.state)];
-                return { ...sm, state: chainSmState };
+                const votePower = Number(smInfo.votePower);
+                return { ...sm, state: chainSmState, votingPower: votePower };
               } catch {
                 return sm;
               }
@@ -102,6 +105,8 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
             ...will,
             state: chainWillState,
             secondaryMembers: enrichedMembers,
+            minSecurityPeriod: Number(securityPeriodConfig.minSecurityPeriod) / 86400, // Convert seconds to days
+            maxSecurityPeriod: Number(securityPeriodConfig.maxSecurityPeriod) / 86400, // Convert seconds to days
             executionTimestampOnChain,
             deathDeclarationTimestampOnChain,
             cooldownTimestampOnChain,

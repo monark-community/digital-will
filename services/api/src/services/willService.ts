@@ -417,14 +417,15 @@ export const cancelWillOnChain = async (
 
     const { minSecurityPeriod, maxSecurityPeriod, secondaryMembersVotingPowers } = input;
 
+    // A REMETTRE UNE FOIS QUE LE CAS DES SM DÉSISTÉ SERA GÉRÉ.
     // Vérifier que tous les secondaryMembers ont une votingPower fournie
-    for (const member of will.secondaryMembers) {
-        if (!(member.secondaryMemberId in secondaryMembersVotingPowers)) {
-            throw new BadRequestError(
-                `Missing votingPower for secondary member ${member.email}`
-            );
-        }
-    }
+    // for (const member of will.secondaryMembers) {
+    //     if (!(member.secondaryMemberId in secondaryMembersVotingPowers)) {
+    //         throw new BadRequestError(
+    //             `Missing votingPower for secondary member ${member.email}`
+    //         );
+    //     }
+    // }
 
     // Supprimer le will et créer un draftWill dans une transaction
     return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -446,7 +447,7 @@ export const cancelWillOnChain = async (
                 email: member.email,
                 phoneNumber: member.phoneNumber ?? null,
                 walletAddress: member.walletAddress ?? member.tempWalletAddress ?? null,
-                votingPower: secondaryMembersVotingPowers[member.secondaryMemberId],
+                votingPower: secondaryMembersVotingPowers[member.secondaryMemberId] ?? 1,
                 draftWillId: draftWill.draftWillId,
                 relationship: member.relationship ?? null,
             }));
