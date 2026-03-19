@@ -10,7 +10,12 @@ import {WillState} from "@interfaces/WillState.sol";
 import {SMInfo, SMPartialInfo} from "@interfaces/SMInfo.sol";
 import {SMState} from "@interfaces/SMState.sol";
 import {SecurityPeriodConfig} from "@interfaces/SecurityPeriodConfig.sol";
-
+import {SwapConfig} from "@interfaces/SwapConfig.sol";
+import {ConfigUtils} from "@src/ConfigUtils.sol";
+import {MockSwapRouter} from "@src/anvil-swap-related/MockSwapRouter.sol";
+import {MockWETH} from "@src/anvil-swap-related/MockWETH.sol";
+import {MockUSDC} from "@src/anvil-swap-related/MockUSDC.sol";
+import {MockQuoterV2} from "@src/anvil-swap-related/MockQuoterV2.sol";
 import "@src/WillErrors.sol" as Errors;
 
 contract WillTestUpdate is Test {
@@ -35,9 +40,15 @@ contract WillTestUpdate is Test {
                 maxSecurityPeriod: 7 days
             });
 
+        SwapConfig memory swapConfig = ConfigUtils.getConfig();
         vm.deal(pm, 2 ether);
         vm.prank(pm);
-        will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
     }
 
     // Updating SM info, state maintained INACTIVE.
@@ -330,9 +341,25 @@ contract WillTestInvalidUpdate is Test {
                 maxSecurityPeriod: 7 days
             });
 
+        MockWETH eth = new MockWETH();
+        MockUSDC usdc = new MockUSDC();
+        MockSwapRouter router = new MockSwapRouter();
+        MockQuoterV2 quoter = new MockQuoterV2();
+        SwapConfig memory swapConfig = SwapConfig({
+            swapRouter: address(router),
+            quoter: address(quoter),
+            wNative: address(eth),
+            usdc: address(usdc),
+            poolFee: 0
+        });
         vm.deal(pm, 2 ether);
         vm.prank(pm);
-        will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
     }
 
     // Will Canceled.

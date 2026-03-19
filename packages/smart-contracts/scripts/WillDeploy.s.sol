@@ -28,16 +28,12 @@ contract DeployWill is Script {
 
         // Configure the security period
         SecurityPeriodConfig memory config = SecurityPeriodConfig({
-            minSecurityPeriod: 1 minutes,
-            maxSecurityPeriod: 2 minutes
+            minSecurityPeriod: 1 seconds,
+            maxSecurityPeriod: 2 seconds
         });
 
         // Deploy a new Will through the factory
-        address newWill = factory.createWill{value: 1 ether}(
-            msg.sender,
-            smList,
-            config
-        );
+        address newWill = factory.createWill{value: 0.1 ether}(smList, config);
         vm.stopBroadcast();
 
         // Optional: log the address

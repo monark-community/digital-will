@@ -20,12 +20,8 @@ contract WillFactoryTest is Test {
         });
 
         vm.deal(address(this), 1 ether);
-
-        address willAddress = factory.createWill{value: 1 ether}(
-            address(this),
-            sms,
-            config
-        );
+        vm.prank(address(this));
+        address willAddress = factory.createWill{value: 1 ether}(sms, config);
 
         assertTrue(willAddress != address(0));
         assertEq(willAddress.balance, 1 ether);
