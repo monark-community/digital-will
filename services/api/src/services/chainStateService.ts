@@ -45,7 +45,7 @@ export interface WillFromDB {
 
 /**
  * Enrich wills with on-chain state data
- * Careful: it also takes draft wills as input 
+ * Careful: it also takes draft wills as input and returns them without enrichment 
  */
 export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]): Promise<T[]> {
   try {

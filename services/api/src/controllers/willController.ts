@@ -39,9 +39,11 @@ export const handleGetWills = asyncHandler(async (
 
   const wills = await willService.getWillsByWalletAddress(walletAddress);
 
+  const enrichedWills = await enrichWillsWithChainState(wills);
+
   res.status(StatusCodes.OK).json({
     success: true,
-    data: wills,
+    data: enrichedWills,
   });
 
 });
