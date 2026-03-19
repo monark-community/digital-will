@@ -14,36 +14,85 @@ export interface SecondaryMemberInput {
   lastName: string;
   email: string;
   phoneNumber?: string;
-  walletAddress: string;
+  walletAddress?: string;
+  tempWalletAddress?: string;    // Pour les membres sans compte
+  votingPower?: number;
 }
 
-export interface SaveWillToDBParams {
+export interface CreateDraftWillParams {
   walletAddress: string;
+  willName: string;
+  secondaryMembers?: SecondaryMemberInput[];
+  minSecurityPeriod?: number;
+  maxSecurityPeriod?: number;
+}
+
+export interface UpdateDraftWillParams {
+  willName?: string;
+  secondaryMembers?: SecondaryMemberInput[];
+  minSecurityPeriod?: number;
+  maxSecurityPeriod?: number;
+}
+
+export interface DeployWillParams {
   contractAddressInBlockchain: string;
   chainId: number;
-  secondaryMembers: SecondaryMemberInput[];
 }
 
 export interface WillFromDB {
   willId: string;
+  willName: string;
   walletAddress: string;
-  contractAddressInBlockchain: string;
-  chainId: number;
+  contractAddressInBlockchain?: string | null;  // Optionnel
+  chainId?: number | null;                      // Optionnel
+  minSecurityPeriod: number;
+  maxSecurityPeriod: number;
+  state: 'DRAFT' | 'INACTIVE' | 'ACTIVE' | 'CANCELED' | 'EXECUTED';
+  executionTimestampOnChain?: number;
+  deathDeclarationTimestampOnChain?: number;
+  cooldownTimestampOnChain?: number;     // unix seconds; 0 or undefined = not on cooldown
   secondaryMembers: Array<{
     secondaryMemberId: string;
     firstName: string;
     lastName: string;
     email: string;
     phoneNumber?: string | null;
-    walletAddress: string;
+    walletAddress?: string | null;
+    tempWalletAddress?: string | null;
+    votingPower: number;
+    state: 'PENDING' | 'VALIDATED' | 'DECLARED_DEATH';
+    relationship?: string | null;
   }>;
 }
 
+export interface AssociatedWill extends WillFromDB {
+  owner: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  myMembership: {
+    secondaryMemberId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber?: string | null;
+    votingPower: number;
+    state: 'PENDING' | 'VALIDATED' | 'DECLARED_DEATH';
+    relationship?: string | null;
+    walletAddress?: string | null;
+    tempWalletAddress?: string | null;
+  };
+}
+
 class WillService {
+  // ============================================
+  // BLOCKCHAIN
+  // ============================================
   /**
    * Create a new will by calling the WillFactory contract
    */
-  async createWill(params: CreateWillParams): Promise<CreateWillResult> {
+  async createWillOnBlockchain(params: CreateWillParams): Promise<CreateWillResult> {
     try {
       const signer = await getSigner();
 
@@ -66,14 +115,28 @@ class WillService {
         params.securityPeriodConfig.minSecurityPeriod,
         params.securityPeriodConfig.maxSecurityPeriod,
       ];
+      const txOverrides: { value?: bigint } = {};
+      if (params.fundEth && parseFloat(params.fundEth) > 0) {
+        const amountWei = ethers.parseEther(params.fundEth);
+        const gasBuffer = ethers.parseEther("0.005");
+        const signerAddress = await signer.getAddress();
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const userBalance = await provider.getBalance(signerAddress);
+        if (userBalance < amountWei + gasBuffer) {
+          throw new Error(
+            `Insufficient balance. You have ${parseFloat(ethers.formatEther(userBalance)).toFixed(4)} ETH but need at least ${parseFloat(ethers.formatEther(amountWei + gasBuffer)).toFixed(4)} ETH (funding + gas).`
+          );
+        }
+        txOverrides.value = amountWei;
+      }
 
       // Send the transaction
       const tx = await factoryContract.createWill(
         checksummedOwner,
         smList,
-        securityConfig
+        securityConfig,
+        txOverrides
       );
-
       const receipt = await tx.wait();
 
       if (!receipt) {
@@ -120,6 +183,53 @@ class WillService {
   }
 
   /**
+   * Deploy a draft will (blockchain + update DB)
+   */
+  async deployWill(willId: string, params: {
+    factoryAddress: string;
+    ownerAddress: string;
+    secondaryMembers: Array<{ address: string; power: number }>;
+    minSecurityPeriodDays: number;
+    maxSecurityPeriodDays: number;
+    /** Optional ETH amount to send with the createWill tx (e.g. "0.5") */
+    initialFundEth?: string;
+  }): Promise<WillFromDB> {
+    try {
+      // 1. Préparer les paramètres pour la blockchain
+      const blockchainParams = this.prepareCreateWillParams(
+        params.factoryAddress,
+        params.ownerAddress,
+        params.secondaryMembers.map(m => ({ 
+          address: m.address, 
+          power: m.power 
+        })),
+        params.minSecurityPeriodDays,
+        params.maxSecurityPeriodDays,
+        params.initialFundEth
+      );
+
+      // 2. Appeler la blockchain
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const network = await provider.getNetwork();
+      const blockchainResult = await this.createWillOnBlockchain(blockchainParams);
+
+      // 3. Mettre à jour la DB via la route de déploiement
+      const response = await apiClient.post<{
+        success: boolean;
+        data: WillFromDB;
+      }>(API_ROUTES.WILLS.DEPLOY(willId), {
+        contractAddressInBlockchain: blockchainResult.willAddress,
+        chainId: Number(network.chainId)
+      });
+
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error deploying will:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Helper to prepare create will parameters from form data
    */
   prepareCreateWillParams(
@@ -127,7 +237,8 @@ class WillService {
     ownerAddress: string,
     secondaryMembers: Array<{ address: string; power: number }>,
     minSecurityPeriodDays: number,
-    maxSecurityPeriodDays: number
+    maxSecurityPeriodDays: number,
+    fundEth?: string
   ): CreateWillParams {
     return {
       factoryAddress,
@@ -140,26 +251,26 @@ class WillService {
         minSecurityPeriod: daysToSeconds(minSecurityPeriodDays),
         maxSecurityPeriod: daysToSeconds(maxSecurityPeriodDays),
       },
+      fundEth,
     };
   }
 
-  async saveWillToDB(params: SaveWillToDBParams): Promise<WillFromDB> {
+  // ============================================
+  // OFFCHAIN (BASE DE DONNÉES)
+  // ============================================
+  /**
+   * Get all wills where the authenticated user is a secondary member
+   */
+  async getAssociatedWills(): Promise<AssociatedWill[]> {
     try {
-      const response = await apiClient.post<{
+      const response = await apiClient.get<{
         success: boolean;
-        data: WillFromDB;
-      }>(API_ROUTES.WILLS.BASE, {
-        will: {
-          walletAddress: params.walletAddress,
-          contractAddressInBlockchain: params.contractAddressInBlockchain,
-          chainId: params.chainId,
-        },
-        secondaryMembers: params.secondaryMembers,
-      });
+        data: AssociatedWill[];
+      }>(API_ROUTES.WILLS.ASSOCIATED);
       return response.data.data;
     } catch (error: any) {
-      console.error("Error saving will to database:", error);
-      throw new Error("Failed to save will to database: " + (error.response?.data?.message || error.message));
+      console.error("Error fetching associated wills:", error);
+      throw new Error("Failed to fetch associated wills: " + (error.response?.data?.message || error.message));
     }
   }
 
@@ -173,6 +284,105 @@ class WillService {
     } catch (error: any) {
       console.error("Error fetching wills:", error);
       throw new Error("Failed to fetch wills: " + (error.response?.data?.message || error.message));
+    }
+  }
+  
+  /*
+   * Create a new draft will (off-chain only)
+   */
+  async createDraftWill(params: CreateDraftWillParams): Promise<WillFromDB> {
+    console.log(params.willName);
+    try {
+      const response = await apiClient.post<{
+        success: boolean;
+        data: WillFromDB;
+      }>(API_ROUTES.WILLS.DRAFT, params);
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error creating draft will:", error);
+      throw new Error("Failed to create draft will: " + (error.response?.data?.message || error.message));
+    }
+  }
+/**
+   * Update an existing draft will
+   */
+  async updateDraftWill(willId: string, params: UpdateDraftWillParams): Promise<WillFromDB> {
+    try {
+      const response = await apiClient.put<{
+        success: boolean;
+        data: WillFromDB;
+      }>(`${API_ROUTES.WILLS.DRAFT}/${willId}`, params);
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error updating draft will:", error);
+      throw new Error("Failed to update draft will: " + (error.response?.data?.message || error.message));
+    }
+  }
+  
+  /**
+   * Revert a canceled on-chain will back to DRAFT in the DB
+   */
+  async cancelWill(willId: string): Promise<WillFromDB> {
+    try {
+      const response = await apiClient.post<{
+        success: boolean;
+        data: WillFromDB;
+      }>(API_ROUTES.WILLS.CANCEL(willId));
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error canceling will:", error);
+      throw new Error("Failed to cancel will: " + (error.response?.data?.message || error.message));
+    }
+  }
+
+  /**
+   * Delete a draft will
+   */
+  async deleteDraftWill(willId: string): Promise<void> {
+    try {
+      await apiClient.delete(`${API_ROUTES.WILLS.DRAFT}/${willId}`);
+    } catch (error: any) {
+      console.error("Error deleting draft will:", error);
+      throw new Error("Failed to delete draft will: " + (error.response?.data?.message || error.message));
+    }
+  }
+
+  /**
+   * Update members and/or security periods of a deployed (INACTIVE/ACTIVE) will in the DB.
+   * Call AFTER the blockchain updateWill tx succeeds (or alone if only names changed).
+   */
+  async updateDeployedWillMembers(willId: string, params: {
+    updatedMembers?: Array<{ secondaryMemberId: string; firstName?: string; lastName?: string; email?: string; relationship?: string; walletAddress?: string; votingPower?: number; }>;
+    addedMembers?: Array<{ walletAddress: string; votingPower: number; firstName?: string; lastName?: string; email?: string; relationship?: string; }>;
+    deletedMemberIds?: string[];
+    minSecurityPeriod?: number;
+    maxSecurityPeriod?: number;
+  }): Promise<WillFromDB> {
+    try {
+      const response = await apiClient.put<{ success: boolean; data: WillFromDB }>(
+        API_ROUTES.WILLS.UPDATE_MEMBERS(willId),
+        params
+      );
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error updating deployed will members:", error);
+      throw new Error("Failed to update will: " + (error.response?.data?.message || error.message));
+    }
+  
+  }
+  async addMemberToContacts(contactData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber?: string;
+    walletAddress: string;
+    relationship?: string;
+  }): Promise<void> {
+    try {
+      await apiClient.post('/api/contacts', contactData);
+    } catch (error: any) {
+      console.error("Error adding contact:", error);
+      throw new Error(error.response?.data?.message || "Failed to add contact");
     }
   }
 }

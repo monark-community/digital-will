@@ -1,0 +1,62 @@
+specVersion: v0.1.0
+package:
+  name: willchain_events
+  version: v0.1.0
+  url: https://github.com/username/willchain_events-sepolia
+  description: Substreams module for willchain_events on Ethereum Sepolia Testnet
+
+imports:
+    ethcommon: https://spkg.io/streamingfast/ethereum-common-v0.3.3.spkg
+
+protobuf:
+  files:
+    - contract.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ./target/wasm32-unknown-unknown/release/substreams.wasm
+
+modules:
+
+  - name: store_will_created
+    kind: store
+    initialBlock: 10338130
+    updatePolicy: set
+    valueType: proto:dynamic_datasource
+    blockFilter:
+      module: ethcommon:index_events
+      query:
+        string: evt_addr:0x6cbd60e8222f5f07d32c773ef15fd01a43ec8328 && evt_sig:0x29d4e80ae450e75960cecdd4590bedb67875629d9428844280e728aecbee3cfe
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+  - name: map_events
+    kind: map
+    initialBlock: 10338130
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+      - store: store_will_created
+    output:
+      type: proto:contract.v1.Events
+  - name: map_calls
+    kind: map
+    initialBlock: 10338130
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+      - store: store_will_created
+    output:
+      type: proto:contract.v1.Calls
+  - name: map_events_calls
+    kind: map
+    initialBlock: 10338130
+    inputs:
+      - map: map_events
+      - map: map_calls
+    output:
+      type: proto:contract.v1.EventsCalls
+network: sepolia

@@ -120,6 +120,7 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
  * Check if wallet exists and get associated user
  */
 export async function checkWalletExists(walletAddress: string): Promise<{ exists: boolean; userId?: string }> {
+
   const wallet = await prisma.wallet.findUnique({
     where: { address: walletAddress.toLowerCase() },
     include: { user: true },
@@ -183,6 +184,7 @@ export async function walletSignIn(
  * Link wallet to existing user account
  */
 export async function linkWallet(userId: string, walletAddress: string): Promise<UserResponse> {
+
   const existingWallet = await prisma.user.findUnique({
     where: { walletAddress: walletAddress.toLowerCase() },
   });
@@ -190,7 +192,7 @@ export async function linkWallet(userId: string, walletAddress: string): Promise
   if (existingWallet && existingWallet.userId !== userId) {
     throw new ConflictError('This wallet is already linked to another account');
   }
-
+  
   const user = await prisma.user.update({
     where: { userId },
     data: { walletAddress: walletAddress.toLowerCase() },

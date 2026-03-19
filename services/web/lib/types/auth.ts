@@ -25,6 +25,7 @@ export interface Contact {
   phoneNumber?: string | null;
   walletAddress: string;
   createdAt: string;
+  relationship?: string | null;
 }
 
 export interface SignUpRequest {
