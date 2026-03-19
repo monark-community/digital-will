@@ -200,9 +200,9 @@ class WillService {
       const blockchainParams = this.prepareCreateWillParams(
         params.factoryAddress,
         params.ownerAddress,
-        params.secondaryMembers.map(m => ({ 
-          address: m.address, 
-          power: m.power 
+        params.secondaryMembers.map(m => ({
+          address: m.address,
+          power: m.power
         })),
         params.minSecurityPeriodDays,
         params.maxSecurityPeriodDays,
@@ -352,9 +352,9 @@ class WillService {
       throw new Error("Failed to create draft will: " + (error.response?.data?.message || error.message));
     }
   }
-/**
-   * Update an existing draft will
-   */
+  /**
+     * Update an existing draft will
+     */
   async updateDraftWill(willId: string, params: UpdateDraftWillParams): Promise<WillFromDB> {
     try {
       const response = await apiClient.put<{
@@ -367,16 +367,23 @@ class WillService {
       throw new Error("Failed to update draft will: " + (error.response?.data?.message || error.message));
     }
   }
-  
+
   /**
-   * Revert a canceled on-chain will back to DRAFT in the DB
+   * Revert an on-chain will back to DRAFT in the DB
    */
-  async cancelWill(willId: string): Promise<WillFromDB> {
+  async cancelWill(
+    willId: string,
+    params: {
+      minSecurityPeriod: number;
+      maxSecurityPeriod: number;
+      secondaryMembersVotingPowers: Record<string, number>;
+    }
+  ): Promise<WillFromDB> {
     try {
       const response = await apiClient.post<{
         success: boolean;
         data: WillFromDB;
-      }>(API_ROUTES.WILLS.CANCEL(willId));
+      }>(API_ROUTES.WILLS.CANCEL(willId), params);
       return response.data.data;
     } catch (error: any) {
       console.error("Error canceling will:", error);

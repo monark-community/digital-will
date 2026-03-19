@@ -12,37 +12,37 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 /**
- * Get wills by wallet address
+ * Get all wills (drafts and deployed) by wallet address
  */
 export const handleGetWills = asyncHandler(async (
-    req: Request,
-    res: Response,
+  req: Request,
+  res: Response,
 ): Promise<void> => {
 
-    const { walletAddress } = req.params;
-    const userId = req.user?.userId;
+  const { walletAddress } = req.params;
+  const userId = req.user?.userId;
 
-    if (!userId) {
-        throw new UnauthorizedError('User not authenticated');
+  if (!userId) {
+    throw new UnauthorizedError('User not authenticated');
+  }
+
+  const wallet = await prisma.wallet.findFirst({
+    where: {
+      address: walletAddress,
+      userId: userId
     }
+  });
 
-    const wallet = await prisma.wallet.findFirst({
-        where: {
-            address: walletAddress,
-            userId: userId
-        }
-    });
+  if (!wallet) {
+    throw new UnauthorizedError('You do not own this wallet');
+  }
 
-    if (!wallet) {
-        throw new UnauthorizedError('You do not own this wallet');
-    }
+  const wills = await willService.getWillsByWalletAddress(walletAddress);
 
-    const wills = await willService.getWillsByWalletAddress(walletAddress);
-
-    res.status(StatusCodes.OK).json({
-        success: true,
-        data: wills,
-    });
+  res.status(StatusCodes.OK).json({
+    success: true,
+    data: wills,
+  });
 
 });
 
@@ -50,23 +50,23 @@ export const handleGetWills = asyncHandler(async (
  * Get all wills where the authenticated user is a secondary member
  */
 export const handleGetAssociatedWills = asyncHandler(async (
-    req: Request,
-    res: Response,
+  req: Request,
+  res: Response,
 ): Promise<void> => {
-    const userId = req.user?.userId;
-    if (!userId) {
-        res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: 'Unauthorized' });
-        return;
-    }
+  const userId = req.user?.userId;
+  if (!userId) {
+    res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: 'Unauthorized' });
+    return;
+  }
 
-    const wills = await willService.getAssociatedWills(userId);
-    
-    const enrichedWills = await enrichWillsWithChainState(wills);
+  const wills = await willService.getAssociatedWills(userId);
 
-    res.status(StatusCodes.OK).json({
-        success: true,
-        data: enrichedWills,
-    });
+  const enrichedWills = await enrichWillsWithChainState(wills);
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    data: enrichedWills,
+  });
 });
 
 // 1. Créer un brouillon
@@ -131,7 +131,7 @@ export const handleUpdateDraft = async (
   }
 };
 
-// 3. Déployer un will (le passer en INACTIVE)
+// 3. Déployer un will
 export const handleDeployWill = async (
   req: Request,
   res: Response,
@@ -174,9 +174,18 @@ export const handleCancelWillOnChain = async (
 ) => {
   try {
     const { willId } = req.params;
-    if (!willId) throw new BadRequestError('Will ID is required');
+    const { minSecurityPeriod, maxSecurityPeriod, secondaryMembersVotingPowers } = req.body;
 
-    const will = await willService.cancelWillOnChain(willId);
+    if (!willId) throw new BadRequestError('Will ID is required');
+    if (minSecurityPeriod === undefined) throw new BadRequestError('minSecurityPeriod is required');
+    if (maxSecurityPeriod === undefined) throw new BadRequestError('maxSecurityPeriod is required');
+    if (!secondaryMembersVotingPowers) throw new BadRequestError('secondaryMembersVotingPowers is required');
+
+    const will = await willService.cancelWillOnChain(willId, {
+      minSecurityPeriod,
+      maxSecurityPeriod,
+      secondaryMembersVotingPowers,
+    });
 
     res.json({
       success: true,
@@ -188,7 +197,7 @@ export const handleCancelWillOnChain = async (
   }
 };
 
-// 4. Supprimer un brouillon
+// 4. Supprimer un brouillon -- OK
 export const handleDeleteDraft = async (
   req: Request,
   res: Response,
@@ -221,14 +230,12 @@ export const handleUpdateDeployedWill = async (
     const { willId } = req.params;
     if (!willId) throw new BadRequestError('Will ID is required');
 
-    const { updatedMembers, addedMembers, deletedMemberIds, minSecurityPeriod, maxSecurityPeriod } = req.body;
+    const { updatedMembers, addedMembers, deletedMemberIds } = req.body;
 
     const will = await willService.updateDeployedWillInDB(willId, {
       updatedMembers,
       addedMembers,
       deletedMemberIds,
-      minSecurityPeriod,
-      maxSecurityPeriod,
     });
 
     res.json({
@@ -242,7 +249,7 @@ export const handleUpdateDeployedWill = async (
 };
 
 /**
- * Validate a will for deployment readiness
+ * Validate a draft will for deployment readiness -- ok
  */
 export const handleValidateForDeployment = async (
   req: Request,
@@ -253,13 +260,13 @@ export const handleValidateForDeployment = async (
     const { willId } = req.params;
     if (!willId) throw new BadRequestError('Will ID is required');
 
-    const will = await willService.getWillById(willId);
-    if (!will) throw new BadRequestError('Will not found');
+    const draftWill = await willService.getDraftWillById(willId);
+    if (!draftWill) throw new BadRequestError('Will not found');
 
     const validation = validateForDeployment({
-      secondaryMembers: will.secondaryMembers,
-      minSecurityPeriod: will.minSecurityPeriod,
-      maxSecurityPeriod: will.maxSecurityPeriod,
+      secondaryMembers: draftWill.draftsecondarymembers,
+      minSecurityPeriod: draftWill.minSecurityPeriod,
+      maxSecurityPeriod: draftWill.maxSecurityPeriod,
     });
 
     res.json({
@@ -295,7 +302,7 @@ export const handleGetContractBalance = async (
 };
 
 /**
- * Get wills enriched with blockchain state
+ * Get all wills - the deployed ones enriched with blockchain state
  */
 export const handleGetEnrichedWills = asyncHandler(async (
   req: Request,

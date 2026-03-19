@@ -378,11 +378,40 @@ useEffect(() => {
     setCancelError(null);
     setIsCanceling(true);
     try {
+      // Get the will data from realWills
+      const will = realWills.find(w => w.willId === cancelModal.willId);
+      if (!will) {
+        setCancelError("Will not found");
+        setIsCanceling(false);
+        return;
+      }
+
+      // Call blockchain cancel
       await cancelWillContract(cancelModal.contractAddress);
-      await willService.cancelWill(cancelModal.willId);
+
+      // Prepare voting powers map from secondary members
+      const secondaryMembersVotingPowers = will.secondaryMembers.reduce((acc, member) => {
+        acc[member.secondaryMemberId] = member.votingPower;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Call service to update DB
+      await willService.cancelWill(cancelModal.willId, {
+        minSecurityPeriod: will.minSecurityPeriod,
+        maxSecurityPeriod: will.maxSecurityPeriod,
+        secondaryMembersVotingPowers,
+      });
+
+      // Update local state - the will becomes a draft
       setRealWills(prev => prev.map(w =>
         w.willId === cancelModal.willId
-          ? { ...w, state: 'DRAFT' as const, contractAddressInBlockchain: null, chainId: null, cooldownTimestampOnChain: undefined }
+          ? {
+            ...w,
+            state: 'DRAFT' as const,
+            contractAddressInBlockchain: null,
+            chainId: null,
+            cooldownTimestampOnChain: undefined
+          }
           : w
       ));
       setCancelModal(null);
@@ -414,14 +443,44 @@ useEffect(() => {
     setIsCanceledResolving(true);
     const { willId, action } = canceledResolveModal;
     try {
-      await willService.cancelWill(willId);
+      // Get the will data from realWills
+      const will = realWills.find(w => w.willId === willId);
+      
       if (action === 'delete') {
+        // Just delete the draft will without reverting from contract
         await willService.deleteDraftWill(willId);
         setRealWills(prev => prev.filter(w => w.willId !== willId));
       } else {
+        // Revert the will to draft state
+        if (!will) {
+          setCanceledResolveError("Will not found");
+          setIsCanceledResolving(false);
+          return;
+        }
+
+        // Prepare voting powers map from secondary members
+        const secondaryMembersVotingPowers = will.secondaryMembers.reduce((acc, member) => {
+          acc[member.secondaryMemberId] = member.votingPower;
+          return acc;
+        }, {} as Record<string, number>);
+
+        // Call service to revert will to draft
+        await willService.cancelWill(willId, {
+          minSecurityPeriod: will.minSecurityPeriod,
+          maxSecurityPeriod: will.maxSecurityPeriod,
+          secondaryMembersVotingPowers,
+        });
+
+        // Update local state - the will becomes a draft
         setRealWills(prev => prev.map(w =>
           w.willId === willId
-            ? { ...w, state: 'DRAFT' as const, contractAddressInBlockchain: null, chainId: null, cooldownTimestampOnChain: undefined }
+            ? {
+                ...w,
+                state: 'DRAFT' as const,
+                contractAddressInBlockchain: null,
+                chainId: null,
+                cooldownTimestampOnChain: undefined
+              }
             : w
         ));
       }

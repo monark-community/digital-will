@@ -22,9 +22,9 @@ export interface WillFromDB {
   walletAddress: string;
   contractAddressInBlockchain?: string | null;
   chainId?: number | null;
-  minSecurityPeriod: number;
-  maxSecurityPeriod: number;
-  state: 'DRAFT' | 'INACTIVE' | 'ACTIVE' | 'CANCELED' | 'EXECUTED';
+  minSecurityPeriod?: number | null;
+  maxSecurityPeriod?: number | null;
+  state?: 'DRAFT' | 'INACTIVE' | 'ACTIVE' | 'CANCELED' | 'EXECUTED' | null;
   executionTimestampOnChain?: number;
   deathDeclarationTimestampOnChain?: number;
   cooldownTimestampOnChain?: number;
@@ -37,19 +37,19 @@ export interface WillFromDB {
     phoneNumber?: string | null;
     walletAddress?: string | null;
     tempWalletAddress?: string | null;
-    votingPower: number;
-    state: 'PENDING' | 'VALIDATED' | 'DECLARED_DEATH';
+    votingPower?: number | null;
     relationship?: string | null;
   }>;
 }
 
 /**
  * Enrich wills with on-chain state data
+ * Careful: it also takes draft wills as input 
  */
 export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]): Promise<T[]> {
   try {
     const provider = getProvider();
-    
+
     // Test the provider connection first
     try {
       await provider.getBlockNumber();
@@ -60,11 +60,12 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
 
     return Promise.all(
       wills.map(async (will) => {
-        if (!will.contractAddressInBlockchain || will.state === 'DRAFT') return will;
+
+        if (will.state === 'DRAFT') return will;
 
         try {
           const contract = new ethers.Contract(
-            ethers.getAddress(will.contractAddressInBlockchain),
+            ethers.getAddress(will.contractAddressInBlockchain!),
             WILL_ABI,
             provider,
           );
@@ -74,7 +75,7 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
             contract.executionTimeStampS().catch(() => BigInt(0)),
             contract.deathDeclarationTimestampS().catch(() => BigInt(0)),
             contract.cooldownTimeStampS().catch(() => BigInt(0)),
-            provider.getBalance(will.contractAddressInBlockchain),
+            provider.getBalance(will.contractAddressInBlockchain!),
           ]);
 
           const chainWillState = (WILL_STATES_ONCHAIN[Number(stateNum)] ?? will.state) as T['state'];
@@ -89,7 +90,7 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
               if (!smWallet) return sm;
               try {
                 const smInfo = await contract.getDetailedSm(ethers.getAddress(smWallet));
-                const chainSmState = (SM_STATES_ONCHAIN[Number(smInfo.state)] ?? sm.state) as typeof sm.state;
+                const chainSmState = SM_STATES_ONCHAIN[Number(smInfo.state)];
                 return { ...sm, state: chainSmState };
               } catch {
                 return sm;
@@ -97,12 +98,12 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
             }),
           );
 
-          return { 
-            ...will, 
-            state: chainWillState, 
-            secondaryMembers: enrichedMembers, 
+          return {
+            ...will,
+            state: chainWillState,
+            secondaryMembers: enrichedMembers,
             executionTimestampOnChain,
-            deathDeclarationTimestampOnChain, 
+            deathDeclarationTimestampOnChain,
             cooldownTimestampOnChain,
             contractBalance
           };
