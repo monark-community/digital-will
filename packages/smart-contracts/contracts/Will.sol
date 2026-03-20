@@ -450,8 +450,8 @@ contract Will is WillEvents, ReentrancyGuard {
         securityPeriodFinished
         returns (uint256)
     {
-        uint256 amountOut = _swapExactInputSingle();
         willStateS = WillState.EXECUTED;
+        uint256 amountOut = _swapExactInputSingle();
         emit EVT_WillChain_AssetsSwapped(msg.sender);
         return amountOut;
     }
@@ -601,28 +601,28 @@ contract Will is WillEvents, ReentrancyGuard {
         return securityPeriodConfigS;
     }
 
-    // function getCooldownEndTimestamp()
-    //     external
-    //     view
-    //     onCooldown
-    //     returns (uint256)
-    // {
-    //     return cooldownTimeStampS;
-    // }
+    function getCooldownEndTimestamp()
+        external
+        view
+        onCooldown
+        returns (uint256)
+    {
+        return cooldownTimeStampS;
+    }
 
     function getState() external view returns (WillState) {
         return willStateS;
     }
 
-    // function getExecutionPossibleTimestamp()
-    //     external
-    //     view
-    //     willActive
-    //     securityPeriodStarted
-    //     returns (uint256)
-    // {
-    //     return executionTimeStampS;
-    // }
+    function getExecutionPossibleTimestamp()
+        external
+        view
+        willActive
+        securityPeriodStarted
+        returns (uint256)
+    {
+        return executionTimeStampS;
+    }
 
     function getBalance() external view returns (uint256) {
         return address(this).balance;
