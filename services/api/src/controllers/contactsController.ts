@@ -7,7 +7,16 @@ import { StatusCodes } from 'http-status-codes';
  * Get all contacts for current user
  */
 export const handleGetContacts = asyncHandler(async (req: Request, res: Response) => {
-    const contacts = await contactsService.getContactsByUser(req.user?.userId);
+    const userId = req.user?.userId;
+    if (!userId) {
+        res.status(StatusCodes.UNAUTHORIZED).json({
+            success: false,
+            message: 'User not authenticated',
+        });
+        return;
+    }
+
+    const contacts = await contactsService.getContactsByUser(userId);
 
     res.status(StatusCodes.OK).json({
         success: true,
@@ -20,6 +29,14 @@ export const handleGetContacts = asyncHandler(async (req: Request, res: Response
  */
 export const handleAddContact = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
+    if (!userId) {
+        res.status(StatusCodes.UNAUTHORIZED).json({
+            success: false,
+            message: 'User not authenticated',
+        });
+        return;
+    }
+
     const { firstName, lastName, email, walletAddress, phoneNumber, relationship } = req.body;
     const contact = await contactsService.createContact({ userId, firstName, lastName, email, walletAddress: walletAddress?.toLowerCase(), phoneNumber, relationship });
 
@@ -52,6 +69,14 @@ export const handleDeleteContact = asyncHandler(async (req: Request, res: Respon
  */
 export const handleUpdateContact = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
+    if (!userId) {
+        res.status(StatusCodes.UNAUTHORIZED).json({
+            success: false,
+            message: 'User not authenticated',
+        });
+        return;
+    }
+
     const { contactId } = req.params;
     const { firstName, lastName, email, walletAddress, phoneNumber, relationship } = req.body;
     const contact = await contactsService.updateContact({ userId, contactId, firstName, lastName, email, walletAddress: walletAddress?.toLowerCase(), phoneNumber, relationship });

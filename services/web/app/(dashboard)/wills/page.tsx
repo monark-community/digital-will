@@ -387,7 +387,7 @@ useEffect(() => {
       await willService.cancelWill(cancelModal.willId);
       setRealWills(prev => prev.map(w =>
         w.willId === cancelModal.willId
-          ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null, cooldownTimestampOnChain: null }
+          ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null, cooldownTimestampOnChain: undefined }
           : w
       ));
       setCancelModal(null);
@@ -426,7 +426,7 @@ useEffect(() => {
       } else {
         setRealWills(prev => prev.map(w =>
           w.willId === willId
-            ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null, cooldownTimestampOnChain: null }
+            ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null, cooldownTimestampOnChain: undefined }
             : w
         ));
       }
@@ -502,6 +502,10 @@ useEffect(() => {
           } else {
             console.log("Will Name: ",willName);
             // Mode création : nouveau draft
+            if (!selectedWallet) {
+              setErrorMessage("Please select a wallet");
+              return;
+            }
             await willService.createDraftWill({
               walletAddress: selectedWallet.address,
               willName: willName,

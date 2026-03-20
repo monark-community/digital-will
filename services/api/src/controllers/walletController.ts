@@ -14,6 +14,13 @@ import { asyncHandler } from '../middlewares/errorMiddleware';
 export const handleGetWallets = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user?.userId;
+    if (!userId) {
+      res.status(StatusCodes.UNAUTHORIZED).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+      return;
+    }
 
     const wallets = await getUserWallets(userId);
 
@@ -30,6 +37,14 @@ export const handleGetWallets = asyncHandler(
 export const handleAddWallet = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user?.userId;
+    if (!userId) {
+      res.status(StatusCodes.UNAUTHORIZED).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+      return;
+    }
+
     const { walletAddress, signature, message, label } = req.body;
 
     const wallet = await addWallet({
@@ -54,6 +69,14 @@ export const handleAddWallet = asyncHandler(
 export const handleRemoveWallet = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user?.userId;
+    if (!userId) {
+      res.status(StatusCodes.UNAUTHORIZED).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+      return;
+    }
+
     const { walletId } = req.params;
 
     await removeWallet(userId, walletId);
@@ -71,6 +94,14 @@ export const handleRemoveWallet = asyncHandler(
 export const handleUpdateWalletLabel = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user?.userId;
+    if (!userId) {
+      res.status(StatusCodes.UNAUTHORIZED).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+      return;
+    }
+
     const { walletId } = req.params;
     const { label } = req.body;
 

@@ -28,6 +28,7 @@ interface UserResponse {
   lastName: string;
   email: string;
   phoneNo?: string | null;
+  walletAddress?: string | null;
 }
 
 interface AuthResponse {
@@ -58,8 +59,7 @@ export async function signUp(data: SignUpData): Promise<AuthResponse> {
   // Generate JWT token
   const token = jwt.sign(
     { userId: user.userId, email: user.email },
-    config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn }
+    String(config.jwt.secret)
   );
 
   return {
@@ -99,8 +99,7 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
   // Generate JWT token
   const token = jwt.sign(
     { userId: user.userId, email: user.email },
-    config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn }
+    String(config.jwt.secret)
   );
 
   return {
@@ -110,7 +109,6 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
       lastName: user.lastName,
       email: user.email,
       phoneNo: user.phoneNo,
-      walletAddress: user.walletAddress,
     },
     token,
   };
@@ -163,8 +161,7 @@ export async function walletSignIn(
   // Generate JWT token
   const token = jwt.sign(
     { userId: user.userId, email: user.email },
-    config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn }
+    String(config.jwt.secret)
   );
 
   return {
@@ -174,7 +171,7 @@ export async function walletSignIn(
       lastName: user.lastName,
       email: user.email,
       phoneNo: user.phoneNo,
-      walletAddress: user.walletAddress,
+      walletAddress: wallet.address,
     },
     token,
   };
@@ -185,18 +182,21 @@ export async function walletSignIn(
  */
 export async function linkWallet(userId: string, walletAddress: string): Promise<UserResponse> {
 
-  const existingWallet = await prisma.user.findUnique({
-    where: { walletAddress: walletAddress.toLowerCase() },
+  const existingWallet = await prisma.wallet.findUnique({
+    where: { address: walletAddress.toLowerCase() },
   });
 
   if (existingWallet && existingWallet.userId !== userId) {
     throw new ConflictError('This wallet is already linked to another account');
   }
   
-  const user = await prisma.user.update({
+  const user = await prisma.user.findUnique({
     where: { userId },
-    data: { walletAddress: walletAddress.toLowerCase() },
   });
+
+  if (!user) {
+    throw new NotFoundError('User not found');
+  }
 
   return {
     userId: user.userId,
@@ -204,7 +204,7 @@ export async function linkWallet(userId: string, walletAddress: string): Promise
     lastName: user.lastName,
     email: user.email,
     phoneNo: user.phoneNo,
-    walletAddress: user.walletAddress,
+    walletAddress: walletAddress.toLowerCase(),
   };
 }
 
@@ -269,8 +269,7 @@ export async function createAccountWithWallet(data: {
 
   const token = jwt.sign(
     { userId: user.userId, email: user.email },
-    config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn }
+    String(config.jwt.secret)
   );
 
   return {

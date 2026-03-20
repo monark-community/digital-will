@@ -172,7 +172,7 @@ function WillCard({ will, onRefresh }: WillCardProps) {
       <div className="grid grid-cols-2 gap-2 text-xs mb-5">
         <div>
           <p className="text-[var(--text-muted-alt)]">Your vote power</p>
-          <p className="font-medium text-[var(--text-primary)]">{will.myMembership.votePower}</p>
+          <p className="font-medium text-[var(--text-primary)]">{will.myMembership.votingPower}</p>
         </div>
         <div>
           <p className="text-[var(--text-muted-alt)]">Security period</p>
