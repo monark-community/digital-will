@@ -3,7 +3,7 @@ import {
   NotificationRecipientRole,
   UserNotification,
 } from "../substreams/interfaces/cleaned/model";
-import { getWillByContractAddress } from "../services/willService";
+import { createPartialDeployedWill, getWillByContractAddress } from "../services/willService";
 import { createInAppNotification as createAppNotification } from "../services/notificationService";
 import {
   sendEmailNotification,
@@ -15,10 +15,12 @@ import {
   getSecondaryMembersByWillId,
   getSecondaryMembersByWillIdExcluding,
   findSecondaryMemberByAddressAndWill,
+  findDraftSmByAddress,
 } from "../services/secondaryMemberService";
 import { findUserIdByWalletAddress } from "../services/userService";
 import { emitUserNotification } from "../gateways/userNotificationGateway";
 import { generateUserNotification } from "../utils/userNotificationGenerator";
+import { ChainId } from "../substreams/interfaces/cleaned/utils/network";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -179,54 +181,79 @@ async function notifyPmAndSmsExcluding(
 
 /** Notify a specific secondary member. */
 async function notifySpecificSm(
+  pmAddress: string,
   smartContractAddress: string,
   smAddress: string,
   type: NotificationType,
 ): Promise<void> {
   const will = await getWillByContractAddress(smartContractAddress);
+  let partialWill = null;
+
   if (!will) {
-    warn("notifySpecificSm", smartContractAddress);
-    return;
+    console.log("[NotificationHandler] notifySpecificSm: no will found for", smartContractAddress, "- will create it now.");
+
+    partialWill = await createPartialDeployedWill(smartContractAddress, pmAddress, ChainId.SEPOLIA);
+
+    if (!partialWill) {
+      warn("notifySpecificSm", smartContractAddress);
+      return;
+    }
   }
+
+  const willId = will?.willId ?? partialWill!.willId;
 
   if (type === NotificationType.SIGNATURE_REQUEST) {
     const userId = await findUserIdByWalletAddress(smAddress);
     if (userId) {
       // SM has a WillChain account → standard flow
-      await createAppNotification(type, will.willId, userId);
+      await createAppNotification(type, willId, userId);
       emitUserNotification(
         userId,
         buildUserNotif(
           type,
-          will.willName,
-          will.willId,
+          will?.willName ?? smartContractAddress,
+          willId,
           NotificationRecipientRole.SM,
         ),
       );
       await sendEmailNotification(
         type,
-        will.willName,
+        will?.willName ?? smartContractAddress,
         userId,
         NotificationRecipientRole.SM,
       );
     } else {
       // SM has no account → find their record in this will and send the invite email
       const sm = await findSecondaryMemberByAddressAndWill(
-        will.willId,
+        willId,
         smAddress,
       );
-      if (sm) {
-        await sendSignatureRequestToSm(
-          will.willName,
-          sm.firstName,
-          sm.lastName,
-          sm.email,
+      let draftSm = null;
+
+      if (!sm) {
+        console.log(
+          `[NotificationHandler] SIGNATURE_REQUEST: no SM found for address ${smAddress} in will ${willId}. Will check in drafts...`,
         );
-      } else {
-        console.warn(
-          `[NotificationHandler] SIGNATURE_REQUEST: no SM found for address ${smAddress} in will ${will.willId}`,
-        );
+
+        draftSm = await findDraftSmByAddress(pmAddress, smAddress);
+
+        if (!draftSm) {
+          console.warn(
+            `[NotificationHandler] SIGNATURE_REQUEST: no draft SM found for address ${smAddress} and PM ${pmAddress}. Cannot send signature request email.`,
+          );
+          return;
+        }
       }
+
+      const targetSm = sm ?? draftSm;
+
+      await sendSignatureRequestToSm(
+        will?.willName ?? smartContractAddress,
+        targetSm!.firstName,
+        targetSm!.lastName,
+        targetSm!.email,
+      );
+
     }
     return;
   }
@@ -234,19 +261,19 @@ async function notifySpecificSm(
   const userId = await findUserIdByWalletAddress(smAddress);
   if (!userId) return;
 
-  await createAppNotification(type, will.willId, userId);
+  await createAppNotification(type, willId, userId);
   emitUserNotification(
     userId,
     buildUserNotif(
       type,
-      will.willName,
-      will.willId,
+      will?.willName ?? smartContractAddress,
+      willId,
       NotificationRecipientRole.SM_TARGET,
     ),
   );
   await sendEmailNotification(
     type,
-    will.willName,
+    will?.willName ?? smartContractAddress,
     userId,
     NotificationRecipientRole.SM_TARGET,
   );
@@ -313,8 +340,9 @@ export const notifySmValidated = (smartContractAddress: string, sm: string) =>
 export const notifyVetoExercised = (smartContractAddress: string) =>
   notifySmsOnly(smartContractAddress, NotificationType.VETO_EXERCISED);
 
-export const notifySmToSign = (smartContractAddress: string, sm: string) =>
+export const notifySmToSign = (pmAddress: string, smartContractAddress: string, sm: string) =>
   notifySpecificSm(
+    pmAddress,
     smartContractAddress,
     sm,
     NotificationType.SIGNATURE_REQUEST,

@@ -76,7 +76,7 @@ model Contact {
 model Will {
   willId                      String            @id @default(uuid())
   walletAddress               String
-  willName                    String
+  willName                    String?
   contractAddressInBlockchain String
   chainId                     Int
   wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)

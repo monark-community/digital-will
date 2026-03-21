@@ -370,7 +370,7 @@ export const updateDraftWill = async (
 };
 
 // 3. Déployer un draft will : copier les données du draftWill vers la table Will
-// apres transaction blockchain
+// apres transaction blockchain (fonction appelée par le frontend)
 export const deployWill = async (
   draftWillId: string,
   input: {
@@ -400,15 +400,36 @@ export const deployWill = async (
 
   // Créer le will en copiant les données du draftWill dans une transaction
   return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    // Créer le will principal
-    const will = await tx.will.create({
-      data: {
-        walletAddress: draftWill.walletAddress,
-        willName: draftWill.willName,
-        contractAddressInBlockchain,
-        chainId,
+    // Vérifier si le will a déjà été pré-créé par le stream
+    let will = await tx.will.findUnique({
+      where: {
+        chainId_contractAddressInBlockchain: {
+          chainId,
+          contractAddressInBlockchain,
+        },
       },
     });
+
+    if (will) {
+      // Le will existe déjà, on le met à jour avec les informations du draft
+      will = await tx.will.update({
+        where: { willId: will.willId },
+        data: {
+          willName: draftWill.willName,
+        },
+        include: { secondaryMembers: true },
+      });
+    } else {
+      // Créer le will principal
+      will = await tx.will.create({
+        data: {
+          walletAddress: draftWill.walletAddress,
+          willName: draftWill.willName,
+          contractAddressInBlockchain,
+          chainId,
+        },
+      });
+    }
 
     // Copier les membres secondaires
     if (draftWill.draftsecondarymembers.length > 0) {
@@ -448,6 +469,38 @@ export const deployWill = async (
       include: { secondaryMembers: true },
     });
   });
+};
+
+/*
+This function is called by the stream
+when will is not found in DB
+*/
+export const createPartialDeployedWill = async (
+  smartContractAddress: string,
+  pmAddress: string,
+  chainId: number,
+): Promise<Prisma.WillGetPayload<{}>> => {
+  // Vérifier que le wallet existe
+  const wallet = await prisma.wallet.findUnique({
+    where: { address: pmAddress.toLowerCase() },
+  });
+
+  if (!wallet) {
+    throw new NotFoundError("PM's wallet not found");
+  }
+
+  console.log("creation of partial will for contract address", smartContractAddress.toLowerCase());
+
+  // Créer le will deploye avec les informations de base
+  const will = await prisma.will.create({
+    data: {
+      walletAddress: pmAddress.toLowerCase(),
+      contractAddressInBlockchain: smartContractAddress.toLowerCase(),
+      chainId,
+    },
+  });
+
+  return will;
 };
 
 export const cancelWillOnChain = async (

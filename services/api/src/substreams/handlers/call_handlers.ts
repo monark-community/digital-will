@@ -20,6 +20,6 @@ export async function handleCreateWillCall(
 
   // Notify secondary members to sign
   for (const sm of will.newSmList) {
-    await notifySmToSign(will.contractAddressInBlockchain, sm.smAddress);
+    await notifySmToSign(will.walletAddress, will.contractAddressInBlockchain, sm.smAddress);
   }
 }
