@@ -140,7 +140,13 @@ function WillCard({ will, onRefresh }: WillCardProps) {
       }
 
       console.log('Transaction sent:', tx.hash);
-      const receipt = await tx.wait(2);
+      const receipt = await tx.wait();
+      
+      /*
+      Delay added instead of waiting 2 block confirmation 
+      */
+      await new Promise(resolve => setTimeout(resolve, 1000)); 
+      
       console.log('Transaction confirmed:', receipt?.hash);
 
       if (action.id === 'desist') {

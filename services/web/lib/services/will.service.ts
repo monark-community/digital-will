@@ -138,8 +138,13 @@ class WillService {
         securityConfig,
         txOverrides
       );
-      const receipt = await tx.wait(2);
-
+      const receipt = await tx.wait();
+      
+      /*
+      Delay added instead of waiting 2 block confirmation 
+      */
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       if (!receipt) {
         throw new Error("Transaction failed: no receipt received");
       }
