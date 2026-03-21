@@ -105,6 +105,7 @@ export async function handleSmAdded(
     { depth: null, colors: true },
   );
   await notifySmToSign(
+    null,
     event_WillSmAdded.willAddress,
     event_WillSmAdded.smAddress,
   );

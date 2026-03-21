@@ -181,7 +181,7 @@ async function notifyPmAndSmsExcluding(
 
 /** Notify a specific secondary member. */
 async function notifySpecificSm(
-  pmAddress: string,
+  pmAddress: string | null,
   smartContractAddress: string,
   smAddress: string,
   type: NotificationType,
@@ -189,7 +189,7 @@ async function notifySpecificSm(
   const will = await getWillByContractAddress(smartContractAddress);
   let partialWill = null;
 
-  if (!will) {
+  if (!will && pmAddress) {
     console.log("[NotificationHandler] notifySpecificSm: no will found for", smartContractAddress, "- will create it now.");
 
     partialWill = await createPartialDeployedWill(smartContractAddress, pmAddress, ChainId.SEPOLIA);
@@ -230,7 +230,7 @@ async function notifySpecificSm(
       );
       let draftSm = null;
 
-      if (!sm) {
+      if (!sm && pmAddress) {
         console.log(
           `[NotificationHandler] SIGNATURE_REQUEST: no SM found for address ${smAddress} in will ${willId}. Will check in drafts...`,
         );
@@ -238,11 +238,14 @@ async function notifySpecificSm(
         draftSm = await findDraftSmByAddress(pmAddress, smAddress);
 
         if (!draftSm) {
-          console.warn(
+          console.log(
             `[NotificationHandler] SIGNATURE_REQUEST: no draft SM found for address ${smAddress} and PM ${pmAddress}. Cannot send signature request email.`,
           );
           return;
         }
+      } else if (!sm && !pmAddress) {
+        console.log("[NotificationHandler] SIGNATURE_REQUEST: service (not stream) will send email request");
+        return;
       }
 
       const targetSm = sm ?? draftSm;
@@ -340,7 +343,7 @@ export const notifySmValidated = (smartContractAddress: string, sm: string) =>
 export const notifyVetoExercised = (smartContractAddress: string) =>
   notifySmsOnly(smartContractAddress, NotificationType.VETO_EXERCISED);
 
-export const notifySmToSign = (pmAddress: string, smartContractAddress: string, sm: string) =>
+export const notifySmToSign = (pmAddress: string | null, smartContractAddress: string, sm: string) =>
   notifySpecificSm(
     pmAddress,
     smartContractAddress,
@@ -384,6 +387,7 @@ export const notifySmUpdated = (
   smAddress: string,
 ) =>
   notifySpecificSm(
+    null,
     smartContractAddress,
     smAddress,
     NotificationType.SM_UPDATED,

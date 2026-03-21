@@ -1,6 +1,7 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { BadRequestError, NotFoundError } from "../utils/errors";
 import { WillFromDB } from "./chainStateService";
+import { sendSignatureRequestToSm } from "./emailService";
 
 const prisma = new PrismaClient();
 
@@ -668,6 +669,16 @@ export const updateDeployedWillInDB = async (
             willId,
           },
         });
+
+        if (m.email && !existing) {
+          console.log("in updateDeployedWillInDB, sm without willchain account added. Sending email to", m.email);
+          await sendSignatureRequestToSm(
+            existingWill.willName ?? existingWill.contractAddressInBlockchain,
+            m.firstName ?? "",
+            m.lastName ?? "",
+            m.email,
+          );
+        }
       }
     }
 
