@@ -395,25 +395,21 @@ useEffect(() => {
         return acc;
       }, {} as Record<string, number>);
 
-      // Call service to update DB
-      await willService.cancelWill(cancelModal.willId, {
+      /* Call service to update DB
+      The old will is deleted and a new draft will is created instead.
+      */
+      const draftWill = await willService.cancelWill(cancelModal.willId, {
         minSecurityPeriod: will.minSecurityPeriod,
         maxSecurityPeriod: will.maxSecurityPeriod,
         secondaryMembersVotingPowers,
       });
 
-      // Update local state - the will becomes a draft
-      setRealWills(prev => prev.map(w =>
-        w.willId === cancelModal.willId
-          ? {
-            ...w,
-            state: 'DRAFT' as const,
-            contractAddressInBlockchain: null,
-            chainId: null,
-            cooldownTimestampOnChain: undefined
-          }
-          : w
-      ));
+      // Update local state - delete the old will and add the new draft will
+      setRealWills(prev =>
+        prev
+          .filter(w => w.willId !== cancelModal.willId) // Remove the old will
+          .concat(draftWill) // Add the new draft will
+      );
       setCancelModal(null);
     } catch (err: any) {
       setCancelError(getMetaMaskErrorMessage(err) ?? err.message ?? "Transaction failed.");

@@ -83,6 +83,7 @@ model Will {
   secondaryMembers            SecondaryMember[]
   notifications               Notifications[]
   
+  @@unique([chainId, contractAddressInBlockchain])
   @@map("wills")
 }
 
