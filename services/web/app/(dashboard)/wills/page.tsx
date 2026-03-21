@@ -439,47 +439,36 @@ useEffect(() => {
     setIsCanceledResolving(true);
     const { willId, action } = canceledResolveModal;
     try {
-      // Get the will data from realWills
+      // Cancel will in DB (will become a draft will)
+
       const will = realWills.find(w => w.willId === willId);
-      
-      if (action === 'delete') {
-        // Just delete the draft will without reverting from contract
-        await willService.deleteDraftWill(willId);
-        setRealWills(prev => prev.filter(w => w.willId !== willId));
-      } else {
-        // Revert the will to draft state
-        if (!will) {
-          setCanceledResolveError("Will not found");
-          setIsCanceledResolving(false);
-          return;
-        }
 
-        // Prepare voting powers map from secondary members
-        const secondaryMembersVotingPowers = will.secondaryMembers.reduce((acc, member) => {
-          acc[member.secondaryMemberId] = member.votingPower;
-          return acc;
-        }, {} as Record<string, number>);
-
-        // Call service to revert will to draft
-        await willService.cancelWill(willId, {
-          minSecurityPeriod: will.minSecurityPeriod,
-          maxSecurityPeriod: will.maxSecurityPeriod,
-          secondaryMembersVotingPowers,
-        });
-
-        // Update local state - the will becomes a draft
-        setRealWills(prev => prev.map(w =>
-          w.willId === willId
-            ? {
-                ...w,
-                state: 'DRAFT' as const,
-                contractAddressInBlockchain: null,
-                chainId: null,
-                cooldownTimestampOnChain: undefined
-              }
-            : w
-        ));
+      if (!will) {
+        throw new Error("Will to be canceled not found");
       }
+
+      const secondaryMembersVotingPowers = will.secondaryMembers.reduce((acc, member) => {
+        acc[member.secondaryMemberId] = member.votingPower;
+        return acc;
+      }, {} as Record<string, number>);
+
+  
+      const draftWill = await willService.cancelWill(willId, {
+        minSecurityPeriod: will.minSecurityPeriod,
+        maxSecurityPeriod: will.maxSecurityPeriod,
+        secondaryMembersVotingPowers,
+      });
+
+      setRealWills(prev =>
+        prev
+          .filter(w => w.willId !== willId) // Remove the old will
+          .concat(draftWill) // Add the new draft will
+      );
+
+      if (action === 'delete') {
+        await willService.deleteDraftWill(draftWill.willId);
+        setRealWills(prev => prev.filter(w => w.willId !== draftWill.willId));
+      } 
       setCanceledResolveModal(null);
     } catch (err: any) {
       setCanceledResolveError(err.message ?? 'Action failed.');
