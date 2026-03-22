@@ -19,6 +19,7 @@ import {
 import { findUserIdByWalletAddress } from "../services/userService";
 import { emitUserNotification } from "../gateways/userNotificationGateway";
 import { generateUserNotification } from "../utils/userNotificationGenerator";
+import { RETRY_DELAYS_MS } from "../utils/constants";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,39 @@ function warn(fn: string, smartContractAddress: string): void {
   console.warn(
     `[NotificationHandler] ${fn}: no will found for ${smartContractAddress} — skipping`,
   );
+}
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function getWillWithRetry(
+  smartContractAddress: string,
+): ReturnType<typeof getWillByContractAddress> {
+  let will = await getWillByContractAddress(smartContractAddress);
+  for (let i = 0; will === null && i < RETRY_DELAYS_MS.length; i++) {
+    console.warn(
+      `[NotificationHandler] will not found for ${smartContractAddress}, retrying in ${RETRY_DELAYS_MS[i]}ms (attempt ${i + 1}/${RETRY_DELAYS_MS.length})`,
+    );
+    await sleep(RETRY_DELAYS_MS[i]);
+    will = await getWillByContractAddress(smartContractAddress);
+  }
+  return will;
+}
+
+async function getSmWithRetry(
+  willId: string,
+  smAddress: string,
+): ReturnType<typeof findSecondaryMemberByAddressAndWill> {
+  let sm = await findSecondaryMemberByAddressAndWill(willId, smAddress);
+  for (let i = 0; sm === null && i < RETRY_DELAYS_MS.length; i++) {
+    console.warn(
+      `[NotificationHandler] SM not found for ${smAddress} in will ${willId}, retrying in ${RETRY_DELAYS_MS[i]}ms (attempt ${i + 1}/${RETRY_DELAYS_MS.length})`,
+    );
+    await sleep(RETRY_DELAYS_MS[i]);
+    sm = await findSecondaryMemberByAddressAndWill(willId, smAddress);
+  }
+  return sm;
 }
 
 function registeredUserIds(sms: SmWithWallet[]): string[] {
@@ -120,7 +154,7 @@ async function notifyPmAndSms(
   smartContractAddress: string,
   type: NotificationType,
 ): Promise<void> {
-  const will = await getWillByContractAddress(smartContractAddress);
+  const will = await getWillWithRetry(smartContractAddress);
   if (!will) {
     warn("notifyPmAndSms", smartContractAddress);
     return;
@@ -139,7 +173,7 @@ async function notifySmsOnly(
   smartContractAddress: string,
   type: NotificationType,
 ): Promise<void> {
-  const will = await getWillByContractAddress(smartContractAddress);
+  const will = await getWillWithRetry(smartContractAddress);
   if (!will) {
     warn("notifySmsOnly", smartContractAddress);
     return;
@@ -159,7 +193,7 @@ async function notifyPmAndSmsExcluding(
   excludeAddress: string,
   type: NotificationType,
 ): Promise<void> {
-  const will = await getWillByContractAddress(smartContractAddress);
+  const will = await getWillWithRetry(smartContractAddress);
   if (!will) {
     warn("notifyPmAndSmsExcluding", smartContractAddress);
     return;
@@ -177,57 +211,66 @@ async function notifyPmAndSmsExcluding(
   );
 }
 
+async function handleSignatureRequest(
+  will: { willId: string; willName: string },
+  smAddress: string,
+): Promise<void> {
+  const userId = await findUserIdByWalletAddress(smAddress);
+  if (userId) {
+    // SM has a WillChain account → standard in-app + email flow
+    await createAppNotification(
+      NotificationType.SIGNATURE_REQUEST,
+      will.willId,
+      userId,
+    );
+    emitUserNotification(
+      userId,
+      buildUserNotif(
+        NotificationType.SIGNATURE_REQUEST,
+        will.willName,
+        will.willId,
+        NotificationRecipientRole.SM,
+      ),
+    );
+    await sendEmailNotification(
+      NotificationType.SIGNATURE_REQUEST,
+      will.willName,
+      userId,
+      NotificationRecipientRole.SM,
+    );
+    return;
+  }
+
+  // SM has no account → find their record in this will and send the invite email
+  const sm = await getSmWithRetry(will.willId, smAddress);
+  if (sm) {
+    await sendSignatureRequestToSm(
+      will.willName,
+      sm.firstName,
+      sm.lastName,
+      sm.email,
+    );
+  } else {
+    console.warn(
+      `[NotificationHandler] SIGNATURE_REQUEST: no SM found for address ${smAddress} in will ${will.willId}`,
+    );
+  }
+}
+
 /** Notify a specific secondary member. */
 async function notifySpecificSm(
   smartContractAddress: string,
   smAddress: string,
   type: NotificationType,
 ): Promise<void> {
-  const will = await getWillByContractAddress(smartContractAddress);
+  const will = await getWillWithRetry(smartContractAddress);
   if (!will) {
     warn("notifySpecificSm", smartContractAddress);
     return;
   }
 
   if (type === NotificationType.SIGNATURE_REQUEST) {
-    const userId = await findUserIdByWalletAddress(smAddress);
-    if (userId) {
-      // SM has a WillChain account → standard flow
-      await createAppNotification(type, will.willId, userId);
-      emitUserNotification(
-        userId,
-        buildUserNotif(
-          type,
-          will.willName,
-          will.willId,
-          NotificationRecipientRole.SM,
-        ),
-      );
-      await sendEmailNotification(
-        type,
-        will.willName,
-        userId,
-        NotificationRecipientRole.SM,
-      );
-    } else {
-      // SM has no account → find their record in this will and send the invite email
-      const sm = await findSecondaryMemberByAddressAndWill(
-        will.willId,
-        smAddress,
-      );
-      if (sm) {
-        await sendSignatureRequestToSm(
-          will.willName,
-          sm.firstName,
-          sm.lastName,
-          sm.email,
-        );
-      } else {
-        console.warn(
-          `[NotificationHandler] SIGNATURE_REQUEST: no SM found for address ${smAddress} in will ${will.willId}`,
-        );
-      }
-    }
+    await handleSignatureRequest(will, smAddress);
     return;
   }
 
@@ -258,7 +301,7 @@ async function notifyOthersAndTarget(
   smAddress: string,
   type: NotificationType,
 ): Promise<void> {
-  const will = await getWillByContractAddress(smartContractAddress);
+  const will = await getWillWithRetry(smartContractAddress);
   if (!will) {
     warn(`notifyOthersAndTarget[${type}]`, smartContractAddress);
     return;
