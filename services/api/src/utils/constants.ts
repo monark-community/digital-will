@@ -44,4 +44,6 @@ export const ROUTES = {
   },
 } as const;
 
-export const RETRY_DELAYS_MS = [500, 1000, 2000, 3000, 5000, 8000];
+export const RETRY_DELAYS_MS = [
+  500, 1000, 2000, 3000, 8000, 16000, 32000, 64000,
+];
