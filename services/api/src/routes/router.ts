@@ -4,6 +4,7 @@ import walletRoutes from './walletRoutes';
 import contactsRoutes from './contactRoutes';
 import { ROUTES } from '../utils/constants';
 import willRoutes from './willRoutes';
+import userRoutes from './userRoutes';
 
 const router = Router();
 
@@ -24,7 +25,7 @@ router.use(ROUTES.CONTACTS.BASE, contactsRoutes);
 // Will routes
 router.use(ROUTES.WILLS.BASE, willRoutes);
 
-// Future routes
-// router.use(ROUTES.USERS.BASE, userRoutes);
+// User routes
+router.use(ROUTES.USERS.BASE, userRoutes);
 
 export default router;

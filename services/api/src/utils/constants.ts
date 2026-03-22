@@ -30,6 +30,8 @@ export const ROUTES = {
   // Future routes
   USERS: {
     BASE: "/users",
+    DELETE_ELIGIBILITY: "/delete-eligibility",
+    DELETE: "/delete"
   },
   WILLS: {
     BASE: "/wills",
