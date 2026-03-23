@@ -190,9 +190,10 @@ contract Will is WillEvents {
         }
         // Rule 2: all VALIDATED/DECLARED_DEATH → ACTIVE OR declaration in progress
         else {
-            if (willStateS != WillState.ACTIVE) emit EVT_WillChain_WillActivated();
+            if (willStateS != WillState.ACTIVE)
+                emit EVT_WillChain_WillActivated();
             willStateS = WillState.ACTIVE;
-            
+
             if (cumulatedVotePowerS > 0) {
                 updatePeriodUntilExecution();
             } else {
@@ -425,8 +426,9 @@ contract Will is WillEvents {
         willNotExecuted
         executionTimeNotPassed
     {
-        if (smMappingS[msg.sender].state == SMState.PENDING)
-            revert Errors.ERR_SMNotValidated(); // can't desist if didn't give approval previously.
+        // Commented out so that we allow the SM to desist even before participating in contract.
+        // if (smMappingS[msg.sender].state == SMState.DECLARED_DEATH)
+        //     revert Errors.ERR_SMDeclaredDeath(); // can't desist if declared death.
 
         // Remove from datasources
         SMInfo storage sm = smMappingS[msg.sender];

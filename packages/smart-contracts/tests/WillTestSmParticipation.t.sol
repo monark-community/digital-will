@@ -142,8 +142,10 @@ contract WillTestSmParticipation is Test {
         vm.prank(sm2);
         will.declareDeath();
 
+        //vm.expectRevert(Errors.ERR_SMDeclaredDeath.selector);
         vm.prank(sm1);
         will.desistSm();
+
         assertEq(will.deathDeclarationTimestampS(), block.timestamp);
         assertGt(will.deathDeclarationTimestampS(), 0);
 
@@ -253,13 +255,6 @@ contract WillTestInvalidSmParticipation is Test {
         vm.prank(sm1);
         vm.expectRevert(Errors.ERR_WillNotInactive.selector);
         will.validateSm();
-    }
-
-    // SM desists but isn't validated.
-    function test_DesistSm_NotValidated() public {
-        vm.prank(sm1);
-        vm.expectRevert(Errors.ERR_SMNotValidated.selector);
-        will.desistSm();
     }
 
     // Non-SM attempts to desist.
