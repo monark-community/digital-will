@@ -78,7 +78,7 @@ export function initGateway(httpServer: HttpServer): void {
             willId: n.willId,
             willName,
             read: n.readStatus,
-            createdAt: new Date().toISOString(),
+            createdAt: n.createdAt.toISOString(),
           };
         });
         callback(notifications);

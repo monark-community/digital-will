@@ -148,6 +148,7 @@ model Notifications {
   willId     String?
   userId     String
   readStatus Boolean
+  createdAt  DateTime         @default(now())
   will       Will?            @relation(fields: [willId], references: [willId], onDelete: SetNull)
   user       User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
