@@ -505,7 +505,7 @@ contract Will is WillEvents {
         //Starts cooldown by itself through conditions.
 
         emit EVT_WillChain_VetoExercised();
-    }function vetoDeatfunction vetoDeatfunction vetoDeat
+    }
 
     function resetDeclareSmListState() private {
         uint256 length = smListS.length;
