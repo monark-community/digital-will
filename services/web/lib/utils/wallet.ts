@@ -281,13 +281,14 @@ export async function getMultiNetworkBalances(address: string): Promise<{
   totalCAD: number;
 }> {
   try {
-    const [sepoliaBalance, mainnetBalance, bnbBalance, avaxBalance, prices] = await Promise.all([
+    const [sepoliaBalance, bnbBalance, avaxBalance, prices] = await Promise.all([
       getBalanceFromRPC(address, NETWORKS.SEPOLIA.rpcUrl),
-      getBalanceFromRPC(address, NETWORKS.MAINNET.rpcUrl),
       getBalanceFromRPC(address, NETWORKS.BNB.rpcUrl),
       getBalanceFromRPC(address, NETWORKS.AVAX.rpcUrl),
       getCryptoPrices(),
     ]);
+
+    const mainnetBalance = "0.000000";
 
     const total = parseFloat(sepoliaBalance) + parseFloat(mainnetBalance) + parseFloat(bnbBalance) + parseFloat(avaxBalance);
     // For testing purposes, let's assume that 1 sepolia ETH is worth the same as 1 mainnet ETH, even though in reality it has no value.
