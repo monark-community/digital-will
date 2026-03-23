@@ -104,7 +104,7 @@ export function initGateway(httpServer: HttpServer): void {
 
 export function emitUserNotification(
   userId: string,
-  notification: UserNotification,
+  notification: UserNotification & { id: string },
 ): void {
   if (!io) {
     console.warn("[WS] Gateway not initialized — cannot emit notification");

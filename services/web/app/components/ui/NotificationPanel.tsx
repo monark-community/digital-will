@@ -6,7 +6,9 @@ import type { AppNotification } from "@/lib/types";
 interface NotificationPanelProps {
   notifications: AppNotification[];
   onMarkAllRead: () => void;
-  onMarkRead: (id: string) => void;
+  onToggleRead: (id: string) => void;
+  onDelete: (id: string) => void;
+  onDeleteAll: () => void;
   onClose: () => void;
 }
 
@@ -23,7 +25,9 @@ function timeAgo(isoString: string): string {
 const NotificationPanel: React.FC<NotificationPanelProps> = ({
   notifications,
   onMarkAllRead,
-  onMarkRead,
+  onToggleRead,
+  onDelete,
+  onDeleteAll,
   onClose,
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -77,6 +81,17 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                 Mark all as read
               </button>
             )}
+            {notifications.length > 0 && (
+              <button
+                onClick={onDeleteAll}
+                className="p-1 rounded hover:bg-red-500/10 text-[var(--text-muted-alt)] hover:text-red-500 transition-colors"
+                title="Delete all notifications"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                </svg>
+              </button>
+            )}
             <button
               onClick={onClose}
               className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
@@ -120,20 +135,26 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
             </div>
           ) : (
             notifications.map((notif) => (
-              <button
+              <div
                 key={notif.id}
-                onClick={() => onMarkRead(notif.id)}
-                className={`w-full text-left px-6 py-4 border-b border-[var(--border-section)] transition-colors hover:bg-[var(--bg-section)] ${
+                onClick={() => { if (!notif.read) onToggleRead(notif.id); }}
+                className={`w-full text-left px-6 py-4 border-b border-[var(--border-section)] transition-colors hover:bg-[var(--bg-section)] cursor-pointer ${
                   !notif.read ? "bg-[var(--bg-section)]/50" : ""
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  {/* Unread dot */}
-                  <span
-                    className={`mt-1.5 shrink-0 w-2 h-2 rounded-full transition-colors ${
-                      !notif.read ? "bg-[var(--accent)]" : "bg-transparent"
-                    }`}
-                  />
+                  {/* Unread dot — click to toggle */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onToggleRead(notif.id); }}
+                    className="mt-1.5 shrink-0 p-0.5 rounded-full hover:bg-[var(--border-section)] transition-colors"
+                    title={notif.read ? "Mark as unread" : "Mark as read"}
+                  >
+                    <span
+                      className={`block w-2 h-2 rounded-full transition-colors ${
+                        !notif.read ? "bg-[var(--accent)]" : "bg-[var(--text-muted-alt)]/30"
+                      }`}
+                    />
+                  </button>
                   <div className="flex-1 min-w-0">
                     <p
                       className={`text-sm font-medium truncate ${
@@ -151,8 +172,18 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                       {timeAgo(notif.createdAt)}
                     </p>
                   </div>
+                  {/* Delete button */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDelete(notif.id); }}
+                    className="mt-1 shrink-0 p-1 rounded hover:bg-red-500/10 text-[var(--text-muted-alt)] hover:text-red-500 transition-colors"
+                    title="Delete notification"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                    </svg>
+                  </button>
                 </div>
-              </button>
+              </div>
             ))
           )}
         </div>

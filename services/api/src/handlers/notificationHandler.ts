@@ -106,20 +106,11 @@ async function broadcastSplit(
   type: NotificationType,
   smName?: string,
 ): Promise<void> {
-  const allUserIds = [pmUserId, ...smUserIds].filter(Boolean) as string[];
-  for (const userId of allUserIds) {
-    await createAppNotification(type, willId, userId);
-  }
   if (pmUserId) {
+    const pmNotifId = await createAppNotification(type, willId, pmUserId);
     emitUserNotification(
       pmUserId,
-      buildUserNotif(
-        type,
-        willName,
-        willId,
-        NotificationRecipientRole.PM,
-        smName,
-      ),
+      { ...buildUserNotif(type, willName, willId, NotificationRecipientRole.PM, smName), id: pmNotifId },
     );
     await sendEmailNotification(
       type,
@@ -130,15 +121,10 @@ async function broadcastSplit(
     );
   }
   for (const userId of smUserIds) {
+    const smNotifId = await createAppNotification(type, willId, userId);
     emitUserNotification(
       userId,
-      buildUserNotif(
-        type,
-        willName,
-        willId,
-        NotificationRecipientRole.SM,
-        smName,
-      ),
+      { ...buildUserNotif(type, willName, willId, NotificationRecipientRole.SM, smName), id: smNotifId },
     );
   }
   await sendEmailNotifications(
@@ -226,19 +212,19 @@ async function handleSignatureRequest(
   const userId = await findUserIdByWalletAddress(smAddress);
   if (userId) {
     // SM has a WillChain account → standard in-app + email flow
-    await createAppNotification(
+    const sigNotifId = await createAppNotification(
       NotificationType.SIGNATURE_REQUEST,
       will.willId,
       userId,
     );
     emitUserNotification(
       userId,
-      buildUserNotif(
+      { ...buildUserNotif(
         NotificationType.SIGNATURE_REQUEST,
         will.willName,
         will.willId,
         NotificationRecipientRole.SM,
-      ),
+      ), id: sigNotifId },
     );
     await sendEmailNotification(
       NotificationType.SIGNATURE_REQUEST,
@@ -285,15 +271,15 @@ async function notifySpecificSm(
   const userId = await findUserIdByWalletAddress(smAddress);
   if (!userId) return;
 
-  await createAppNotification(type, will.willId, userId);
+  const smTargetNotifId = await createAppNotification(type, will.willId, userId);
   emitUserNotification(
     userId,
-    buildUserNotif(
+    { ...buildUserNotif(
       type,
       will.willName,
       will.willId,
       NotificationRecipientRole.SM_TARGET,
-    ),
+    ), id: smTargetNotifId },
   );
   await sendEmailNotification(
     type,
@@ -333,15 +319,15 @@ async function notifyOthersAndTarget(
 
   const targetUserId = await findUserIdByWalletAddress(smAddress);
   if (targetUserId) {
-    await createAppNotification(type, will.willId, targetUserId);
+    const targetNotifId = await createAppNotification(type, will.willId, targetUserId);
     emitUserNotification(
       targetUserId,
-      buildUserNotif(
+      { ...buildUserNotif(
         type,
         will.willName,
         will.willId,
         NotificationRecipientRole.SM_TARGET,
-      ),
+      ), id: targetNotifId },
     );
     await sendEmailNotification(
       type,
@@ -372,19 +358,19 @@ async function notifyWillAutoCanceled(will: {
 
   const pmUserId = will.wallet?.user?.userId;
   if (!pmUserId) return;
-  await createAppNotification(
+  const autoCancelNotifId = await createAppNotification(
     NotificationType.WILL_CANCELED_ALL_SM_LEFT,
     will.willId,
     pmUserId,
   );
   emitUserNotification(
     pmUserId,
-    buildUserNotif(
+    { ...buildUserNotif(
       NotificationType.WILL_CANCELED_ALL_SM_LEFT,
       will.willName,
       will.willId,
       NotificationRecipientRole.PM,
-    ),
+    ), id: autoCancelNotifId },
   );
   await sendEmailNotification(
     NotificationType.WILL_CANCELED_ALL_SM_LEFT,
@@ -403,19 +389,19 @@ async function notifyWillPmCanceled(
 ): Promise<void> {
   const registeredIds = registeredUserIds(sms);
   for (const userId of registeredIds) {
-    await createAppNotification(
+    const cancelNotifId = await createAppNotification(
       NotificationType.WILL_CANCELED,
       will.willId,
       userId,
     );
     emitUserNotification(
       userId,
-      buildUserNotif(
+      { ...buildUserNotif(
         NotificationType.WILL_CANCELED,
         will.willName,
         will.willId,
         NotificationRecipientRole.SM,
-      ),
+      ), id: cancelNotifId },
     );
   }
   await sendEmailNotifications(

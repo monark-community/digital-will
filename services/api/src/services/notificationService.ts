@@ -8,17 +8,18 @@ export async function createInAppNotification(
   notifType: NotificationType,
   willId: string | null,
   userId: string,
-): Promise<void> {
-  await prisma.notifications.create({
+): Promise<string> {
+  const notif = await prisma.notifications.create({
     data: { notifType, willId, userId, readStatus: false },
   });
   console.log(`[NotificationService] ${notifType} → user ${userId}`);
+  return notif.notifId;
 }
 
 export async function getNotificationsForUser(userId: string) {
   return prisma.notifications.findMany({
     where: { userId },
-    orderBy: { notifId: "desc" },
+    orderBy: { createdAt: "desc" },
     include: {
       will: {
         select: {

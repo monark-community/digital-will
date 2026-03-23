@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
-import { config } from "@/lib/config";
+import { config, API_ROUTES } from "@/lib/config";
+import { apiClient } from "@/lib/api-client";
 import type { AppNotification, HistoryNotification } from "@/lib/types";
 
 export function useNotifications() {
@@ -31,11 +32,11 @@ export function useNotifications() {
       });
     });
 
-    socket.on("notification", (notif: Omit<AppNotification, "id" | "read">) => {
+    socket.on("notification", (notif: Omit<AppNotification, "read"> & { id?: string }) => {
       setNotifications((prev) => [
         {
           ...notif,
-          id: `${notif.createdAt}-${Math.random().toString(36).slice(2)}`,
+          id: notif.id ?? `${notif.createdAt}-${Math.random().toString(36).slice(2)}`,
           read: false,
         },
         ...prev,
@@ -49,15 +50,47 @@ export function useNotifications() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAllRead = useCallback(() => {
+  const markAllRead = useCallback(async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    try {
+      await apiClient.patch(API_ROUTES.NOTIFICATIONS.MARK_ALL_READ);
+    } catch (err) {
+      console.error("[useNotifications] Failed to mark all as read:", err);
+    }
   }, []);
 
-  const markRead = useCallback((id: string) => {
+  const toggleRead = useCallback(async (id: string) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+      prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n)),
     );
+    try {
+      await apiClient.patch(API_ROUTES.NOTIFICATIONS.TOGGLE_READ(id));
+    } catch (err) {
+      console.error("[useNotifications] Failed to toggle read:", err);
+      // Revert on failure
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n)),
+      );
+    }
   }, []);
 
-  return { notifications, unreadCount, markAllRead, markRead };
+  const deleteNotification = useCallback(async (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    try {
+      await apiClient.delete(API_ROUTES.NOTIFICATIONS.DELETE(id));
+    } catch (err) {
+      console.error("[useNotifications] Failed to delete notification:", err);
+    }
+  }, []);
+
+  const deleteAllNotifications = useCallback(async () => {
+    setNotifications([]);
+    try {
+      await apiClient.delete(API_ROUTES.NOTIFICATIONS.DELETE_ALL);
+    } catch (err) {
+      console.error("[useNotifications] Failed to delete all notifications:", err);
+    }
+  }, []);
+
+  return { notifications, unreadCount, markAllRead, toggleRead, deleteNotification, deleteAllNotifications };
 }

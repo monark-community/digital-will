@@ -19,7 +19,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { mutate: logout, isPending: isLoggingOut } = useLogout();
-  const { notifications, unreadCount, markAllRead, markRead } =
+  const { notifications, unreadCount, markAllRead, toggleRead, deleteNotification, deleteAllNotifications } =
     useNotifications();
 
   // Close dropdown when clicking outside
@@ -179,7 +179,9 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
                   <NotificationPanel
                     notifications={notifications}
                     onMarkAllRead={markAllRead}
-                    onMarkRead={markRead}
+                    onToggleRead={toggleRead}
+                    onDelete={deleteNotification}
+                    onDeleteAll={deleteAllNotifications}
                     onClose={() => setIsNotifOpen(false)}
                   />
                 )}
