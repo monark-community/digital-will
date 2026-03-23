@@ -11,6 +11,7 @@ export interface UserNotificationContent {
 type TemplateArgs = {
   willName: string;
   role: NotificationRecipientRole;
+  smName?: string;
 };
 
 const templates: Record<
@@ -43,16 +44,18 @@ const templates: Record<
     message: `All secondary members have left your will "${willName}". It has been automatically canceled.`,
   }),
 
-  [NotificationType.SM_ADDED]: ({ willName, role }) =>
-    role === NotificationRecipientRole.PM
+  [NotificationType.SM_ADDED]: ({ willName, role, smName }) => {
+    const name = smName ?? "A secondary member";
+    return role === NotificationRecipientRole.PM
       ? {
           title: "Member signed",
-          message: `A secondary member has validated their participation in your will "${willName}".`,
+          message: `${name} has validated their participation in your will "${willName}".`,
         }
       : {
           title: "New member signed",
-          message: `A fellow secondary member has validated their participation in the will "${willName}".`,
-        },
+          message: `${name} has validated their participation in the will "${willName}".`,
+        };
+  },
 
   [NotificationType.SM_UPDATED]: ({ willName, role }) =>
     role === NotificationRecipientRole.SM_TARGET
@@ -65,76 +68,87 @@ const templates: Record<
           message: `A secondary member's participation in "${willName}" has been updated.`,
         },
 
-  [NotificationType.SM_REMOVED]: ({ willName, role }) =>
-    role === NotificationRecipientRole.SM_TARGET
+  [NotificationType.SM_REMOVED]: ({ willName, role, smName }) => {
+    const name = smName ?? "A secondary member";
+    return role === NotificationRecipientRole.SM_TARGET
       ? {
           title: "You were removed",
           message: `You have been removed from the will "${willName}" by its owner.`,
         }
       : {
           title: "Member removed",
-          message: `A secondary member has been removed from the will "${willName}".`,
-        },
+          message: `${name} has been removed from the will "${willName}".`,
+        };
+  },
 
-  [NotificationType.SM_DESISTED]: ({ willName, role }) =>
-    role === NotificationRecipientRole.PM
+  [NotificationType.SM_DESISTED]: ({ willName, role, smName }) => {
+    const name = smName ?? "A secondary member";
+    return role === NotificationRecipientRole.PM
       ? {
           title: "Member desisted",
-          message: `A secondary member has withdrawn from your will "${willName}". You may want to add a replacement.`,
+          message: `${name} has withdrawn from your will "${willName}". You may want to add a replacement.`,
         }
       : {
           title: "Member desisted",
-          message: `A secondary member has withdrawn from the will "${willName}".`,
-        },
+          message: `${name} has withdrawn from the will "${willName}".`,
+        };
+  },
 
   [NotificationType.SECURITY_PERIOD_UPDATED]: ({ willName }) => ({
     title: "Security period updated",
     message: `The security period for the will "${willName}" has been updated.`,
   }),
 
-  [NotificationType.DEATH_DECLARED]: ({ willName, role }) =>
-    role === NotificationRecipientRole.PM
+  [NotificationType.DEATH_DECLARED]: ({ willName, role, smName }) => {
+    const name = smName ?? "A secondary member";
+    return role === NotificationRecipientRole.PM
       ? {
           title: "URGENT — Death declaration",
-          message: `A death declaration was submitted for your will "${willName}". Log in immediately to exercise your veto right.`,
+          message: `${name} submitted a death declaration for your will "${willName}". Log in immediately to exercise your veto right.`,
         }
       : {
           title: "Death declaration submitted",
-          message: `A death declaration has been submitted for the will "${willName}". The security period has begun.`,
-        },
+          message: `${name} submitted a death declaration for the will "${willName}". The security period has begun.`,
+        };
+  },
 
-  [NotificationType.DEATH_CONFIRMED]: ({ willName, role }) =>
-    role === NotificationRecipientRole.PM
+  [NotificationType.DEATH_CONFIRMED]: ({ willName, role, smName }) => {
+    const name = smName ?? "A secondary member";
+    return role === NotificationRecipientRole.PM
       ? {
           title: "Death confirmed",
-          message: `The death declaration for your will "${willName}" has been confirmed. Execution has started.`,
+          message: `${name} confirmed the death declaration for your will "${willName}". Execution has started.`,
         }
       : {
           title: "Death confirmed",
-          message: `The death declaration for the will "${willName}" has been confirmed. Execution has started.`,
-        },
+          message: `${name} confirmed the death declaration for the will "${willName}". Execution has started.`,
+        };
+  },
 
   [NotificationType.VETO_EXERCISED]: ({ willName }) => ({
     title: "Death declaration declined",
     message: `The primary member of "${willName}" exercised their veto. The will remains active.`,
   }),
 
-  [NotificationType.ASSETS_SWAPPED]: ({ willName, role }) =>
-    role === NotificationRecipientRole.PM
+  [NotificationType.ASSETS_SWAPPED]: ({ willName, role, smName }) => {
+    const name = smName ?? "A secondary member";
+    return role === NotificationRecipientRole.PM
       ? {
           title: "Assets swapped",
-          message: `An asset swap has been executed in your will "${willName}".`,
+          message: `${name} executed an asset swap in your will "${willName}".`,
         }
       : {
           title: "Assets swapped",
-          message: `An asset swap has been executed in the will "${willName}" you are part of.`,
-        },
+          message: `${name} executed an asset swap in the will "${willName}" you are part of.`,
+        };
+  },
 };
 
 export function generateUserNotification(
   type: NotificationType,
   willName: string,
   role: NotificationRecipientRole = NotificationRecipientRole.SM,
+  smName?: string,
 ): UserNotificationContent {
-  return templates[type]({ willName, role });
+  return templates[type]({ willName, role, smName });
 }

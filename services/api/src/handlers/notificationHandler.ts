@@ -10,6 +10,7 @@ import {
   sendEmailNotifications,
   sendSignatureRequestToSm,
   sendWillCanceledToUnregisteredSm,
+  sendSmRemovedToUnregisteredSm,
 } from "../services/emailService";
 import {
   SmWithWallet,
@@ -73,8 +74,14 @@ function buildUserNotif(
   willName: string,
   willId: string,
   role: NotificationRecipientRole,
+  smName?: string,
 ): UserNotification {
-  const { title, message } = generateUserNotification(type, willName, role);
+  const { title, message } = generateUserNotification(
+    type,
+    willName,
+    role,
+    smName,
+  );
   return {
     type,
     role,
@@ -94,6 +101,7 @@ async function broadcastSplit(
   pmUserId: string | undefined,
   smUserIds: string[],
   type: NotificationType,
+  smName?: string,
 ): Promise<void> {
   const allUserIds = [pmUserId, ...smUserIds].filter(Boolean) as string[];
   for (const userId of allUserIds) {
@@ -102,19 +110,32 @@ async function broadcastSplit(
   if (pmUserId) {
     emitUserNotification(
       pmUserId,
-      buildUserNotif(type, willName, willId, NotificationRecipientRole.PM),
+      buildUserNotif(
+        type,
+        willName,
+        willId,
+        NotificationRecipientRole.PM,
+        smName,
+      ),
     );
     await sendEmailNotification(
       type,
       willName,
       pmUserId,
       NotificationRecipientRole.PM,
+      smName,
     );
   }
   for (const userId of smUserIds) {
     emitUserNotification(
       userId,
-      buildUserNotif(type, willName, willId, NotificationRecipientRole.SM),
+      buildUserNotif(
+        type,
+        willName,
+        willId,
+        NotificationRecipientRole.SM,
+        smName,
+      ),
     );
   }
   await sendEmailNotifications(
@@ -122,6 +143,7 @@ async function broadcastSplit(
     willName,
     smUserIds,
     NotificationRecipientRole.SM,
+    smName,
   );
 }
 
@@ -177,16 +199,20 @@ async function notifyPmAndSmsExcluding(
     warn("notifyPmAndSmsExcluding", smartContractAddress);
     return;
   }
-  const sms = await getSecondaryMembersByWillIdExcluding(
-    will.willId,
-    excludeAddress,
-  );
+  const [sms, actingSm] = await Promise.all([
+    getSecondaryMembersByWillIdExcluding(will.willId, excludeAddress),
+    findSecondaryMemberByAddressAndWill(will.willId, excludeAddress),
+  ]);
+  const smName = actingSm
+    ? `${actingSm.firstName} ${actingSm.lastName}`
+    : undefined;
   await broadcastSplit(
     will.willId,
     will.willName,
     will.wallet?.user?.userId,
     registeredUserIds(sms),
     type,
+    smName,
   );
 }
 
@@ -286,16 +312,20 @@ async function notifyOthersAndTarget(
     return;
   }
 
-  const otherSms = await getSecondaryMembersByWillIdExcluding(
-    will.willId,
-    smAddress,
-  );
+  const [otherSms, removedSm] = await Promise.all([
+    getSecondaryMembersByWillIdExcluding(will.willId, smAddress),
+    findSecondaryMemberByAddressAndWill(will.willId, smAddress),
+  ]);
+  const smName = removedSm
+    ? `${removedSm.firstName} ${removedSm.lastName}`
+    : undefined;
   await broadcastSplit(
     will.willId,
     will.willName,
     undefined,
     registeredUserIds(otherSms),
     type,
+    smName,
   );
 
   const targetUserId = await findUserIdByWalletAddress(smAddress);
@@ -315,6 +345,13 @@ async function notifyOthersAndTarget(
       will.willName,
       targetUserId,
       NotificationRecipientRole.SM_TARGET,
+    );
+  } else if (removedSm) {
+    await sendSmRemovedToUnregisteredSm(
+      will.willName,
+      removedSm.firstName,
+      removedSm.lastName,
+      removedSm.email,
     );
   }
 }
