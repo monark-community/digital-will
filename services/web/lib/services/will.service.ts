@@ -6,7 +6,7 @@ import { ethers } from "ethers";
 import { config, API_ROUTES } from "@/lib/config";
 import { apiClient } from "@/lib/api-client";
 import { WILL_FACTORY_ABI } from "@/lib/contracts/WillFactoryABI";
-import { getSigner, daysToSeconds, waitForTransaction } from "@/lib/utils/blockchain";
+import { getSigner, daysToSeconds } from "@/lib/utils/blockchain";
 import type { CreateWillParams, CreateWillResult, SMPartialInfo, SecurityPeriodConfig } from "@/lib/types/contracts";
 
 export interface SecondaryMemberInput {
@@ -43,14 +43,15 @@ export interface WillFromDB {
   willId: string;
   willName: string;
   walletAddress: string;
-  contractAddressInBlockchain?: string | null;  // Optionnel
-  chainId?: number | null;                      // Optionnel
+  contractAddressInBlockchain?: string | null;
+  chainId?: number | null;
   minSecurityPeriod: number;
   maxSecurityPeriod: number;
   state: 'DRAFT' | 'INACTIVE' | 'ACTIVE' | 'CANCELED' | 'EXECUTED';
   executionTimestampOnChain?: number;
   deathDeclarationTimestampOnChain?: number;
-  cooldownTimestampOnChain?: number;     // unix seconds; 0 or undefined = not on cooldown
+  cooldownTimestampOnChain?: number;
+  contractBalance?: string;
   secondaryMembers: Array<{
     secondaryMemberId: string;
     firstName: string;
@@ -138,7 +139,12 @@ class WillService {
         txOverrides
       );
       const receipt = await tx.wait();
-
+      
+      /*
+      Delay added instead of waiting 2 block confirmation 
+      */
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       if (!receipt) {
         throw new Error("Transaction failed: no receipt received");
       }
@@ -199,9 +205,9 @@ class WillService {
       const blockchainParams = this.prepareCreateWillParams(
         params.factoryAddress,
         params.ownerAddress,
-        params.secondaryMembers.map(m => ({ 
-          address: m.address, 
-          power: m.power 
+        params.secondaryMembers.map(m => ({
+          address: m.address,
+          power: m.power
         })),
         params.minSecurityPeriodDays,
         params.maxSecurityPeriodDays,
@@ -286,6 +292,54 @@ class WillService {
       throw new Error("Failed to fetch wills: " + (error.response?.data?.message || error.message));
     }
   }
+
+  /**
+   * Get wills enriched with blockchain state
+   */
+  async getEnrichedWillsByWallet(walletAddress: string): Promise<WillFromDB[]> {
+    try {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: WillFromDB[];
+      }>(API_ROUTES.WILLS.ENRICHED(walletAddress));
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error fetching enriched wills:", error);
+      throw new Error("Failed to fetch enriched wills: " + (error.response?.data?.message || error.message));
+    }
+  }
+
+  /**
+   * Validate a will for deployment readiness
+   */
+  async validateForDeployment(willId: string): Promise<{ isValid: boolean; errors: string[] }> {
+    try {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: { isValid: boolean; errors: string[] };
+      }>(API_ROUTES.WILLS.VALIDATE(willId));
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error validating will:", error);
+      throw new Error("Failed to validate will: " + (error.response?.data?.message || error.message));
+    }
+  }
+
+  /**
+   * Get contract balance
+   */
+  async getContractBalance(contractAddress: string): Promise<string> {
+    try {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: { balance: string };
+      }>(API_ROUTES.WILLS.BALANCE(contractAddress));
+      return response.data.data.balance;
+    } catch (error: any) {
+      console.error("Error fetching contract balance:", error);
+      return '—';
+    }
+  }
   
   /*
    * Create a new draft will (off-chain only)
@@ -303,9 +357,9 @@ class WillService {
       throw new Error("Failed to create draft will: " + (error.response?.data?.message || error.message));
     }
   }
-/**
-   * Update an existing draft will
-   */
+  /**
+     * Update an existing draft will
+     */
   async updateDraftWill(willId: string, params: UpdateDraftWillParams): Promise<WillFromDB> {
     try {
       const response = await apiClient.put<{
@@ -318,16 +372,23 @@ class WillService {
       throw new Error("Failed to update draft will: " + (error.response?.data?.message || error.message));
     }
   }
-  
+
   /**
-   * Revert a canceled on-chain will back to DRAFT in the DB
+   * Revert an on-chain will back to DRAFT in the DB
    */
-  async cancelWill(willId: string): Promise<WillFromDB> {
+  async cancelWill(
+    willId: string,
+    params: {
+      minSecurityPeriod: number;
+      maxSecurityPeriod: number;
+      secondaryMembersVotingPowers: Record<string, number>;
+    }
+  ): Promise<WillFromDB> {
     try {
       const response = await apiClient.post<{
         success: boolean;
         data: WillFromDB;
-      }>(API_ROUTES.WILLS.CANCEL(willId));
+      }>(API_ROUTES.WILLS.CANCEL(willId), params);
       return response.data.data;
     } catch (error: any) {
       console.error("Error canceling will:", error);
@@ -370,6 +431,20 @@ class WillService {
     }
   
   }
+
+  /**
+   * Remove the current user as a secondary member from a will (after desist)
+   */
+  async removeSecondaryMember(willId: string): Promise<void> {
+    try {
+      const response = await apiClient.delete(API_ROUTES.WILLS.REMOVE_SECONDARY_MEMBER(willId));
+      console.log('Successfully removed secondary member from database:', response.data);
+    } catch (error: any) {
+      console.error("Error removing secondary member:", error);
+      throw new Error(error.response?.data?.message || "Failed to remove secondary member from database");
+    }
+  }
+
   async addMemberToContacts(contactData: {
     firstName: string;
     lastName: string;

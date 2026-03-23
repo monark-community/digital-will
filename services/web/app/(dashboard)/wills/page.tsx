@@ -7,8 +7,7 @@ import { willService, type SecondaryMemberInput, type WillFromDB } from "@/lib/s
 import type { Contact } from "@/lib/types";
 import { config } from "@/lib/config";
 import { ethers } from "ethers";
-import { getContractBalance, fundWillContract, withdrawWillContract, cancelWillContract, vetoDeathContract, updateWillContract } from "@/lib/utils/blockchain";
-import { enrichWillsWithChainState } from "@/lib/utils/chainState";
+import { fundWillContract, withdrawWillContract, cancelWillContract, vetoDeathContract, updateWillContract } from "@/lib/utils/blockchain";
 import { SecurityPeriodCountdown, CooldownCountdown } from "@/app/components/ui/SecurityPeriodCountdown";
 
 const WILL_STATE_COLORS: Record<string, string> = {
@@ -215,25 +214,19 @@ export default function WillsPage() {
     setIsLoadingWills(true);
     try {
       const allWillsPromises = wallets.map(wallet =>
-        willService.getWillsByWallet(wallet.address)
+        willService.getEnrichedWillsByWallet(wallet.address)
       );
       const willsArrays = await Promise.all(allWillsPromises);
       const allWills = willsArrays.flat();
-      const enriched = await enrichWillsWithChainState(allWills);
-      setRealWills(enriched);
+      setRealWills(allWills);
 
-      const deployedWills = enriched.filter(w => w.contractAddressInBlockchain && w.state !== 'DRAFT');
-      const balanceEntries = await Promise.all(
-        deployedWills.map(async (w) => {
-          try {
-            const balance = await getContractBalance(w.contractAddressInBlockchain!);
-            return [w.willId, balance] as [string, string];
-          } catch {
-            return [w.willId, '—'] as [string, string];
-          }
-        })
-      );
-      setContractBalances(Object.fromEntries(balanceEntries));
+      const balanceMap: Record<string, string> = {};
+      allWills.forEach(w => {
+        if (w.contractBalance !== undefined) {
+          balanceMap[w.willId] = w.contractBalance;
+        }
+      });
+      setContractBalances(balanceMap);
     } catch (error) {
       console.error("Error fetching wills:", error);
     } finally {
@@ -312,11 +305,13 @@ useEffect(() => {
     setSecondaryMembers(updated);
     setShowContactDropdown(null);
   };
+
   const refreshBalance = async (willId: string, contractAddress: string) => {
     try {
-      const balance = await getContractBalance(contractAddress);
+      const balance = await willService.getContractBalance(contractAddress);
       setContractBalances(prev => ({ ...prev, [willId]: balance }));
-    } catch {
+    } catch (error) {
+      console.error("Error refreshing balance:", error);
     }
   };
 
@@ -383,13 +378,38 @@ useEffect(() => {
     setCancelError(null);
     setIsCanceling(true);
     try {
+      // Get the will data from realWills
+      const will = realWills.find(w => w.willId === cancelModal.willId);
+      if (!will) {
+        setCancelError("Will not found");
+        setIsCanceling(false);
+        return;
+      }
+
+      // Call blockchain cancel
       await cancelWillContract(cancelModal.contractAddress);
-      await willService.cancelWill(cancelModal.willId);
-      setRealWills(prev => prev.map(w =>
-        w.willId === cancelModal.willId
-          ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null, cooldownTimestampOnChain: null }
-          : w
-      ));
+
+      // Prepare voting powers map from secondary members
+      const secondaryMembersVotingPowers = will.secondaryMembers.reduce((acc, member) => {
+        acc[member.secondaryMemberId] = member.votingPower;
+        return acc;
+      }, {} as Record<string, number>);
+
+      /* Call service to update DB
+      The old will is deleted and a new draft will is created instead.
+      */
+      const draftWill = await willService.cancelWill(cancelModal.willId, {
+        minSecurityPeriod: will.minSecurityPeriod,
+        maxSecurityPeriod: will.maxSecurityPeriod,
+        secondaryMembersVotingPowers,
+      });
+
+      // Update local state - delete the old will and add the new draft will
+      setRealWills(prev =>
+        prev
+          .filter(w => w.willId !== cancelModal.willId) // Remove the old will
+          .concat(draftWill) // Add the new draft will
+      );
       setCancelModal(null);
     } catch (err: any) {
       setCancelError(getMetaMaskErrorMessage(err) ?? err.message ?? "Transaction failed.");
@@ -419,17 +439,36 @@ useEffect(() => {
     setIsCanceledResolving(true);
     const { willId, action } = canceledResolveModal;
     try {
-      await willService.cancelWill(willId);
-      if (action === 'delete') {
-        await willService.deleteDraftWill(willId);
-        setRealWills(prev => prev.filter(w => w.willId !== willId));
-      } else {
-        setRealWills(prev => prev.map(w =>
-          w.willId === willId
-            ? { ...w, state: 'DRAFT', contractAddressInBlockchain: null, chainId: null, cooldownTimestampOnChain: null }
-            : w
-        ));
+      // Cancel will in DB (will become a draft will)
+
+      const will = realWills.find(w => w.willId === willId);
+
+      if (!will) {
+        throw new Error("Will to be canceled not found");
       }
+
+      const secondaryMembersVotingPowers = will.secondaryMembers.reduce((acc, member) => {
+        acc[member.secondaryMemberId] = member.votingPower;
+        return acc;
+      }, {} as Record<string, number>);
+
+  
+      const draftWill = await willService.cancelWill(willId, {
+        minSecurityPeriod: will.minSecurityPeriod,
+        maxSecurityPeriod: will.maxSecurityPeriod,
+        secondaryMembersVotingPowers,
+      });
+
+      setRealWills(prev =>
+        prev
+          .filter(w => w.willId !== willId) // Remove the old will
+          .concat(draftWill) // Add the new draft will
+      );
+
+      if (action === 'delete') {
+        await willService.deleteDraftWill(draftWill.willId);
+        setRealWills(prev => prev.filter(w => w.willId !== draftWill.willId));
+      } 
       setCanceledResolveModal(null);
     } catch (err: any) {
       setCanceledResolveError(err.message ?? 'Action failed.');
@@ -473,63 +512,66 @@ useEffect(() => {
 };
 
   const handleCreateDraft = async () => {
-    const { isValid } = validateDraftForm();
-    if (!isValid) return;
+    const selectedWallet = wallets?.find(w => w.walletId === selectedWalletId);
+    if (!selectedWallet && !editingWillId) {
+      setErrorMessage("Please select a wallet");
+      return;
+    }
+    
     setErrorMessage(null);
     setSuccessMessage(null);
 
-   const validMembers = secondaryMembers.filter(m => m.firstName.trim() || m.lastName.trim() || m.email.trim() || m.address.trim());
+    const validMembers = secondaryMembers.filter(m => 
+      m.firstName.trim() || m.lastName.trim() || m.email.trim() || m.address.trim()
+    );
 
     setIsSavingDraft(true);
-    try{
+    try {
       if (editingWillId) {
-            // Mode édition : mettre à jour un draft existant
-            await willService.updateDraftWill(editingWillId, {
-              willName: willName.trim(),
-              secondaryMembers: validMembers.map(m => ({
-                firstName: m.firstName,
-                lastName: m.lastName,
-                email: m.email,
-                phoneNumber: m.phoneNumber,
-                tempWalletAddress: m.address, // Utilisé comme tempWalletAddress en draft
-                votingPower: m.power,
-                relationship: m.relationship,
-              })),
-              minSecurityPeriod: parseInt(minSecurityPeriod) || 0,
-              maxSecurityPeriod: parseInt(maxSecurityPeriod) || 0,
-            });
-            setSuccessMessage("Draft will updated successfully!");
-          } else {
-            console.log("Will Name: ",willName);
-            // Mode création : nouveau draft
-            await willService.createDraftWill({
-              walletAddress: selectedWallet.address,
-              willName: willName,
-              secondaryMembers: validMembers.map(m => ({
-                firstName: m.firstName,
-                lastName: m.lastName,
-                email: m.email,
-                phoneNumber: m.phoneNumber,
-                tempWalletAddress: m.address,
-                votingPower: m.power,
-                relationship: m.relationship,
-              })),
-              minSecurityPeriod: parseInt(minSecurityPeriod) || 0,
-              maxSecurityPeriod: parseInt(maxSecurityPeriod) || 0,
-            });
-            setSuccessMessage("Draft will saved successfully!");
-          }
+        await willService.updateDraftWill(editingWillId, {
+          willName: willName.trim(),
+          secondaryMembers: validMembers.map(m => ({
+            firstName: m.firstName,
+            lastName: m.lastName,
+            email: m.email,
+            phoneNumber: m.phoneNumber,
+            tempWalletAddress: m.address,
+            votingPower: m.power,
+            relationship: m.relationship,
+          })),
+          minSecurityPeriod: parseInt(minSecurityPeriod) || 0,
+          maxSecurityPeriod: parseInt(maxSecurityPeriod) || 0,
+        });
+        setSuccessMessage("Draft will updated successfully!");
+      } else {
+        await willService.createDraftWill({
+          walletAddress: selectedWallet!.address,
+          willName: willName,
+          secondaryMembers: validMembers.map(m => ({
+            firstName: m.firstName,
+            lastName: m.lastName,
+            email: m.email,
+            phoneNumber: m.phoneNumber,
+            tempWalletAddress: m.address,
+            votingPower: m.power,
+            relationship: m.relationship,
+          })),
+          minSecurityPeriod: parseInt(minSecurityPeriod) || 0,
+          maxSecurityPeriod: parseInt(maxSecurityPeriod) || 0,
+        });
+        setSuccessMessage("Draft will saved successfully!");
+      }
 
-          setTimeout(() => {
-            resetForm();
-            window.location.reload(); // Refresh to show new/updated will
-          }, 2000);
-        } catch (error: any) {
-          setErrorMessage(error.message);
-        } finally {
-          setIsSavingDraft(false);
-        }
-    };
+      setTimeout(() => {
+        resetForm();
+        window.location.reload(); // Refresh to show new/updated will
+      }, 2000);
+    } catch (error: any) {
+      setErrorMessage(error.message);
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
 
 const validateForDeployment = (will: WillFromDB): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
@@ -745,12 +787,16 @@ if (minSecurityPeriod.trim() && maxSecurityPeriod.trim() &&
 };
 
 const handleDeployWill = async (will: WillFromDB) => {
-  const deploymentValidation = validateForDeployment(will);
-  if (!deploymentValidation.isValid) {
-    setErrorMessage(deploymentValidation.errors[0]);
-    return;
+  try {
+    const validation = await willService.validateForDeployment(will.willId);
+    if (!validation.isValid) {
+      setErrorMessage(validation.errors[0]);
+      return;
+    }
+    setDeployModal(will);
+  } catch (error: any) {
+    setErrorMessage(error.message || "Validation failed");
   }
-  setDeployModal(will);
 };
 
 const handleConfirmDeploy = async (fundEth?: string) => {
@@ -1739,7 +1785,7 @@ const handleConfirmDeleteDraft = async () => {
                                 <path d="M16 21.5L6 16.5L16 30L26 16.5L16 21.5Z" fillOpacity="0.7" />
                               </svg>
                               {contractBalances[will.willId] !== undefined
-                                ? `${parseFloat(contractBalances[will.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[will.willId]).toFixed(4)).toString()} ETH`
+                                ? `${parseFloat(contractBalances[will.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[will.willId]).toFixed(6)).toString()} ETH`
                                 : '...'}
                             </span>
                             <div className="flex items-center gap-1 ml-2">
@@ -2065,7 +2111,7 @@ const handleConfirmDeleteDraft = async () => {
               <span className="text-xs text-[var(--text-muted-alt)]">Contract balance</span>
               <span className="text-sm font-semibold text-[var(--text-primary)] font-mono">
                 {contractBalances[withdrawModal.willId] !== undefined
-                  ? `${parseFloat(contractBalances[withdrawModal.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[withdrawModal.willId]).toFixed(4)).toString()} ETH`
+                  ? `${parseFloat(contractBalances[withdrawModal.willId]) === 0 ? '0' : parseFloat(parseFloat(contractBalances[withdrawModal.willId]).toFixed(6)).toString()} ETH`
                   : '—'}
               </span>
             </div>

@@ -1,41 +1,136 @@
-import { PrismaClient, Prisma, SMState, WillState } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { BadRequestError, NotFoundError } from "../utils/errors";
-import { REGEX } from "../utils/constants";
-import { validateWalletAddress } from "../utils/crypto";
+import { WillFromDB } from "./chainStateService";
 
 const prisma = new PrismaClient();
 
-interface SecondaryMemberInput {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phoneNumber?: string;
-    walletAddress: string;
-    votingPower: number;
-    state: SMState;
-    relationship?: string;
+/**
+ * Maps a draft will to the WillFromDB format expected by the frontend
+ */
+const mapDraftWillToWillFromDB = (
+  draftWill: Prisma.DraftWillGetPayload<{
+    include: { draftsecondarymembers: true };
+  }>,
+): WillFromDB => {
+  const { draftsecondarymembers, draftWillId, ...dw } = draftWill;
+  return {
+    ...dw,
+    state: "DRAFT" as const,
+    willId: draftWillId,
+    secondaryMembers: draftsecondarymembers,
+  };
+};
+
+/*
+Get all wills (drafts and deployed) by wallet address
+*/
+export const getWillsByWalletAddress = async (
+  walletAddress: string,
+): Promise<WillFromDB[]> => {
+  const wallet = await prisma.wallet.findUnique({
+    where: { address: walletAddress.toLowerCase() },
+  });
+
+  if (!wallet) {
+    throw new NotFoundError("Wallet not found");
+  }
+
+  // Get both draft and deployed wills in parallel
+  const [draftWills, deployedWills] = await Promise.all([
+    getDraftWillsByWalletAddress(walletAddress),
+    getDeployedWillsByWalletAddress(walletAddress),
+  ]);
+
+  // Combine and return
+  return [...draftWills, ...deployedWills];
+};
+
+/*
+Get all deployed wills by wallet address
+*/
+export const getDeployedWillsByWalletAddress = async (
+  walletAddress: string,
+): Promise<WillFromDB[]> => {
+  const wallet = await prisma.wallet.findUnique({
+    where: { address: walletAddress.toLowerCase() },
+  });
+
+  if (!wallet) {
+    throw new NotFoundError("Wallet not found");
+  }
+
+  // Get only deployed wills
+  const deployedWills = await prisma.will.findMany({
+    where: { walletAddress: walletAddress.toLowerCase() },
+    include: { secondaryMembers: true },
+  });
+
+  return deployedWills as WillFromDB[];
+};
+
+/*
+Get all draft wills by wallet address
+*/
+export const getDraftWillsByWalletAddress = async (
+  walletAddress: string,
+): Promise<WillFromDB[]> => {
+  const wallet = await prisma.wallet.findUnique({
+    where: { address: walletAddress.toLowerCase() },
+  });
+
+  if (!wallet) {
+    throw new NotFoundError("Wallet not found");
+  }
+
+  // Get only draft wills
+  const draftWills = await prisma.draftWill.findMany({
+    where: { walletAddress: walletAddress.toLowerCase() },
+    include: { draftsecondarymembers: true },
+  });
+
+  return draftWills.map(mapDraftWillToWillFromDB);
+};
+
+/**
+ * Get a single will by ID
+ */
+export const getWillById = async (willId: string) => {
+  return await prisma.will.findUnique({
+    where: { willId },
+    include: { secondaryMembers: true },
+  });
+};
+
+/**
+ * Get a single will by contract address
+ */
+export async function getWillByContractAddress(
+  contractAddress: string,
+): Promise<Prisma.WillGetPayload<{
+  include: {
+    wallet: {
+      include: { user: true };
+    };
+  };
+}> | null> {
+  return prisma.will.findFirst({
+    where: { contractAddressInBlockchain: contractAddress.toLowerCase() },
+    include: {
+      wallet: {
+        include: { user: true },
+      },
+    },
+  });
 }
 
-interface CreateWillInput {
-    userWalletAddress: string;
-    contractAddressInBlockchain: string;
-    chainId: number;
-    secondaryMembers: SecondaryMemberInput[];
-}
-
-export const getWillsByWalletAddress = async (walletAddress: string) => {
-    const wallet = await prisma.wallet.findUnique({
-        where: { address: walletAddress },
-    });
-
-    if (!wallet) {
-        throw new NotFoundError('Wallet not found');
-    }
-
-    return await prisma.will.findMany({
-        where: { walletAddress },
-        include: { secondaryMembers: true },
-    });
+/**
+ * Get a single draft will by ID
+ */
+export const getDraftWillById = async (draftWillId: string) => {
+  return await prisma.draftWill.findUnique({
+    where: { draftWillId },
+    include: { draftsecondarymembers: true },
+  });
 };
 
 /**
@@ -43,454 +138,525 @@ export const getWillsByWalletAddress = async (walletAddress: string) => {
  * Matches via walletAddress, tempWalletAddress, or email on SecondaryMember.
  */
 export const getAssociatedWills = async (userId: string) => {
-    const user = await prisma.user.findUnique({
-        where: { userId },
-        include: { wallets: { select: { address: true } } },
-    });
+  const user = await prisma.user.findUnique({
+    where: { userId },
+    include: { wallets: { select: { address: true } } },
+  });
 
-    if (!user) {
-        return [];
-    }
+  if (!user) {
+    return [];
+  }
 
-    const walletAddresses = user.wallets.map((w) => w.address);
+  const walletAddresses = user.wallets.map((w) => w.address);
 
-    const orConditions: any[] = [
-        { email: user.email },
-    ];
+  const orConditions: any[] = [{ email: user.email }];
 
-    if (walletAddresses.length > 0) {
-        orConditions.push({ walletAddress: { in: walletAddresses } });
-        orConditions.push({ tempWalletAddress: { in: walletAddresses } });
-    }
+  if (walletAddresses.length > 0) {
+    orConditions.push({ walletAddress: { in: walletAddresses } });
+    orConditions.push({ tempWalletAddress: { in: walletAddresses } });
+  }
 
-    const secondaryMemberRecords = await prisma.secondaryMember.findMany({
-        where: {
-            OR: orConditions,
-            will: {
-                state: { not: 'DRAFT' },
-            },
-        },
+  const secondaryMemberRecords = await prisma.secondaryMember.findMany({
+    where: {
+      OR: orConditions,
+    },
+    include: {
+      will: {
         include: {
-            will: {
-                include: {
-                    secondaryMembers: true,
-                    wallet: {
-                        include: {
-                            user: {
-                                select: { firstName: true, lastName: true, email: true },
-                            },
-                        },
-                    },
-                },
+          secondaryMembers: true,
+          wallet: {
+            include: {
+              user: {
+                select: { firstName: true, lastName: true, email: true },
+              },
             },
+          },
         },
-    });
+      },
+    },
+  });
 
-    type WillWithOwner = Omit<typeof secondaryMemberRecords[0]['will'], 'wallet'> & {
-        owner: { firstName: string; lastName: string; email: string };
-        myMembership: typeof secondaryMemberRecords[0];
-    };
-    const willsMap = new Map<string, WillWithOwner>();
-    for (const sm of secondaryMemberRecords) {
-        if (!willsMap.has(sm.willId)) {
-            const { wallet, ...willData } = sm.will;
-            willsMap.set(sm.willId, {
-                ...willData,
-                owner: wallet?.user ?? { firstName: 'Unknown', lastName: '', email: '' },
-                myMembership: sm,
-            });
-        }
+  type WillWithOwner = Omit<
+    (typeof secondaryMemberRecords)[0]["will"],
+    "wallet"
+  > & {
+    owner: { firstName: string; lastName: string; email: string };
+    myMembership: (typeof secondaryMemberRecords)[0];
+  };
+  const willsMap = new Map<string, WillWithOwner>();
+  for (const sm of secondaryMemberRecords) {
+    if (!willsMap.has(sm.willId)) {
+      const { wallet, ...willData } = sm.will;
+      willsMap.set(sm.willId, {
+        ...willData,
+        owner: wallet?.user ?? {
+          firstName: "Unknown",
+          lastName: "",
+          email: "",
+        },
+        myMembership: sm,
+      });
     }
+  }
 
-    return Array.from(willsMap.values());
+  return Array.from(willsMap.values());
 };
 
 export const createDraftWill = async (input: {
-    walletAddress: string;
-    willName: string;
-    secondaryMembers?: Array<{
-        firstName: string;
-        lastName: string;
-        email: string;
-        phoneNumber?: string;
-        tempWalletAddress?: string;  // Optionnel
-        votingPower: number;
-        relationship?: string;       // Optionnel
-    }>;
-    minSecurityPeriod: number;
-    maxSecurityPeriod: number;
+  walletAddress: string;
+  willName: string;
+  secondaryMembers?: Array<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber?: string;
+    tempWalletAddress?: string; // Optionnel
+    votingPower: number;
+    relationship?: string; // Optionnel
+  }>;
+  minSecurityPeriod: number;
+  maxSecurityPeriod: number;
 }) => {
-    const {
-        walletAddress, 
-        willName,
-        secondaryMembers = [],
-        minSecurityPeriod = 28,        // Valeur par défaut
-        maxSecurityPeriod = 154         // Valeur par défaut
-    } = input;
-    console.log(willName);
+  const {
+    walletAddress,
+    willName,
+    secondaryMembers = [],
+    minSecurityPeriod = 28, // Valeur par défaut
+    maxSecurityPeriod = 154, // Valeur par défaut
+  } = input;
 
-    // Vérifier que le wallet existe
-    const wallet = await prisma.wallet.findUnique({
-        where: { address: walletAddress },
-    });
+  // Vérifier que le wallet existe
+  const wallet = await prisma.wallet.findUnique({
+    where: { address: walletAddress.toLowerCase() },
+  });
 
-    if (!wallet) {
-        throw new NotFoundError('Wallet not found');
-    }
+  if (!wallet) {
+    throw new NotFoundError("Wallet not found");
+  }
 
-    return await prisma.$transaction(async (tx) => {
+  return await prisma.$transaction(async (tx) => {
     // Créer le will en mode DRAFT
-    const will = await tx.will.create({
-        data: {
-            walletAddress,
-            willName,
-            state: 'DRAFT',
-            minSecurityPeriod,
-            maxSecurityPeriod
-        },
+    const draftWill = await tx.draftWill.create({
+      data: {
+        walletAddress: walletAddress.toLowerCase(),
+        willName,
+        minSecurityPeriod,
+        maxSecurityPeriod,
+      },
     });
 
     // S'il y a des secondary members, on les crée
     if (secondaryMembers.length > 0) {
-        const membersData = await Promise.all(secondaryMembers.map(async (member) => {
-            // Vérifier si l'adresse wallet existe dans la table Wallet
-            let walletAddressToUse = null;
-            let tempWalletAddressToUse = member.tempWalletAddress;
+      const membersData = await Promise.all(
+        secondaryMembers.map(async (member) => {
+          return {
+            firstName: member.firstName,
+            lastName: member.lastName,
+            email: member.email,
+            phoneNumber: member.phoneNumber ?? null,
+            walletAddress: member.tempWalletAddress?.toLowerCase() ?? null,
+            votingPower: member.votingPower || 1,
+            relationship: member.relationship ?? null,
+            draftWillId: draftWill.draftWillId,
+          };
+        }),
+      );
 
-            if (member.tempWalletAddress) {
-                const existingWallet = await tx.wallet.findUnique({
-                    where: { address: member.tempWalletAddress }
-                });
-
-                if (existingWallet) {
-                    walletAddressToUse = member.tempWalletAddress;
-                    tempWalletAddressToUse = undefined; // Pas besoin de temp
-                } else {
-                    walletAddressToUse = null;
-                    tempWalletAddressToUse = member.tempWalletAddress;
-                }
-            }
-
-            return {
-                firstName: member.firstName,
-                lastName: member.lastName,
-                email: member.email,
-                phoneNumber: member.phoneNumber,
-                tempWalletAddress: tempWalletAddressToUse,
-                walletAddress: walletAddressToUse,
-                votingPower: member.votingPower || 1,
-                state: SMState.PENDING,
-                relationship: member.relationship,
-                willId: will.willId,
-            };
-        }));
-
-        await tx.secondaryMember.createMany({
-            data: membersData,
-        });
+      await tx.draftSecondaryMember.createMany({
+        data: membersData,
+      });
     }
 
     // Retourner le will avec ses membres
-    return await tx.will.findUnique({
-        where: { willId: will.willId },
-        include: { secondaryMembers: true },
+    const draftWillWithMembers = await tx.draftWill.findUnique({
+      where: { draftWillId: draftWill.draftWillId },
+      include: { draftsecondarymembers: true },
     });
-});
+    return mapDraftWillToWillFromDB(draftWillWithMembers!);
+  });
 };
 
 // 2. Mettre à jour un brouillon existant
 export const updateDraftWill = async (
-    willId: string,
-    input: {
-        willName?: string;
-        secondaryMembers?: Array<{
-            firstName?: string;
-            lastName?: string;
-            email?: string;
-            phoneNumber?: string;
-            tempWalletAddress?: string;
-            votingPower?: number;
-            relationship?: string;
-        }>;
-        minSecurityPeriod?: number;
-        maxSecurityPeriod?: number;
-    }
+  willId: string,
+  input: {
+    willName?: string;
+    secondaryMembers?: Array<{
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phoneNumber?: string;
+      tempWalletAddress?: string;
+      votingPower?: number;
+      relationship?: string;
+    }>;
+    minSecurityPeriod?: number;
+    maxSecurityPeriod?: number;
+  },
 ) => {
+  // Vérifier que le will existe et est DRAFT
+  const existingDraftWill = await prisma.draftWill.findUnique({
+    where: { draftWillId: willId },
+    include: {
+      wallet: {
+        // ← Inclure le wallet pour avoir accès à l'utilisateur
+        include: { user: true },
+      },
+    },
+  });
 
+  if (!existingDraftWill) {
+    throw new NotFoundError("Draft will not found");
+  }
 
-    // Vérifier que le will existe et est DRAFT
-    const existingWill = await prisma.will.findUnique({
-        where: { willId },
-        include: { 
-            wallet: {  // ← Inclure le wallet pour avoir accès à l'utilisateur
-                include: { user: true }
-            }
+  // Mise à jour avec transaction
+  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Mettre à jour le nom si fourni
+    if (input.willName !== undefined) {
+      await tx.draftWill.update({
+        where: { draftWillId: willId },
+        data: { willName: input.willName },
+      });
+    }
+    // Mettre à jour les périodes si fournies
+    if (
+      input.minSecurityPeriod !== undefined ||
+      input.maxSecurityPeriod !== undefined
+    ) {
+      await tx.draftWill.update({
+        where: { draftWillId: willId },
+        data: {
+          minSecurityPeriod: input.minSecurityPeriod || 1,
+          maxSecurityPeriod: input.maxSecurityPeriod,
         },
-    });
-
-    if (!existingWill) {
-        throw new NotFoundError('Will not found');
+      });
     }
 
-    if (existingWill.state !== WillState.DRAFT) {
-        throw new BadRequestError('Cannot update a will that is already deployed');
-    }
+    // Mettre à jour les members si fournis
+    if (input.secondaryMembers) {
+      await tx.draftSecondaryMember.deleteMany({
+        where: { draftWillId: willId },
+      });
 
-    // Récupérer l'utilisateur propriétaire du wallet
-    const userId = existingWill.wallet.userId;
+      if (input.secondaryMembers.length > 0) {
+        const membersData = await Promise.all(
+          input.secondaryMembers.map(async (member) => {
+            return {
+              firstName: member.firstName!,
+              lastName: member.lastName!,
+              email: member.email!,
+              phoneNumber: member.phoneNumber,
+              walletAddress: member.tempWalletAddress?.toLowerCase() ?? null,
+              votingPower: member.votingPower || 1,
+              relationship: member.relationship,
+              draftWillId: willId,
+            };
+          }),
+        );
 
-    // Mise à jour avec transaction
-    return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        // Mettre à jour le nom si fourni
-        if (input.willName !== undefined) {
-            await tx.will.update({
-                where: { willId },
-                data: { willName: input.willName },
-            });
-        }
-        // Mettre à jour les périodes si fournies
-        if (input.minSecurityPeriod !== undefined || input.maxSecurityPeriod !== undefined) {
-            await tx.will.update({
-                where: { willId },
-                data: {
-                    minSecurityPeriod: input.minSecurityPeriod || 1,
-                    maxSecurityPeriod: input.maxSecurityPeriod,
-                },
-            });
-        }
-
-        // Mettre à jour les members si fournis
-        if (input.secondaryMembers) {
-            await tx.secondaryMember.deleteMany({
-                where: { willId },
-            });
-
-            if (input.secondaryMembers.length > 0) {
-                const membersData = await Promise.all(input.secondaryMembers.map(async (member) => {
-                    let walletAddressToUse = null;
-                    let tempWalletAddressToUse = member.tempWalletAddress;
-
-                    if (member.tempWalletAddress) {
-                        // Vérifier si le wallet existe DANS LA TRANSACTION
-                        const existingWallet = await tx.wallet.findUnique({
-                            where: { address: member.tempWalletAddress }
-                        });
-
-                        if (existingWallet) {
-                            walletAddressToUse = member.tempWalletAddress;
-                            tempWalletAddressToUse = undefined;
-                        } else {
-                            walletAddressToUse = null;
-                            tempWalletAddressToUse = member.tempWalletAddress;
-                        }
-                    }
-
-                    return {
-                        firstName: member.firstName!,
-                        lastName: member.lastName!,
-                        email: member.email!,
-                        phoneNumber: member.phoneNumber,
-                        tempWalletAddress: tempWalletAddressToUse,
-                        walletAddress: walletAddressToUse,  // ← Sera null si wallet n'existe pas
-                        votingPower: member.votingPower || 1,
-                        state: SMState.PENDING,
-                        relationship: member.relationship,
-                        willId,
-                    };
-                }));
-
-                await tx.secondaryMember.createMany({
-                    data: membersData,
-                });
-            }
-        }
-
-        return await tx.will.findUnique({
-            where: { willId },
-            include: { secondaryMembers: true },
+        await tx.draftSecondaryMember.createMany({
+          data: membersData,
         });
+      }
+    }
+
+    const draftWill = await tx.draftWill.findUnique({
+      where: { draftWillId: willId },
+      include: { draftsecondarymembers: true },
     });
+
+    return mapDraftWillToWillFromDB(draftWill!);
+  });
 };
 
-// 3. Marquer un will comme déployé (après transaction blockchain)
+// 3. Déployer un draft will : copier les données du draftWill vers la table Will
+// apres transaction blockchain
 export const deployWill = async (
-    willId: string,
-    input: {
-        contractAddressInBlockchain: string;
-        chainId: number;
-    }
+  draftWillId: string,
+  input: {
+    contractAddressInBlockchain: string;
+    chainId: number;
+  },
 ) => {
-    const { contractAddressInBlockchain, chainId } = input;
+  const { contractAddressInBlockchain: rawAddress, chainId } = input;
+  const contractAddressInBlockchain = rawAddress.toLowerCase();
 
-    // Vérifier que le will existe
-    const will = await prisma.will.findUnique({
-        where: { willId },
-        include: { secondaryMembers: true },
+  // Vérifier que le draft will existe
+  const draftWill = await prisma.draftWill.findUnique({
+    where: { draftWillId },
+    include: { draftsecondarymembers: true },
+  });
+
+  if (!draftWill) {
+    throw new NotFoundError("Draft will not found");
+  }
+
+  // Vérifier que les membres ont les infos nécessaires
+  for (const member of draftWill.draftsecondarymembers) {
+    if (!member.walletAddress) {
+      throw new BadRequestError(`Member ${member.email} has no wallet address`);
+    }
+  }
+
+  // Créer le will en copiant les données du draftWill dans une transaction
+  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Créer le will principal
+    const will = await tx.will.create({
+      data: {
+        walletAddress: draftWill.walletAddress,
+        willName: draftWill.willName,
+        contractAddressInBlockchain,
+        chainId,
+      },
     });
 
-    if (!will) {
-        throw new NotFoundError('Will not found');
-    }
-    if (will.state !== 'DRAFT') {
-        throw new BadRequestError('Can only deploy DRAFT wills');
+    // Copier les membres secondaires
+    if (draftWill.draftsecondarymembers.length > 0) {
+      const membersData = await Promise.all(
+        draftWill.draftsecondarymembers.map(async (member) => {
+          // Vérifier si le wallet existe dans le système
+          const existingWallet = await tx.wallet.findUnique({
+            where: { address: member.walletAddress! },
+          });
+
+          return {
+            firstName: member.firstName,
+            lastName: member.lastName,
+            email: member.email,
+            phoneNumber: member.phoneNumber ?? null,
+            walletAddress: existingWallet ? member.walletAddress : null,
+            tempWalletAddress: existingWallet ? null : member.walletAddress,
+            willId: will.willId,
+            relationship: member.relationship ?? null,
+          };
+        }),
+      );
+
+      await tx.secondaryMember.createMany({
+        data: membersData,
+      });
     }
 
-    // Au déploiement, on peut valider que les membres ont les infos nécessaires
-    for (const member of will.secondaryMembers) {
-        const hasAddress = member.walletAddress || member.tempWalletAddress;
-        if (!hasAddress) {
-            throw new BadRequestError(`Member ${member.email} has no wallet address`);
-        }
-    }
-
-    // Mettre à jour avec les infos blockchain
-    return await prisma.will.update({
-        where: { willId },
-        data: {
-            contractAddressInBlockchain,
-            chainId,
-            state: WillState.INACTIVE,
-        },
-        include: { secondaryMembers: true },
+    // Supprimer le draftWill après déploiement réussi
+    // les draftSecondaryMembers seront supprimés automatiquement (cascade)
+    await tx.draftWill.delete({
+      where: { draftWillId },
     });
+
+    return await tx.will.findUnique({
+      where: { willId: will.willId },
+      include: { secondaryMembers: true },
+    });
+  });
 };
 
-export const cancelWillOnChain = async (willId: string) => {
-    const will = await prisma.will.findUnique({ where: { willId } });
+export const cancelWillOnChain = async (
+  willId: string,
+  input: {
+    minSecurityPeriod: number;
+    maxSecurityPeriod: number;
+    secondaryMembersVotingPowers: Record<string, number>; // { secondaryMemberId: votingPower }
+  },
+) => {
+  // Vérifier que le will existe
+  const will = await prisma.will.findUnique({
+    where: { willId },
+    include: { secondaryMembers: true },
+  });
 
-    if (!will) throw new NotFoundError('Will not found');
-    if (will.state === WillState.DRAFT) throw new BadRequestError('Will is already a draft');
-    if (will.state === WillState.EXECUTED) throw new BadRequestError('Cannot revert an executed will');
+  if (!will) {
+    throw new NotFoundError("Will not found");
+  }
 
-    return await prisma.will.update({
-        where: { willId },
-        data: {
-            state: WillState.DRAFT,
-            contractAddressInBlockchain: null,
-            chainId: null,
-        },
-        include: { secondaryMembers: true },
+  const { minSecurityPeriod, maxSecurityPeriod, secondaryMembersVotingPowers } =
+    input;
+
+  // Supprimer le will et créer un draftWill dans une transaction
+  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Créer le draftWill avec les mêmes informations
+    const draftWill = await tx.draftWill.create({
+      data: {
+        walletAddress: will.walletAddress,
+        willName: will.willName,
+        minSecurityPeriod,
+        maxSecurityPeriod,
+      },
     });
+
+    // Créer les draftSecondaryMembers à partir des secondaryMembers supprimés
+    if (will.secondaryMembers.length > 0) {
+      const membersData = will.secondaryMembers.map((member) => ({
+        firstName: member.firstName,
+        lastName: member.lastName,
+        email: member.email,
+        phoneNumber: member.phoneNumber ?? null,
+        walletAddress: member.walletAddress ?? member.tempWalletAddress ?? null,
+        votingPower:
+          secondaryMembersVotingPowers[member.secondaryMemberId] ?? 1,
+        draftWillId: draftWill.draftWillId,
+        relationship: member.relationship ?? null,
+      }));
+
+      await tx.draftSecondaryMember.createMany({
+        data: membersData,
+      });
+    }
+
+    // Supprimer le will (les secondaryMembers seront supprimés en cascade)
+    await tx.will.delete({
+      where: { willId },
+    });
+
+    const draftWillWithMembers = await tx.draftWill.findUnique({
+      where: { draftWillId: draftWill.draftWillId },
+      include: { draftsecondarymembers: true },
+    });
+
+    return mapDraftWillToWillFromDB(draftWillWithMembers!);
+  });
 };
 
 // 4. Supprimer un brouillon (optionnel, pour plus tard)
-export const deleteDraftWill = async (willId: string) => {
-    const will = await prisma.will.findUnique({
-        where: { willId },
-    });
+export const deleteDraftWill = async (draftWillId: string) => {
+  const draftWill = await prisma.draftWill.findUnique({
+    where: { draftWillId },
+  });
 
-    if (!will) {
-        throw new NotFoundError('Will not found');
-    }
+  if (!draftWill) {
+    throw new NotFoundError("Draft will not found");
+  }
 
-    if (will.state !== WillState.DRAFT) {
-        throw new BadRequestError('Cannot delete a deployed will');
-    }
-
-    // Les secondaryMembers seront supprimés automatiquement (Cascade dans Prisma)
-    return await prisma.will.delete({
-        where: { willId },
-    });
+  // Les secondaryMembers seront supprimés automatiquement (Cascade dans Prisma)
+  return await prisma.draftWill.delete({
+    where: { draftWillId },
+  });
 };
 
 export const updateDeployedWillInDB = async (
-    willId: string,
-    input: {
-        updatedMembers?: Array<{
-            secondaryMemberId: string;
-            firstName?: string;
-            lastName?: string;
-            email?: string;
-            relationship?: string;
-            walletAddress?: string;
-            votingPower?: number;
-        }>;
-        addedMembers?: Array<{
-            walletAddress: string;
-            votingPower: number;
-            firstName?: string;
-            lastName?: string;
-            email?: string;
-            relationship?: string;
-        }>;
-        deletedMemberIds?: string[];
-        minSecurityPeriod?: number;
-        maxSecurityPeriod?: number;
-    }
+  willId: string,
+  input: {
+    updatedMembers?: Array<{
+      secondaryMemberId: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      relationship?: string;
+      walletAddress?: string;
+    }>;
+    addedMembers?: Array<{
+      walletAddress: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      relationship?: string;
+    }>;
+    deletedMemberIds?: string[];
+  },
 ) => {
-    const existingWill = await prisma.will.findUnique({ where: { willId } });
-    if (!existingWill) throw new NotFoundError('Will not found');
-    if (existingWill.state === WillState.DRAFT) throw new BadRequestError('Use the draft update endpoint for draft wills');
-    if (existingWill.state === WillState.CANCELED || existingWill.state === WillState.EXECUTED)
-        throw new BadRequestError('Cannot update a canceled or executed will');
+  const existingWill = await prisma.will.findUnique({ where: { willId } });
+  if (!existingWill) throw new NotFoundError("Will not found");
 
-    return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        if (input.minSecurityPeriod !== undefined || input.maxSecurityPeriod !== undefined) {
-            await tx.will.update({
-                where: { willId },
-                data: {
-                    ...(input.minSecurityPeriod !== undefined && { minSecurityPeriod: input.minSecurityPeriod }),
-                    ...(input.maxSecurityPeriod !== undefined && { maxSecurityPeriod: input.maxSecurityPeriod }),
-                },
-            });
+  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    if (input.updatedMembers?.length) {
+      for (const m of input.updatedMembers) {
+        let walletAddress: string | null = null;
+        let tempWalletAddress: string | null | undefined = undefined;
+        if (m.walletAddress) {
+          const walletAddrLower = m.walletAddress.toLowerCase();
+          const existing = await tx.wallet.findUnique({
+            where: { address: walletAddrLower },
+          });
+          if (existing) {
+            walletAddress = walletAddrLower;
+            tempWalletAddress = null;
+          } else {
+            walletAddress = null;
+            tempWalletAddress = walletAddrLower;
+          }
         }
-
-        if (input.updatedMembers?.length) {
-            for (const m of input.updatedMembers) {
-                let walletAddress: string | null = null;
-                let tempWalletAddress: string | null | undefined = undefined;
-                if (m.walletAddress) {
-                    const existing = await tx.wallet.findUnique({ where: { address: m.walletAddress } });
-                    if (existing) {
-                        walletAddress = m.walletAddress;
-                        tempWalletAddress = null;
-                    } else {
-                        walletAddress = null;
-                        tempWalletAddress = m.walletAddress;
-                    }
-                }
-                await tx.secondaryMember.update({
-                    where: { secondaryMemberId: m.secondaryMemberId },
-                    data: {
-                        ...(m.firstName !== undefined && { firstName: m.firstName }),
-                        ...(m.lastName !== undefined && { lastName: m.lastName }),
-                        ...(m.email !== undefined && { email: m.email }),
-                        ...(m.relationship !== undefined && { relationship: m.relationship }),
-                        ...(m.walletAddress !== undefined && { walletAddress, tempWalletAddress }),
-                        ...(m.votingPower !== undefined && { votingPower: m.votingPower }),
-                    },
-                });
-            }
-        }
-
-        if (input.deletedMemberIds?.length) {
-            await tx.secondaryMember.deleteMany({
-                where: { secondaryMemberId: { in: input.deletedMemberIds } },
-            });
-        }
-
-        if (input.addedMembers?.length) {
-            for (const m of input.addedMembers) {
-                const existing = await tx.wallet.findUnique({ where: { address: m.walletAddress } });
-                await tx.secondaryMember.create({
-                    data: {
-                        firstName: m.firstName ?? '',
-                        lastName: m.lastName ?? '',
-                        email: m.email ?? '',
-                        relationship: m.relationship ?? null,
-                        walletAddress: existing ? m.walletAddress : null,
-                        tempWalletAddress: existing ? null : m.walletAddress,
-                        votingPower: m.votingPower,
-                        state: 'PENDING',
-                        willId,
-                    },
-                });
-            }
-        }
-
-        return await tx.will.findUnique({
-            where: { willId },
-            include: { secondaryMembers: true },
+        await tx.secondaryMember.update({
+          where: { secondaryMemberId: m.secondaryMemberId },
+          data: {
+            ...(m.firstName !== undefined && { firstName: m.firstName }),
+            ...(m.lastName !== undefined && { lastName: m.lastName }),
+            ...(m.email !== undefined && { email: m.email }),
+            ...(m.relationship !== undefined && {
+              relationship: m.relationship,
+            }),
+            ...(m.walletAddress !== undefined && {
+              walletAddress,
+              tempWalletAddress,
+            }),
+          },
         });
+      }
+    }
+
+    if (input.deletedMemberIds?.length) {
+      await tx.secondaryMember.deleteMany({
+        where: { secondaryMemberId: { in: input.deletedMemberIds } },
+      });
+    }
+
+    if (input.addedMembers?.length) {
+      for (const m of input.addedMembers) {
+        const walletAddrLower = m.walletAddress.toLowerCase();
+        const existing = await tx.wallet.findUnique({
+          where: { address: walletAddrLower },
+        });
+        await tx.secondaryMember.create({
+          data: {
+            firstName: m.firstName ?? "",
+            lastName: m.lastName ?? "",
+            email: m.email ?? "",
+            relationship: m.relationship ?? null,
+            walletAddress: existing ? walletAddrLower : null,
+            tempWalletAddress: existing ? null : walletAddrLower,
+            willId,
+          },
+        });
+      }
+    }
+
+    return await tx.will.findUnique({
+      where: { willId },
+      include: { secondaryMembers: true },
     });
+  });
+};
+
+/**
+ * Remove a secondary member from a will after they desist
+ * Matches by wallet address (walletAddress or tempWalletAddress)
+ */
+export const removeSecondaryMemberByAddress = async (
+  willId: string,
+  userWalletAddresses: string[]
+) => {
+  const will = await prisma.will.findUnique({ where: { willId } });
+  if (!will) {
+    throw new NotFoundError("Will not found");
+  }
+
+  // Find the secondary member by matching any of the user's wallet addresses
+  const secondaryMember = await prisma.secondaryMember.findFirst({
+    where: {
+      willId,
+      OR: [
+        { walletAddress: { in: userWalletAddresses } },
+        { tempWalletAddress: { in: userWalletAddresses } },
+      ],
+    },
+  });
+
+  if (!secondaryMember) {
+    throw new NotFoundError("You are not a secondary member of this will");
+  }
+
+  // Delete the secondary member record
+  await prisma.secondaryMember.delete({
+    where: { secondaryMemberId: secondaryMember.secondaryMemberId },
+  });
+
+  return { success: true, message: "Successfully removed from will" };
 };

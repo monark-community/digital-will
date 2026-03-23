@@ -42,6 +42,10 @@ export const API_ROUTES = {
     DEPLOY: (willId: string) => `/api/wills/${willId}/deploy`,
     CANCEL: (willId: string) => `/api/wills/${willId}/cancel`,
     UPDATE_MEMBERS: (willId: string) => `/api/wills/${willId}/members`,
+    REMOVE_SECONDARY_MEMBER: (willId: string) => `/api/wills/${willId}/secondary-member`,
     BY_WALLET: (walletAddress: string) => `/api/wills/${walletAddress}`,
+    ENRICHED: (walletAddress: string) => `/api/wills/${walletAddress}/enriched`,
+    VALIDATE: (willId: string) => `/api/wills/validate/${willId}`,
+    BALANCE: (contractAddress: string) => `/api/wills/balance/${contractAddress}`,
   },
 } as const;

@@ -4,7 +4,8 @@ import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
-import { useLogout } from "@/lib/hooks";
+import { useLogout, useNotifications } from "@/lib/hooks";
+import NotificationPanel from "./NotificationPanel";
 import type { User } from "@/lib/types";
 
 interface HeaderProps {
@@ -14,9 +15,12 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { mutate: logout, isPending: isLoggingOut } = useLogout();
+  const { notifications, unreadCount, markAllRead, markRead } =
+    useNotifications();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -143,11 +147,42 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
               </>
             ) : (
               <>
-                <button className="text-[var(--text-primary)] hover:text-[var(--accent)] p-2 rounded-lg transition-colors">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-                  </svg>
-                </button>
+                {/* Bell icon with badge */}
+                <div className="relative">
+                  <button
+                    onClick={() => setIsNotifOpen((prev) => !prev)}
+                    className="relative text-[var(--text-primary)] hover:text-[var(--accent)] p-2 rounded-lg transition-colors"
+                    aria-label="Notifications"
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
+                      />
+                    </svg>
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                        {unreadCount > 5 ? "5+" : unreadCount}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {isNotifOpen && (
+                  <NotificationPanel
+                    notifications={notifications}
+                    onMarkAllRead={markAllRead}
+                    onMarkRead={markRead}
+                    onClose={() => setIsNotifOpen(false)}
+                  />
+                )}
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}

@@ -48,7 +48,6 @@ modules:
     initialBlock: 10338130
     inputs:
       - source: sf.ethereum.type.v2.Block
-      - store: store_will_created
     output:
       type: proto:contract.v1.Calls
   - name: map_events_calls
