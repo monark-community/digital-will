@@ -51,6 +51,7 @@ const SM_ACTIONS: ActionDef[] = [
     description: 'Start the security period countdown.',
     disabledReason: (w) => {
       if (w.state !== 'ACTIVE') return `Will must be ACTIVE (currently ${w.state})`;
+      if (w.myMembership.state === 'DECLARED_DEATH') return 'You already declared death';
       if (w.myMembership.state !== 'VALIDATED') return 'You must be a validated member to declare death';
       const nowSec = Math.floor(Date.now() / 1000);
       const cooldownEnd = w.cooldownTimestampOnChain ?? 0;
@@ -65,7 +66,6 @@ const SM_ACTIONS: ActionDef[] = [
         if (m > 0 || parts.length === 0) parts.push(`${m}m`);
         return `On cooldown after PM veto — ${parts.join(' ')} remaining`;
       }
-      if (w.myMembership.state === 'DECLARED_DEATH') return 'You already declared death';
       return null;
     },
     colorActive: 'bg-red-700 hover:bg-red-600 text-white',

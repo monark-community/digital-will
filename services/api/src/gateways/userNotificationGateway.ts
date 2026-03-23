@@ -28,7 +28,7 @@ export function initGateway(httpServer: HttpServer): void {
   });
 
   // JWT authentication middleware
-  io.use((socket: Socket, next) => {
+  io.use((socket: Socket, next: (err?: Error) => void) => {
     const token = socket.handshake.auth?.token as string | undefined;
     if (!token) return next(new Error("Authentication required"));
 
@@ -64,14 +64,16 @@ export function initGateway(httpServer: HttpServer): void {
             pmUserId === userId
               ? NotificationRecipientRole.PM
               : NotificationRecipientRole.SM;
+          const contentData = JSON.parse(n.content);
+          const notifType = contentData.type as NotificationType;
           const { title, message } = generateUserNotification(
-            n.notifType as NotificationType,
+            notifType,
             willName,
             role,
           );
           return {
             id: n.notifId,
-            type: n.notifType,
+            type: notifType,
             role,
             title,
             message,

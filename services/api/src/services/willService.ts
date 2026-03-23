@@ -16,7 +16,7 @@ const mapDraftWillToWillFromDB = (
   return {
     ...dw,
     state: "DRAFT" as const,
-    willId: draftWilId,
+    willId: draftWillId,
     secondaryMembers: draftsecondarymembers,
   };
 };
