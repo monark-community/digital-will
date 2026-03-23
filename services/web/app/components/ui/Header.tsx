@@ -19,8 +19,14 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { mutate: logout, isPending: isLoggingOut } = useLogout();
-  const { notifications, unreadCount, markAllRead, toggleRead, deleteNotification, deleteAllNotifications } =
-    useNotifications();
+  const {
+    notifications,
+    unreadCount,
+    markAllRead,
+    toggleRead,
+    deleteNotification,
+    deleteAllNotifications,
+  } = useNotifications();
 
   // Close dropdown when clicking outside
   useEffect(() => {

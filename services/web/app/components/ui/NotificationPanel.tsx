@@ -87,8 +87,18 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                 className="p-1 rounded hover:bg-red-500/10 text-[var(--text-muted-alt)] hover:text-red-500 transition-colors"
                 title="Delete all notifications"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"
+                  />
                 </svg>
               </button>
             )}
@@ -137,7 +147,9 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
             notifications.map((notif) => (
               <div
                 key={notif.id}
-                onClick={() => { if (!notif.read) onToggleRead(notif.id); }}
+                onClick={() => {
+                  if (!notif.read) onToggleRead(notif.id);
+                }}
                 className={`w-full text-left px-6 py-4 border-b border-[var(--border-section)] transition-colors hover:bg-[var(--bg-section)] cursor-pointer ${
                   !notif.read ? "bg-[var(--bg-section)]/50" : ""
                 }`}
@@ -145,13 +157,18 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                 <div className="flex items-start gap-3">
                   {/* Unread dot — click to toggle */}
                   <button
-                    onClick={(e) => { e.stopPropagation(); onToggleRead(notif.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleRead(notif.id);
+                    }}
                     className="mt-1.5 shrink-0 p-0.5 rounded-full hover:bg-[var(--border-section)] transition-colors"
                     title={notif.read ? "Mark as unread" : "Mark as read"}
                   >
                     <span
                       className={`block w-2 h-2 rounded-full transition-colors ${
-                        !notif.read ? "bg-[var(--accent)]" : "bg-[var(--text-muted-alt)]/30"
+                        !notif.read
+                          ? "bg-[var(--accent)]"
+                          : "bg-[var(--text-muted-alt)]/30"
                       }`}
                     />
                   </button>
@@ -174,12 +191,25 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                   </div>
                   {/* Delete button */}
                   <button
-                    onClick={(e) => { e.stopPropagation(); onDelete(notif.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(notif.id);
+                    }}
                     className="mt-1 shrink-0 p-1 rounded hover:bg-red-500/10 text-[var(--text-muted-alt)] hover:text-red-500 transition-colors"
                     title="Delete notification"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"
+                      />
                     </svg>
                   </button>
                 </div>

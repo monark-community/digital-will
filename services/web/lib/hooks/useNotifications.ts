@@ -32,16 +32,21 @@ export function useNotifications() {
       });
     });
 
-    socket.on("notification", (notif: Omit<AppNotification, "read"> & { id?: string }) => {
-      setNotifications((prev) => [
-        {
-          ...notif,
-          id: notif.id ?? `${notif.createdAt}-${Math.random().toString(36).slice(2)}`,
-          read: false,
-        },
-        ...prev,
-      ]);
-    });
+    socket.on(
+      "notification",
+      (notif: Omit<AppNotification, "read"> & { id?: string }) => {
+        setNotifications((prev) => [
+          {
+            ...notif,
+            id:
+              notif.id ??
+              `${notif.createdAt}-${Math.random().toString(36).slice(2)}`,
+            read: false,
+          },
+          ...prev,
+        ]);
+      },
+    );
 
     return () => {
       socket.disconnect();
@@ -88,9 +93,19 @@ export function useNotifications() {
     try {
       await apiClient.delete(API_ROUTES.NOTIFICATIONS.DELETE_ALL);
     } catch (err) {
-      console.error("[useNotifications] Failed to delete all notifications:", err);
+      console.error(
+        "[useNotifications] Failed to delete all notifications:",
+        err,
+      );
     }
   }, []);
 
-  return { notifications, unreadCount, markAllRead, toggleRead, deleteNotification, deleteAllNotifications };
+  return {
+    notifications,
+    unreadCount,
+    markAllRead,
+    toggleRead,
+    deleteNotification,
+    deleteAllNotifications,
+  };
 }

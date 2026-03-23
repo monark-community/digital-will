@@ -8,7 +8,9 @@ export const config = {
   },
   blockchain: {
     rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || "http://localhost:8545",
-    willFactoryAddress: process.env.NEXT_PUBLIC_WILL_FACTORY_ADDRESS || "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    willFactoryAddress:
+      process.env.NEXT_PUBLIC_WILL_FACTORY_ADDRESS ||
+      "0x5FbDB2315678afecb367f032d93F642f64180aa3",
   },
   isProduction: process.env.NODE_ENV === "production",
   isDevelopment: process.env.NODE_ENV === "development",
@@ -42,11 +44,13 @@ export const API_ROUTES = {
     DEPLOY: (willId: string) => `/api/wills/${willId}/deploy`,
     CANCEL: (willId: string) => `/api/wills/${willId}/cancel`,
     UPDATE_MEMBERS: (willId: string) => `/api/wills/${willId}/members`,
-    REMOVE_SECONDARY_MEMBER: (willId: string) => `/api/wills/${willId}/secondary-member`,
+    REMOVE_SECONDARY_MEMBER: (willId: string) =>
+      `/api/wills/${willId}/secondary-member`,
     BY_WALLET: (walletAddress: string) => `/api/wills/${walletAddress}`,
     ENRICHED: (walletAddress: string) => `/api/wills/${walletAddress}/enriched`,
     VALIDATE: (willId: string) => `/api/wills/validate/${willId}`,
-    BALANCE: (contractAddress: string) => `/api/wills/balance/${contractAddress}`,
+    BALANCE: (contractAddress: string) =>
+      `/api/wills/balance/${contractAddress}`,
   },
   NOTIFICATIONS: {
     TOGGLE_READ: (notifId: string) => `/api/notifications/${notifId}/read`,
