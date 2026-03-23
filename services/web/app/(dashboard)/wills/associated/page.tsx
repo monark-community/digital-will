@@ -10,7 +10,7 @@ import { useCurrentUser, useWallets } from "@/lib/hooks";
 import type { User } from "@/lib/types";
 import { SecurityPeriodCountdown, CooldownCountdown } from "@/app/components/ui/SecurityPeriodCountdown";
 
-type ActionId = 'validate' | 'desist' | 'declareDeath' | 'swapAssets';
+type ActionId = 'validate' | 'refuse' |  'declareDeath' | 'swapAssets';
 
 interface ActionDef {
   id: ActionId;
@@ -33,17 +33,17 @@ const SM_ACTIONS: ActionDef[] = [
     colorActive: 'bg-emerald-600 hover:bg-emerald-500 text-white',
   },
   {
-    id: 'desist',
-    label: 'Desist',
-    description: 'Withdraw your participation.',
+    id: 'refuse',
+    label: 'Refuse',
+    description: 'Refuse to participate.',
     disabledReason: (w) => {
       if (w.state === 'CANCELED') return 'Will is canceled';
       if (w.state === 'EXECUTED') return 'Will is already executed';
       if (w.state === 'DRAFT')    return 'Will is not yet deployed';
-      if (w.myMembership.state === 'PENDING') return 'Validate first before desisting';
+      if (w.myMembership.state === 'DECLARED_DEATH') return 'Cannot withdraw participation after death declaration';
       return null;
     },
-    colorActive: 'bg-yellow-600 hover:bg-yellow-500 text-white',
+    colorActive: 'bg-red-600 hover:bg-red-500 text-white',
   },
   {
     id: 'declareDeath',
@@ -210,7 +210,7 @@ export default function AssociatedWillsPage() {
       let tx: ethers.TransactionResponse;
       switch (action.id) {
         case 'validate':     tx = await contract.validateSm();   break;
-        case 'desist':       tx = await contract.desistSm();     break;
+        case 'refuse':       tx = await contract.desistSm();     break;
         case 'declareDeath': tx = await contract.declareDeath(); break;
         case 'swapAssets':   tx = await contract.swapAssets();  break;
       }
@@ -221,8 +221,8 @@ export default function AssociatedWillsPage() {
       */
       await new Promise(resolve => setTimeout(resolve, 1000)); 
 
-      if (action.id === 'desist') {
-        console.log('🔵 Desist confirmed, removing from database...');
+      if (action.id === 'refuse') {
+        console.log('🔵 Refuse confirmed, removing from database...');
         try {
           await willService.removeSecondaryMember(will.willId);
           console.log('🔵 Successfully removed from database');

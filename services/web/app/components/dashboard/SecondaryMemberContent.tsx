@@ -39,7 +39,7 @@ async function getWillContract(contractAddress: string) {
 }
 
 interface ActionDef {
-  id: 'validate' | 'desist' | 'declareDeath' | 'swapAssets';
+  id: 'validate' | 'refuse' | 'declareDeath' | 'swapAssets';
   label: string;
   description: string;
   disabledReason: (will: AssociatedWill) => string | null;
@@ -59,9 +59,9 @@ const ACTIONS: ActionDef[] = [
     color: 'green',
   },
   {
-    id: 'desist',
-    label: 'Desist',
-    description: 'Withdraw your participation from this will.',
+    id: 'refuse',
+    label: 'Refuse',
+    description: 'Refuse to participate in this will.',
     disabledReason: (will) => {
       if (will.state === 'CANCELED') return 'Will is canceled';
       if (will.state === 'EXECUTED') return 'Will is already executed';
@@ -126,7 +126,7 @@ function WillCard({ will, onRefresh }: WillCardProps) {
         case 'validate':
           tx = await contract.validateSm();
           break;
-        case 'desist':
+        case 'refuse':
           tx = await contract.desistSm();
           break;
         case 'declareDeath':
