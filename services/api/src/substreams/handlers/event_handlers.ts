@@ -45,6 +45,7 @@ import {
   notifyWillActivated,
   notifyWillCanceled,
 } from "../../handlers/notificationHandler";
+import { markWillAsCanceled } from "../../services/willService";
 
 export async function handleAssetsSwapped(
   evt: Will_EvtWillChainAssetsSwapped,
@@ -225,4 +226,5 @@ export async function handleWillCanceled(
     { depth: null, colors: true },
   );
   await notifyWillCanceled(event_WillCanceled.willAddress);
+  await markWillAsCanceled(event_WillCanceled.willAddress);
 }

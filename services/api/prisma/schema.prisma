@@ -80,9 +80,11 @@ model Will {
   willName                    String
   contractAddressInBlockchain String
   chainId                     Int
+  isCanceled                  Boolean           @default(false)
   wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
   secondaryMembers            SecondaryMember[]
   notifications               Notifications[]
+  protectionPeriodTimer       ProtectionPeriodTimer?
   
   @@unique([chainId, contractAddressInBlockchain])
   @@map("wills")
@@ -153,4 +155,15 @@ model Notifications {
   user       User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model ProtectionPeriodTimer {
+  timerId   String   @id @default(uuid())
+  willId    String   @unique
+  expiresAt DateTime
+  fired     Boolean  @default(false)
+  will      Will     @relation(fields: [willId], references: [willId], onDelete: Cascade)
+
+  @@index([fired, expiresAt])
+  @@map("protection_period_timers")
 }

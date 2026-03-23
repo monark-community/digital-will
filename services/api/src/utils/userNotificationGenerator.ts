@@ -41,7 +41,7 @@ const templates: Record<
 
   [NotificationType.WILL_CANCELED_ALL_SM_LEFT]: ({ willName }) => ({
     title: "Will automatically canceled",
-    message: `All secondary members have left your will "${willName}". It has been automatically canceled.`,
+    message: `All secondary members have left your will "${willName}". It has been automatically canceled and moved back to draft so you can redeploy it.`,
   }),
 
   [NotificationType.SM_ADDED]: ({ willName, role, smName }) => {
