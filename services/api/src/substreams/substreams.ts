@@ -4,7 +4,6 @@ inspired by https://www.npmjs.com/package/@substreams/node
 import dotenv from "dotenv";
 import path from "path";
 import { createRegistry } from "@substreams/core";
-import { BlockUndoSignal } from "@substreams/core/proto";
 import { readPackage } from "@substreams/manifest";
 import { sleep, stream } from "./substreams_utils";
 import { eventsCallsDispatcher } from "./substreams_dispatcher";
@@ -60,11 +59,6 @@ export async function startSubstreamsListener(): Promise<void> {
     throw new Error("No modules found in substream package");
   }
 
-  // Connect Transport
-  const headers = new Headers({
-    "X-User-Agent": "@substreams/node",
-    "X-Api-Key": API_KEY,
-  });
   const registry = createRegistry(substreamPackage);
 
   const apiKeyInterceptor: Interceptor = (next) => async (req) => {
@@ -78,22 +72,6 @@ export async function startSubstreamsListener(): Promise<void> {
     httpVersion: "2",
     interceptors: [apiKeyInterceptor],
   });
-
-  /**
-   * Called when a blockUndoSignal is received (chain reorg).
-   * signal.lastValidCursor marks the last block that is still valid — any
-   * data written to the DB for blocks *after* that point must be rolled back.
-   * TODO: implement DB rollback logic
-   */
-  async function onUndo(
-    signal: BlockUndoSignal,
-    chainId: string,
-  ): Promise<void> {
-    console.warn(
-      `[Substreams] Chain reorg on chainId=${chainId}. Last valid cursor: ${signal.lastValidCursor} and last valid block: ${signal.lastValidBlock}`,
-    );
-    // TODO: delete/revert DB rows whose block_number > the block referenced by signal.last_valid_block
-  }
 
   // Exponential backoff state
   let backoffMs = 1_000;
@@ -117,7 +95,6 @@ export async function startSubstreamsListener(): Promise<void> {
         eventsCallsDispatcher,
         CHAIN_ID,
         lastCursor,
-        onUndo,
       );
       lastCursor = result.cursor;
 
