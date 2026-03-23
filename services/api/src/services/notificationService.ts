@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { NotificationType } from "../substreams/interfaces/cleaned/model";
+import { cleanupCanceledWill } from "./willService";
 
 const prisma = new PrismaClient();
 
@@ -7,17 +8,18 @@ export async function createInAppNotification(
   notifType: NotificationType,
   willId: string | null,
   userId: string,
-): Promise<void> {
-  await prisma.notifications.create({
+): Promise<string> {
+  const notif = await prisma.notifications.create({
     data: { notifType, willId, userId, readStatus: false },
   });
   console.log(`[NotificationService] ${notifType} → user ${userId}`);
+  return notif.notifId;
 }
 
 export async function getNotificationsForUser(userId: string) {
   return prisma.notifications.findMany({
     where: { userId },
-    orderBy: { notifId: "desc" },
+    orderBy: { createdAt: "desc" },
     include: {
       will: {
         select: {
@@ -60,9 +62,29 @@ export async function deleteNotification(
   });
   if (!notif) return false;
   await prisma.notifications.delete({ where: { notifId } });
+
+  // If the notification was linked to a canceled will, clean up if no notifications remain
+  if (notif.willId) {
+    await cleanupCanceledWill(notif.willId);
+  }
+
   return true;
 }
 
 export async function deleteAllNotifications(userId: string): Promise<void> {
+  // Collect willIds of notifications before deleting them
+  const notifs = await prisma.notifications.findMany({
+    where: { userId },
+    select: { willId: true },
+  });
+  const willIds = [
+    ...new Set(notifs.map((n) => n.willId).filter(Boolean)),
+  ] as string[];
+
   await prisma.notifications.deleteMany({ where: { userId } });
+
+  // Clean up any canceled wills that no longer have notifications
+  for (const willId of willIds) {
+    await cleanupCanceledWill(willId);
+  }
 }

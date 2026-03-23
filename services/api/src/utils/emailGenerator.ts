@@ -186,8 +186,8 @@ const templates: Record<
       `<p>We are writing to inform you that your digital will <strong>"${willName}"</strong> has been
       <strong style="color:#dc2626;">automatically canceled</strong> because all designated secondary members
       have left the will.</p>
-      <p>Without any secondary members, the will cannot be executed. You can create a new will and designate
-      new secondary members at any time from your dashboard.</p>`,
+      <p>Without any secondary members, the will cannot be executed. Your will has been <strong>moved back to draft</strong>
+      so you can update it and redeploy it with new secondary members at any time from your dashboard.</p>`,
       "Go to My Dashboard",
     ),
   }),

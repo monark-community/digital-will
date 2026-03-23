@@ -45,6 +45,7 @@ import {
   notifyWillActivated,
   notifyWillCanceled,
 } from "../../handlers/notificationHandler";
+import { markWillAsCanceled } from "../../services/willService";
 import {
   upsertProtectionPeriodTimer,
   cancelProtectionPeriodTimer,
@@ -233,5 +234,6 @@ export async function handleWillCanceled(
     { depth: null, colors: true },
   );
   await notifyWillCanceled(event_WillCanceled.willAddress);
+  await markWillAsCanceled(event_WillCanceled.willAddress);
   await cancelProtectionPeriodTimer(event_WillCanceled.willAddress);
 }

@@ -81,6 +81,7 @@ model Will {
   willName                    String
   contractAddressInBlockchain String
   chainId                     Int
+  isCanceled                  Boolean           @default(false)
   wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
   secondaryMembers            SecondaryMember[]
   notifications               Notifications[]

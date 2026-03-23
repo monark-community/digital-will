@@ -60,4 +60,10 @@ export const API_ROUTES = {
     BALANCE: (contractAddress: string) =>
       `/api/wills/balance/${contractAddress}`,
   },
+  NOTIFICATIONS: {
+    TOGGLE_READ: (notifId: string) => `/api/notifications/${notifId}/read`,
+    MARK_ALL_READ: "/api/notifications/read/all",
+    DELETE: (notifId: string) => `/api/notifications/${notifId}`,
+    DELETE_ALL: "/api/notifications",
+  },
 } as const;
