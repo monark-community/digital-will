@@ -7,7 +7,12 @@ import { config, API_ROUTES } from "@/lib/config";
 import { apiClient } from "@/lib/api-client";
 import { WILL_FACTORY_ABI } from "@/lib/contracts/WillFactoryABI";
 import { getSigner, daysToSeconds } from "@/lib/utils/blockchain";
-import type { CreateWillParams, CreateWillResult, SMPartialInfo, SecurityPeriodConfig } from "@/lib/types/contracts";
+import type {
+  CreateWillParams,
+  CreateWillResult,
+  SMPartialInfo,
+  SecurityPeriodConfig,
+} from "@/lib/types/contracts";
 
 export interface SecondaryMemberInput {
   firstName: string;
@@ -15,7 +20,7 @@ export interface SecondaryMemberInput {
   email: string;
   phoneNumber?: string;
   walletAddress?: string;
-  tempWalletAddress?: string;    // Pour les membres sans compte
+  tempWalletAddress?: string; // Pour les membres sans compte
   votingPower?: number;
 }
 
@@ -47,7 +52,7 @@ export interface WillFromDB {
   chainId?: number | null;
   minSecurityPeriod: number;
   maxSecurityPeriod: number;
-  state: 'DRAFT' | 'INACTIVE' | 'ACTIVE' | 'CANCELED' | 'EXECUTED';
+  state: "DRAFT" | "INACTIVE" | "ACTIVE" | "CANCELED" | "EXECUTED";
   executionTimestampOnChain?: number;
   deathDeclarationTimestampOnChain?: number;
   cooldownTimestampOnChain?: number;
@@ -61,7 +66,7 @@ export interface WillFromDB {
     walletAddress?: string | null;
     tempWalletAddress?: string | null;
     votingPower: number;
-    state: 'PENDING' | 'VALIDATED' | 'DECLARED_DEATH';
+    state: "PENDING" | "VALIDATED" | "DECLARED_DEATH";
     relationship?: string | null;
   }>;
 }
@@ -79,7 +84,7 @@ export interface AssociatedWill extends WillFromDB {
     email: string;
     phoneNumber?: string | null;
     votingPower: number;
-    state: 'PENDING' | 'VALIDATED' | 'DECLARED_DEATH';
+    state: "PENDING" | "VALIDATED" | "DECLARED_DEATH";
     relationship?: string | null;
     walletAddress?: string | null;
     tempWalletAddress?: string | null;
@@ -93,17 +98,21 @@ class WillService {
   /**
    * Create a new will by calling the WillFactory contract
    */
-  async createWillOnBlockchain(params: CreateWillParams): Promise<CreateWillResult> {
+  async createWillOnBlockchain(
+    params: CreateWillParams,
+  ): Promise<CreateWillResult> {
     try {
       const signer = await getSigner();
 
-      const checksummedFactoryAddress = ethers.getAddress(params.factoryAddress);
+      const checksummedFactoryAddress = ethers.getAddress(
+        params.factoryAddress,
+      );
       const checksummedOwner = ethers.getAddress(params.owner);
 
       const factoryContract = new ethers.Contract(
         checksummedFactoryAddress,
         WILL_FACTORY_ABI,
-        signer
+        signer,
       );
 
       // Checksum each SM address
@@ -125,7 +134,7 @@ class WillService {
         const userBalance = await provider.getBalance(signerAddress);
         if (userBalance < amountWei + gasBuffer) {
           throw new Error(
-            `Insufficient balance. You have ${parseFloat(ethers.formatEther(userBalance)).toFixed(4)} ETH but need at least ${parseFloat(ethers.formatEther(amountWei + gasBuffer)).toFixed(4)} ETH (funding + gas).`
+            `Insufficient balance. You have ${parseFloat(ethers.formatEther(userBalance)).toFixed(4)} ETH but need at least ${parseFloat(ethers.formatEther(amountWei + gasBuffer)).toFixed(4)} ETH (funding + gas).`,
           );
         }
         txOverrides.value = amountWei;
@@ -136,15 +145,15 @@ class WillService {
         checksummedOwner,
         smList,
         securityConfig,
-        txOverrides
+        txOverrides,
       );
       const receipt = await tx.wait();
-      
+
       /*
       Delay added instead of waiting 2 block confirmation 
       */
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       if (!receipt) {
         throw new Error("Transaction failed: no receipt received");
       }
@@ -158,8 +167,7 @@ class WillService {
             willAddress = parsed.args.willAddress;
             break;
           }
-        } catch (_) {
-        }
+        } catch (_) {}
       }
 
       if (!willAddress) {
@@ -172,52 +180,64 @@ class WillService {
       };
     } catch (error: any) {
       console.error("Error creating will:", error);
-      
-      if (error.code === 4001 || error.code === "ACTION_REJECTED" || error.reason === "rejected") {
+
+      if (
+        error.code === 4001 ||
+        error.code === "ACTION_REJECTED" ||
+        error.reason === "rejected"
+      ) {
         const rejectionError: any = new Error("User rejected the transaction");
         rejectionError.code = error.code || "ACTION_REJECTED";
         rejectionError.reason = "rejected";
         throw rejectionError;
       }
-      
+
       if (error.code === "CALL_EXCEPTION") {
-        throw new Error("Contract call failed: " + (error.reason || error.message));
+        throw new Error(
+          "Contract call failed: " + (error.reason || error.message),
+        );
       }
-      
-      throw new Error("Failed to create will: " + (error.message || "Unknown error"));
+
+      throw new Error(
+        "Failed to create will: " + (error.message || "Unknown error"),
+      );
     }
   }
 
   /**
    * Deploy a draft will (blockchain + update DB)
    */
-  async deployWill(willId: string, params: {
-    factoryAddress: string;
-    ownerAddress: string;
-    secondaryMembers: Array<{ address: string; power: number }>;
-    minSecurityPeriodDays: number;
-    maxSecurityPeriodDays: number;
-    /** Optional ETH amount to send with the createWill tx (e.g. "0.5") */
-    initialFundEth?: string;
-  }): Promise<WillFromDB> {
+  async deployWill(
+    willId: string,
+    params: {
+      factoryAddress: string;
+      ownerAddress: string;
+      secondaryMembers: Array<{ address: string; power: number }>;
+      minSecurityPeriodSeconds: number;
+      maxSecurityPeriodSeconds: number;
+      /** Optional ETH amount to send with the createWill tx (e.g. "0.5") */
+      initialFundEth?: string;
+    },
+  ): Promise<WillFromDB> {
     try {
       // 1. Préparer les paramètres pour la blockchain
       const blockchainParams = this.prepareCreateWillParams(
         params.factoryAddress,
         params.ownerAddress,
-        params.secondaryMembers.map(m => ({
+        params.secondaryMembers.map((m) => ({
           address: m.address,
-          power: m.power
+          power: m.power,
         })),
-        params.minSecurityPeriodDays,
-        params.maxSecurityPeriodDays,
-        params.initialFundEth
+        params.minSecurityPeriodSeconds,
+        params.maxSecurityPeriodSeconds,
+        params.initialFundEth,
       );
 
       // 2. Appeler la blockchain
       const provider = new ethers.BrowserProvider((window as any).ethereum);
       const network = await provider.getNetwork();
-      const blockchainResult = await this.createWillOnBlockchain(blockchainParams);
+      const blockchainResult =
+        await this.createWillOnBlockchain(blockchainParams);
 
       // 3. Mettre à jour la DB via la route de déploiement
       const response = await apiClient.post<{
@@ -225,7 +245,7 @@ class WillService {
         data: WillFromDB;
       }>(API_ROUTES.WILLS.DEPLOY(willId), {
         contractAddressInBlockchain: blockchainResult.willAddress,
-        chainId: Number(network.chainId)
+        chainId: Number(network.chainId),
       });
 
       return response.data.data;
@@ -242,9 +262,9 @@ class WillService {
     factoryAddress: string,
     ownerAddress: string,
     secondaryMembers: Array<{ address: string; power: number }>,
-    minSecurityPeriodDays: number,
-    maxSecurityPeriodDays: number,
-    fundEth?: string
+    minSecurityPeriodSeconds: number,
+    maxSecurityPeriodSeconds: number,
+    fundEth?: string,
   ): CreateWillParams {
     return {
       factoryAddress,
@@ -254,8 +274,8 @@ class WillService {
         votePower: sm.power,
       })),
       securityPeriodConfig: {
-        minSecurityPeriod: daysToSeconds(minSecurityPeriodDays),
-        maxSecurityPeriod: daysToSeconds(maxSecurityPeriodDays),
+        minSecurityPeriod: BigInt(minSecurityPeriodSeconds),
+        maxSecurityPeriod: BigInt(maxSecurityPeriodSeconds),
       },
       fundEth,
     };
@@ -276,7 +296,10 @@ class WillService {
       return response.data.data;
     } catch (error: any) {
       console.error("Error fetching associated wills:", error);
-      throw new Error("Failed to fetch associated wills: " + (error.response?.data?.message || error.message));
+      throw new Error(
+        "Failed to fetch associated wills: " +
+          (error.response?.data?.message || error.message),
+      );
     }
   }
 
@@ -289,7 +312,10 @@ class WillService {
       return response.data.data;
     } catch (error: any) {
       console.error("Error fetching wills:", error);
-      throw new Error("Failed to fetch wills: " + (error.response?.data?.message || error.message));
+      throw new Error(
+        "Failed to fetch wills: " +
+          (error.response?.data?.message || error.message),
+      );
     }
   }
 
@@ -305,14 +331,19 @@ class WillService {
       return response.data.data;
     } catch (error: any) {
       console.error("Error fetching enriched wills:", error);
-      throw new Error("Failed to fetch enriched wills: " + (error.response?.data?.message || error.message));
+      throw new Error(
+        "Failed to fetch enriched wills: " +
+          (error.response?.data?.message || error.message),
+      );
     }
   }
 
   /**
    * Validate a will for deployment readiness
    */
-  async validateForDeployment(willId: string): Promise<{ isValid: boolean; errors: string[] }> {
+  async validateForDeployment(
+    willId: string,
+  ): Promise<{ isValid: boolean; errors: string[] }> {
     try {
       const response = await apiClient.get<{
         success: boolean;
@@ -321,7 +352,10 @@ class WillService {
       return response.data.data;
     } catch (error: any) {
       console.error("Error validating will:", error);
-      throw new Error("Failed to validate will: " + (error.response?.data?.message || error.message));
+      throw new Error(
+        "Failed to validate will: " +
+          (error.response?.data?.message || error.message),
+      );
     }
   }
 
@@ -337,10 +371,10 @@ class WillService {
       return response.data.data.balance;
     } catch (error: any) {
       console.error("Error fetching contract balance:", error);
-      return '—';
+      return "—";
     }
   }
-  
+
   /*
    * Create a new draft will (off-chain only)
    */
@@ -354,13 +388,19 @@ class WillService {
       return response.data.data;
     } catch (error: any) {
       console.error("Error creating draft will:", error);
-      throw new Error("Failed to create draft will: " + (error.response?.data?.message || error.message));
+      throw new Error(
+        "Failed to create draft will: " +
+          (error.response?.data?.message || error.message),
+      );
     }
   }
   /**
-     * Update an existing draft will
-     */
-  async updateDraftWill(willId: string, params: UpdateDraftWillParams): Promise<WillFromDB> {
+   * Update an existing draft will
+   */
+  async updateDraftWill(
+    willId: string,
+    params: UpdateDraftWillParams,
+  ): Promise<WillFromDB> {
     try {
       const response = await apiClient.put<{
         success: boolean;
@@ -369,7 +409,10 @@ class WillService {
       return response.data.data;
     } catch (error: any) {
       console.error("Error updating draft will:", error);
-      throw new Error("Failed to update draft will: " + (error.response?.data?.message || error.message));
+      throw new Error(
+        "Failed to update draft will: " +
+          (error.response?.data?.message || error.message),
+      );
     }
   }
 
@@ -382,7 +425,7 @@ class WillService {
       minSecurityPeriod: number;
       maxSecurityPeriod: number;
       secondaryMembersVotingPowers: Record<string, number>;
-    }
+    },
   ): Promise<WillFromDB> {
     try {
       const response = await apiClient.post<{
@@ -392,7 +435,10 @@ class WillService {
       return response.data.data;
     } catch (error: any) {
       console.error("Error canceling will:", error);
-      throw new Error("Failed to cancel will: " + (error.response?.data?.message || error.message));
+      throw new Error(
+        "Failed to cancel will: " +
+          (error.response?.data?.message || error.message),
+      );
     }
   }
 
@@ -404,7 +450,10 @@ class WillService {
       await apiClient.delete(`${API_ROUTES.WILLS.DRAFT}/${willId}`);
     } catch (error: any) {
       console.error("Error deleting draft will:", error);
-      throw new Error("Failed to delete draft will: " + (error.response?.data?.message || error.message));
+      throw new Error(
+        "Failed to delete draft will: " +
+          (error.response?.data?.message || error.message),
+      );
     }
   }
 
@@ -412,24 +461,44 @@ class WillService {
    * Update members and/or security periods of a deployed (INACTIVE/ACTIVE) will in the DB.
    * Call AFTER the blockchain updateWill tx succeeds (or alone if only names changed).
    */
-  async updateDeployedWillMembers(willId: string, params: {
-    updatedMembers?: Array<{ secondaryMemberId: string; firstName?: string; lastName?: string; email?: string; relationship?: string; walletAddress?: string; votingPower?: number; }>;
-    addedMembers?: Array<{ walletAddress: string; votingPower: number; firstName?: string; lastName?: string; email?: string; relationship?: string; }>;
-    deletedMemberIds?: string[];
-    minSecurityPeriod?: number;
-    maxSecurityPeriod?: number;
-  }): Promise<WillFromDB> {
+  async updateDeployedWillMembers(
+    willId: string,
+    params: {
+      updatedMembers?: Array<{
+        secondaryMemberId: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        relationship?: string;
+        walletAddress?: string;
+        votingPower?: number;
+      }>;
+      addedMembers?: Array<{
+        walletAddress: string;
+        votingPower: number;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        relationship?: string;
+      }>;
+      deletedMemberIds?: string[];
+      minSecurityPeriod?: number;
+      maxSecurityPeriod?: number;
+    },
+  ): Promise<WillFromDB> {
     try {
-      const response = await apiClient.put<{ success: boolean; data: WillFromDB }>(
-        API_ROUTES.WILLS.UPDATE_MEMBERS(willId),
-        params
-      );
+      const response = await apiClient.put<{
+        success: boolean;
+        data: WillFromDB;
+      }>(API_ROUTES.WILLS.UPDATE_MEMBERS(willId), params);
       return response.data.data;
     } catch (error: any) {
       console.error("Error updating deployed will members:", error);
-      throw new Error("Failed to update will: " + (error.response?.data?.message || error.message));
+      throw new Error(
+        "Failed to update will: " +
+          (error.response?.data?.message || error.message),
+      );
     }
-  
   }
 
   /**
@@ -437,11 +506,19 @@ class WillService {
    */
   async removeSecondaryMember(willId: string): Promise<void> {
     try {
-      const response = await apiClient.delete(API_ROUTES.WILLS.REMOVE_SECONDARY_MEMBER(willId));
-      console.log('Successfully removed secondary member from database:', response.data);
+      const response = await apiClient.delete(
+        API_ROUTES.WILLS.REMOVE_SECONDARY_MEMBER(willId),
+      );
+      console.log(
+        "Successfully removed secondary member from database:",
+        response.data,
+      );
     } catch (error: any) {
       console.error("Error removing secondary member:", error);
-      throw new Error(error.response?.data?.message || "Failed to remove secondary member from database");
+      throw new Error(
+        error.response?.data?.message ||
+          "Failed to remove secondary member from database",
+      );
     }
   }
 
@@ -454,7 +531,7 @@ class WillService {
     relationship?: string;
   }): Promise<void> {
     try {
-      await apiClient.post('/api/contacts', contactData);
+      await apiClient.post("/api/contacts", contactData);
     } catch (error: any) {
       console.error("Error adding contact:", error);
       throw new Error(error.response?.data?.message || "Failed to add contact");

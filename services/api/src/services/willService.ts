@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 
 /**
  * Maps a draft will to the WillFromDB format expected by the frontend
+ * Returns security periods in SECONDS for consistency with deployed wills
  */
 const mapDraftWillToWillFromDB = (
   draftWill: Prisma.DraftWillGetPayload<{
@@ -13,6 +14,7 @@ const mapDraftWillToWillFromDB = (
   }>,
 ): WillFromDB => {
   const { draftsecondarymembers, draftWillId, ...dw } = draftWill;
+
   return {
     ...dw,
     state: "DRAFT" as const,
@@ -631,7 +633,7 @@ export const updateDeployedWillInDB = async (
  */
 export const removeSecondaryMemberByAddress = async (
   willId: string,
-  userWalletAddresses: string[]
+  userWalletAddresses: string[],
 ) => {
   const will = await prisma.will.findUnique({ where: { willId } });
   if (!will) {

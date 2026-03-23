@@ -32,6 +32,7 @@ export enum NotificationType {
   DEATH_CONFIRMED = "DEATH_CONFIRMED",
   VETO_EXERCISED = "VETO_EXERCISED",
   ASSETS_SWAPPED = "ASSETS_SWAPPED",
+  EXECUTE_WILL = "EXECUTE_WILL",
 }
 
 export enum NotificationRecipientRole {

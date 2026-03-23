@@ -142,6 +142,11 @@ const templates: Record<
           message: `${name} executed an asset swap in the will "${willName}" you are part of.`,
         };
   },
+
+  [NotificationType.EXECUTE_WILL]: ({ willName }) => ({
+    title: "Protection period ended — Execute the will",
+    message: `The protection period for the will "${willName}" has expired. You may now proceed with execution.`,
+  }),
 };
 
 export function generateUserNotification(

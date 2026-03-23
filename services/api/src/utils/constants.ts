@@ -58,3 +58,9 @@ export const RETRY_DELAYS_MS = [
 export const AWAIT_DELAYS_MS = [
   1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000,
 ];
+
+// Protection period poller: 1 minutes in local/dev, 1 hour in production
+export const PROTECTION_PERIOD_POLLER_INTERVAL_MS =
+  process.env.NODE_ENV === "production"
+    ? 60 * 60 * 1_000
+    : 1 * 60 * 1_000;

@@ -11,11 +11,16 @@ const WILL_ABI = [
   "function deathDeclarationTimestampS() view returns (uint256)",
   "function cooldownTimeStampS() view returns (uint256)",
   "function getSecurityPeriodConfig() view returns (tuple(uint256 minSecurityPeriod, uint256 maxSecurityPeriod))",
-  "function getDetailedSm(address) view returns (tuple(uint8 state, uint8 votePower))"
+  "function getDetailedSm(address) view returns (tuple(uint8 state, uint8 votePower))",
 ];
 
-const WILL_STATES_ONCHAIN = ['CANCELED', 'INACTIVE', 'ACTIVE', 'EXECUTED'] as const;
-const SM_STATES_ONCHAIN = ['PENDING', 'VALIDATED', 'DECLARED_DEATH'] as const;
+const WILL_STATES_ONCHAIN = [
+  "CANCELED",
+  "INACTIVE",
+  "ACTIVE",
+  "EXECUTED",
+] as const;
+const SM_STATES_ONCHAIN = ["PENDING", "VALIDATED", "DECLARED_DEATH"] as const;
 
 export interface WillFromDB {
   willId: string;
@@ -25,7 +30,7 @@ export interface WillFromDB {
   chainId?: number | null;
   minSecurityPeriod?: number | null;
   maxSecurityPeriod?: number | null;
-  state?: 'DRAFT' | 'INACTIVE' | 'ACTIVE' | 'CANCELED' | 'EXECUTED' | null;
+  state?: "DRAFT" | "INACTIVE" | "ACTIVE" | "CANCELED" | "EXECUTED" | null;
   executionTimestampOnChain?: number;
   deathDeclarationTimestampOnChain?: number;
   cooldownTimestampOnChain?: number;
@@ -45,9 +50,11 @@ export interface WillFromDB {
 
 /**
  * Enrich wills with on-chain state data
- * Careful: it also takes draft wills as input and returns them without enrichment 
+ * Careful: it also takes draft wills as input and returns them without enrichment
  */
-export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]): Promise<T[]> {
+export async function enrichWillsWithChainState<T extends WillFromDB>(
+  wills: T[],
+): Promise<T[]> {
   try {
     const provider = getProvider();
 
@@ -55,14 +62,16 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
     try {
       await provider.getBlockNumber();
     } catch (error) {
-      console.warn('Cannot connect to blockchain RPC, returning wills without enrichment:', error);
+      console.warn(
+        "Cannot connect to blockchain RPC, returning wills without enrichment:",
+        error,
+      );
       return wills;
     }
 
     return Promise.all(
       wills.map(async (will) => {
-
-        if (will.state === 'DRAFT') return will;
+        if (will.state === "DRAFT") return will;
 
         try {
           const contract = new ethers.Contract(
@@ -71,16 +80,29 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
             provider,
           );
 
-          const [stateNum, rawExecTs, rawDeclTs, rawCooldownTs, balanceWei, securityPeriodConfig] = await Promise.all([
+          const [
+            stateNum,
+            rawExecTs,
+            rawDeclTs,
+            rawCooldownTs,
+            balanceWei,
+            securityPeriodConfig,
+          ] = await Promise.all([
             contract.getState(),
             contract.executionTimeStampS().catch(() => BigInt(0)),
             contract.deathDeclarationTimestampS().catch(() => BigInt(0)),
             contract.cooldownTimeStampS().catch(() => BigInt(0)),
             provider.getBalance(will.contractAddressInBlockchain!),
-            contract.getSecurityPeriodConfig().catch(() => ({ minSecurityPeriod: BigInt(0), maxSecurityPeriod: BigInt(0) })),
+            contract
+              .getSecurityPeriodConfig()
+              .catch(() => ({
+                minSecurityPeriod: BigInt(0),
+                maxSecurityPeriod: BigInt(0),
+              })),
           ]);
 
-          const chainWillState = (WILL_STATES_ONCHAIN[Number(stateNum)] ?? will.state) as T['state'];
+          const chainWillState = (WILL_STATES_ONCHAIN[Number(stateNum)] ??
+            will.state) as T["state"];
           const executionTimestampOnChain = Number(rawExecTs);
           const deathDeclarationTimestampOnChain = Number(rawDeclTs);
           const cooldownTimestampOnChain = Number(rawCooldownTs);
@@ -91,7 +113,9 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
               const smWallet = sm.walletAddress || sm.tempWalletAddress;
               if (!smWallet) return sm;
               try {
-                const smInfo = await contract.getDetailedSm(ethers.getAddress(smWallet));
+                const smInfo = await contract.getDetailedSm(
+                  ethers.getAddress(smWallet),
+                );
                 const chainSmState = SM_STATES_ONCHAIN[Number(smInfo.state)];
                 const votePower = Number(smInfo.votePower);
                 return { ...sm, state: chainSmState, votingPower: votePower };
@@ -105,12 +129,12 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
             ...will,
             state: chainWillState,
             secondaryMembers: enrichedMembers,
-            minSecurityPeriod: Number(securityPeriodConfig.minSecurityPeriod) / 86400, // Convert seconds to days
-            maxSecurityPeriod: Number(securityPeriodConfig.maxSecurityPeriod) / 86400, // Convert seconds to days
+            minSecurityPeriod: Number(securityPeriodConfig.minSecurityPeriod), // Keep in seconds
+            maxSecurityPeriod: Number(securityPeriodConfig.maxSecurityPeriod), // Keep in seconds
             executionTimestampOnChain,
             deathDeclarationTimestampOnChain,
             cooldownTimestampOnChain,
-            contractBalance
+            contractBalance,
           };
         } catch (error) {
           console.error(`Error enriching will ${will.willId}:`, error);
@@ -119,7 +143,7 @@ export async function enrichWillsWithChainState<T extends WillFromDB>(wills: T[]
       }),
     );
   } catch (error) {
-    console.error('Error in enrichWillsWithChainState:', error);
+    console.error("Error in enrichWillsWithChainState:", error);
     return wills; // Return unenriched wills on error
   }
 }

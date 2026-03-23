@@ -517,3 +517,6 @@ export const notifySmRemoved = (
     smAddress,
     NotificationType.SM_REMOVED,
   );
+
+export const notifyExecuteWill = (smartContractAddress: string) =>
+  notifySmsOnly(smartContractAddress, NotificationType.EXECUTE_WILL);
