@@ -11,6 +11,26 @@ interface DeleteEligibilityResponse {
     secondaryMemberWills: string[];
   };
 }
+
+/**
+ * Update user's email notification preference
+ */
+export async function updateEmailNotifications(userId: string, wantToReceiveMails: boolean) {
+  const user = await prisma.user.update({
+    where: { userId },
+    data: { wantToReceiveMails },
+    select: {
+      userId: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      phoneNo: true,
+      wantToReceiveMails: true
+    }
+  });
+  return user;
+}
+
 /**
  * Check if a user can delete their account
  * A user can delete their account only if:

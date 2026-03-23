@@ -37,6 +37,8 @@ interface UserResponse {
   lastName: string;
   email: string;
   phoneNo?: string | null;
+  walletAddress?: string | null;
+  wantToReceiveMails: boolean;
 }
 
 interface AuthResponse {
@@ -78,6 +80,7 @@ export async function signUp(data: SignUpData): Promise<AuthResponse> {
       lastName: user.lastName,
       email: user.email,
       phoneNo: user.phoneNo,
+      wantToReceiveMails: user.wantToReceiveMails,
     },
     token,
   };
@@ -120,6 +123,7 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
       email: user.email,
       phoneNo: user.phoneNo,
       walletAddress: user.walletAddress,
+      wantToReceiveMails: user.wantToReceiveMails,
     },
     token,
   };
@@ -185,6 +189,7 @@ export async function walletSignIn(
       email: user.email,
       phoneNo: user.phoneNo,
       walletAddress: user.walletAddress,
+      wantToReceiveMails: user.wantToReceiveMails,
     },
     token,
   };
@@ -217,6 +222,7 @@ export async function linkWallet(
     email: user.email,
     phoneNo: user.phoneNo,
     walletAddress: user.walletAddress,
+    wantToReceiveMails: user.wantToReceiveMails,
   };
 }
 
@@ -301,6 +307,7 @@ export async function createAccountWithWallet(data: {
       email: user.email,
       phoneNo: user.phoneNo,
       walletAddress: primaryWallet.address,
+      wantToReceiveMails: user.wantToReceiveMails,
     },
     token,
   };

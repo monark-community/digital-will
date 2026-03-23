@@ -8,6 +8,7 @@ export interface User {
   lastName: string;
   email: string;
   phoneNo?: string | null;
+  wantToReceiveMails: boolean;
 }
 
 export interface Wallet {

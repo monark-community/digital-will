@@ -28,6 +28,7 @@ export const API_ROUTES = {
   },
   USERS:{
     BASE: "/api/users",
+    RECEIVE_EMAILS: "/api/users/receive-emails",
     DELETE_ELIGIBILITY: "/api/users/delete-eligibility",
     DELETE: "/api/users/delete",
   },

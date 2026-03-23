@@ -3,6 +3,38 @@ import * as userService from '../services/userService';
 import { prisma } from '../services/authService';
 
 /**
+ * PATCH /api/users/receive-emails
+ * Update email notification preference
+ */
+export const updateEmailNotifications = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { wantToReceiveMails } = req.body;
+
+    if (typeof wantToReceiveMails !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'wantToReceiveMails must be a boolean'
+      });
+    }
+
+    const updatedUser = await userService.updateEmailNotifications(userId, wantToReceiveMails);
+
+    res.json({
+      success: true,
+      data: updatedUser,
+      message: 'Email notification preference updated'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /api/users/me/delete-eligibility
  * Check if current user can delete their account
  */

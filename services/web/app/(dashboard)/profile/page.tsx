@@ -17,6 +17,7 @@ export default function ProfilePage() {
     canDelete: boolean;
     obstacles: { ownedDeployedWills: string[]; secondaryMemberWills: string[] };
   } | null>(null);
+  const [isUpdatingPreferences, setIsUpdatingPreferences] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -45,6 +46,20 @@ export default function ProfilePage() {
     }
   }, [getUser, router, user]);
 
+const handleToggleEmailNotifications = async () => {
+  if (!user) return;
+  
+  setIsUpdatingPreferences(true);
+  try {
+    const updatedUser = await userService.updateEmailNotifications(!user.wantToReceiveMails);
+    setUser(updatedUser);
+    authService.setUser(updatedUser); // Met à jour le cache local
+  } catch (error: any) {
+    setDeleteError(error.message); // ou un state d'erreur spécifique
+  } finally {
+    setIsUpdatingPreferences(false);
+  }
+};
 
   // Fonction pour vérifier l'éligibilité avant d'ouvrir le modal
   const handleCheckDeleteEligibility = async () => {
@@ -161,7 +176,37 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-
+            <div className="pt-6 border-t border-[var(--border-section)]">
+              <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
+                Preferences
+              </h2>
+              
+              <div className="flex items-center justify-between p-4 bg-[var(--bg-section)] rounded-lg">
+                <div>
+                  <p className="font-medium text-[var(--text-primary)]">Email Notifications</p>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Receive email updates about your wills and secondary member status
+                  </p>
+                </div>
+                <button
+                  onClick={handleToggleEmailNotifications}
+                  disabled={isUpdatingPreferences}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 ${
+                    user?.wantToReceiveMails ? 'bg-[var(--accent)]' : 'bg-gray-600'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      user?.wantToReceiveMails ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              
+              {isUpdatingPreferences && (
+                <p className="text-sm text-[var(--text-muted)] mt-2">Updating...</p>
+              )}
+            </div>
             <div className="pt-6 border-t border-[var(--border-section)]">
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
