@@ -175,6 +175,19 @@ const templates: Record<
     ),
   }),
 
+  [NotificationType.WILL_CANCELED_ALL_SM_LEFT]: ({ willName, recipientName }) => ({
+    subject: `WillChain — Your will "${willName}" has been automatically canceled`,
+    body: buildEmail(
+      recipientName,
+      `<p>We are writing to inform you that your digital will <strong>"${willName}"</strong> has been
+      <strong style="color:#dc2626;">automatically canceled</strong> because all designated secondary members
+      have left the will.</p>
+      <p>Without any secondary members, the will cannot be executed. You can create a new will and designate
+      new secondary members at any time from your dashboard.</p>`,
+      "Go to My Dashboard",
+    ),
+  }),
+
   [NotificationType.SIGNATURE_REQUEST]: ({ willName, recipientName }) => ({
     subject: `WillChain — Action Required: You have been added to the will "${willName}"`,
     body: buildEmail(

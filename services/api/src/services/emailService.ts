@@ -82,6 +82,39 @@ export async function sendSignatureRequestToSm(
   }
 }
 
+/**
+ * Sends a WILL_CANCELED email directly to a secondary member who does not have
+ * a WillChain account, using their stored contact details.
+ */
+export async function sendWillCanceledToUnregisteredSm(
+  willName: string,
+  smFirstName: string,
+  smLastName: string,
+  smEmail: string,
+): Promise<void> {
+  const name = `${smFirstName} ${smLastName}`;
+  const { subject, body } = generateEmail(
+    NotificationType.WILL_CANCELED,
+    willName,
+    name,
+    NotificationRecipientRole.SM,
+  );
+
+  const { error } = await throttledSend({
+    from: config.email.from,
+    to: smEmail,
+    subject,
+    html: body,
+  });
+
+  if (error) {
+    console.error(
+      `[EmailService] Failed to send WILL_CANCELED to ${smEmail}:`,
+      error,
+    );
+  }
+}
+
 export async function sendEmailNotifications(
   type: NotificationType,
   willName: string,

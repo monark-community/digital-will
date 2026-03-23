@@ -38,6 +38,11 @@ const templates: Record<
     message: `The will "${willName}" has been canceled by its owner.`,
   }),
 
+  [NotificationType.WILL_CANCELED_ALL_SM_LEFT]: ({ willName }) => ({
+    title: "Will automatically canceled",
+    message: `All secondary members have left your will "${willName}". It has been automatically canceled.`,
+  }),
+
   [NotificationType.SM_ADDED]: ({ willName, role }) =>
     role === NotificationRecipientRole.PM
       ? {

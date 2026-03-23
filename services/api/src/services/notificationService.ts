@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 export async function createInAppNotification(
   notifType: NotificationType,
-  willId: string,
+  willId: string | null,
   userId: string,
 ): Promise<void> {
   await prisma.notifications.create({

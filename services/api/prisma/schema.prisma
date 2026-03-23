@@ -13,6 +13,7 @@ enum NotificationType {
   SIGNATURE_REQUEST
   WILL_ACTIVATED
   WILL_CANCELED
+  WILL_CANCELED_ALL_SM_LEFT
   SM_ADDED
   SM_UPDATED
   SM_REMOVED
@@ -142,13 +143,13 @@ model WillFactory {
 }
 
 model Notifications {
-  notifId    String  @id @default(uuid())
-  notifType    NotificationType @default(WILL_ACTIVATED)
-  willId     String
+  notifId    String           @id @default(uuid())
+  notifType  NotificationType @default(WILL_ACTIVATED)
+  willId     String?
   userId     String
   readStatus Boolean
-  will       Will    @relation(fields: [willId], references: [willId], onDelete: Cascade)
-  user       User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  will       Will?            @relation(fields: [willId], references: [willId], onDelete: SetNull)
+  user       User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@map("notifications")
 }

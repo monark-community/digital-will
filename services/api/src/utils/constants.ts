@@ -47,3 +47,7 @@ export const ROUTES = {
 export const RETRY_DELAYS_MS = [
   500, 1000, 2000, 3000, 8000, 16000, 32000, 64000,
 ];
+
+export const AWAIT_DELAYS_MS = [
+  1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000,
+];

@@ -9,6 +9,7 @@ import {
   sendEmailNotification,
   sendEmailNotifications,
   sendSignatureRequestToSm,
+  sendWillCanceledToUnregisteredSm,
 } from "../services/emailService";
 import {
   SmWithWallet,
@@ -19,7 +20,8 @@ import {
 import { findUserIdByWalletAddress } from "../services/userService";
 import { emitUserNotification } from "../gateways/userNotificationGateway";
 import { generateUserNotification } from "../utils/userNotificationGenerator";
-import { RETRY_DELAYS_MS } from "../utils/constants";
+import { AWAIT_DELAYS_MS, RETRY_DELAYS_MS } from "../utils/constants";
+import { getSmListFromChain } from "../utils/blockchain";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -123,30 +125,6 @@ async function broadcastSplit(
   );
 }
 
-/**
- * Creating App notifications and sending Emails for secondary members.
- */
-async function broadcastSmsOnly(
-  willId: string,
-  willName: string,
-  smUserIds: string[],
-  type: NotificationType,
-): Promise<void> {
-  for (const userId of smUserIds) {
-    await createAppNotification(type, willId, userId);
-    emitUserNotification(
-      userId,
-      buildUserNotif(type, willName, willId, NotificationRecipientRole.SM),
-    );
-  }
-  await sendEmailNotifications(
-    type,
-    willName,
-    smUserIds,
-    NotificationRecipientRole.SM,
-  );
-}
-
 // ─── Notification patterns ────────────────────────────────────────────────────
 
 /** Notify Primary Member and Secondary Members. */
@@ -179,9 +157,10 @@ async function notifySmsOnly(
     return;
   }
   const sms = await getSecondaryMembersByWillId(will.willId);
-  await broadcastSmsOnly(
+  await broadcastSplit(
     will.willId,
     will.willName,
+    undefined,
     registeredUserIds(sms),
     type,
   );
@@ -311,9 +290,10 @@ async function notifyOthersAndTarget(
     will.willId,
     smAddress,
   );
-  await broadcastSmsOnly(
+  await broadcastSplit(
     will.willId,
     will.willName,
+    undefined,
     registeredUserIds(otherSms),
     type,
   );
@@ -341,11 +321,98 @@ async function notifyOthersAndTarget(
 
 // ─── Per-event exports ────────────────────────────────────────────────────────
 
+/** All SMs desisted → will was auto-canceled → notify PM only. */
+async function notifyWillAutoCanceled(will: {
+  willId: string;
+  willName: string;
+  wallet?: { user?: { userId?: string } } | null;
+}): Promise<void> {
+  const pmUserId = will.wallet?.user?.userId;
+  if (!pmUserId) return;
+  await createAppNotification(
+    NotificationType.WILL_CANCELED_ALL_SM_LEFT,
+    will.willId,
+    pmUserId,
+  );
+  emitUserNotification(
+    pmUserId,
+    buildUserNotif(
+      NotificationType.WILL_CANCELED_ALL_SM_LEFT,
+      will.willName,
+      will.willId,
+      NotificationRecipientRole.PM,
+    ),
+  );
+  await sendEmailNotification(
+    NotificationType.WILL_CANCELED_ALL_SM_LEFT,
+    will.willName,
+    pmUserId,
+    NotificationRecipientRole.PM,
+  );
+}
+
+/**
+ * PM explicitly canceled the will → notify registered SMs in-app + email, and email unregistered SMs directly.
+ */
+async function notifyWillPmCanceled(
+  will: { willId: string; willName: string },
+  sms: SmWithWallet[],
+): Promise<void> {
+  const registeredIds = registeredUserIds(sms);
+  for (const userId of registeredIds) {
+    await createAppNotification(NotificationType.WILL_CANCELED, null, userId);
+    emitUserNotification(
+      userId,
+      buildUserNotif(
+        NotificationType.WILL_CANCELED,
+        will.willName,
+        will.willId,
+        NotificationRecipientRole.SM,
+      ),
+    );
+  }
+  await sendEmailNotifications(
+    NotificationType.WILL_CANCELED,
+    will.willName,
+    registeredIds,
+    NotificationRecipientRole.SM,
+  );
+
+  const unregistered = sms.filter((sm) => sm.wallet === null);
+  for (const sm of unregistered) {
+    await sendWillCanceledToUnregisteredSm(
+      will.willName,
+      sm.firstName,
+      sm.lastName,
+      sm.email,
+    );
+  }
+}
+
+export async function notifyWillCanceled(
+  smartContractAddress: string,
+): Promise<void> {
+  // Fetch all data BEFORE the sleep — will/SM records may be deleted during the wait.
+  const will = await getWillWithRetry(smartContractAddress);
+  if (!will) {
+    warn("notifyWillCanceled", smartContractAddress);
+    return;
+  }
+  // Fetch SMs before the sleep — will may be deleted during the wait.
+  const sms = await getSecondaryMembersByWillId(will.willId);
+
+  await sleep(AWAIT_DELAYS_MS[4]);
+  const smListOnChain = await getSmListFromChain(smartContractAddress);
+
+  if (smListOnChain.length === 0) {
+    await notifyWillAutoCanceled(will);
+  } else {
+    await notifyWillPmCanceled(will, sms);
+  }
+}
+
 export const notifyWillActivated = (smartContractAddress: string) =>
   notifyPmAndSms(smartContractAddress, NotificationType.WILL_ACTIVATED);
-
-export const notifyWillCanceled = (smartContractAddress: string) =>
-  notifySmsOnly(smartContractAddress, NotificationType.WILL_CANCELED);
 
 export const notifySecurityPeriodUpdated = (smartContractAddress: string) =>
   notifySmsOnly(smartContractAddress, NotificationType.SECURITY_PERIOD_UPDATED);
