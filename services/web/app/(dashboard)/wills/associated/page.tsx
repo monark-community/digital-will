@@ -217,9 +217,9 @@ export default function AssociatedWillsPage() {
       const receipt = await tx.wait();
       
       /*
-      Delay added instead of waiting 2 block confirmation 
+      2 seconds delay added instead of waiting 2 block confirmation 
       */
-      await new Promise(resolve => setTimeout(resolve, 1000)); 
+      await new Promise(resolve => setTimeout(resolve, 2000)); 
 
       if (action.id === 'desist') {
         console.log('🔵 Desist confirmed, removing from database...');

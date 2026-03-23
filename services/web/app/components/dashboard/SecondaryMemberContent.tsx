@@ -145,7 +145,7 @@ function WillCard({ will, onRefresh }: WillCardProps) {
       /*
       Delay added instead of waiting 2 block confirmation 
       */
-      await new Promise(resolve => setTimeout(resolve, 1000)); 
+      await new Promise(resolve => setTimeout(resolve, 2000)); 
       
       console.log('Transaction confirmed:', receipt?.hash);
 

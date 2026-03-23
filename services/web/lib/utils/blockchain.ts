@@ -62,7 +62,7 @@ export async function fundWillContract(
   /*
   Delay added instead of waiting 2 block confirmation 
   */
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise(resolve => setTimeout(resolve, 2000));
   
   return tx.hash;
 }
@@ -93,7 +93,7 @@ export async function withdrawWillContract(
   /*
   Delay added instead of waiting 2 block confirmation 
   */
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise(resolve => setTimeout(resolve, 2000));
   
   return tx.hash;
 }
@@ -124,7 +124,7 @@ export async function vetoDeathContract(contractAddress: string): Promise<string
   /*
   Delay added instead of waiting 2 block confirmation 
   */
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise(resolve => setTimeout(resolve, 2000));
   return tx.hash;
 }
 
