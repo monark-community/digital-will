@@ -1,10 +1,10 @@
-import { Router } from 'express';
-import authRoutes from './authRoutes';
-import walletRoutes from './walletRoutes';
-import contactsRoutes from './contactRoutes';
-import { ROUTES } from '../utils/constants';
-import willRoutes from './willRoutes';
-import notificationRoutes from './notificationRoutes';
+import { Router } from "express";
+import authRoutes from "./authRoutes";
+import walletRoutes from "./walletRoutes";
+import contactsRoutes from "./contactRoutes";
+import { ROUTES } from "../utils/constants";
+import willRoutes from "./willRoutes";
+import notificationRoutes from "./notificationRoutes";
 
 const router = Router();
 
