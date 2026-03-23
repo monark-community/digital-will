@@ -40,7 +40,6 @@ const SM_ACTIONS: ActionDef[] = [
       if (w.state === 'CANCELED') return 'Will is canceled';
       if (w.state === 'EXECUTED') return 'Will is already executed';
       if (w.state === 'DRAFT')    return 'Will is not yet deployed';
-      if (w.myMembership.state === 'DECLARED_DEATH') return 'Cannot withdraw participation after death declaration';
       return null;
     },
     colorActive: 'bg-red-600 hover:bg-red-500 text-white',

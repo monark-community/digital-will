@@ -66,7 +66,6 @@ const ACTIONS: ActionDef[] = [
       if (will.state === 'CANCELED') return 'Will is canceled';
       if (will.state === 'EXECUTED') return 'Will is already executed';
       if (will.state === 'DRAFT')    return 'Will is not yet deployed';
-      if (will.myMembership.state === 'PENDING') return 'You must validate before you can desist';
       return null;
     },
     color: 'yellow',
@@ -149,8 +148,8 @@ function WillCard({ will, onRefresh }: WillCardProps) {
       
       console.log('Transaction confirmed:', receipt?.hash);
 
-      if (action.id === 'desist') {
-        console.log('Desist confirmed, removing from database...');
+      if (action.id === 'refuse') {
+        console.log('Refuse confirmed, removing from database...');
         try {
           await willService.removeSecondaryMember(will.willId);
           console.log('Successfully removed from database');
@@ -221,8 +220,8 @@ function WillCard({ will, onRefresh }: WillCardProps) {
           const isLoading  = loadingAction === action.id;
           const anyLoading = loadingAction !== null;
 
-          if (action.id === 'desist') {
-            console.log('Desist button state:', {
+          if (action.id === 'refuse') {
+            console.log('Refuse button state:', {
               willState: will.state,
               membershipState: will.myMembership.state,
               contractAddress: will.contractAddressInBlockchain,
