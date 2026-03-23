@@ -488,6 +488,20 @@ const templates: Record<
       "View Will Status",
     ),
   }),
+
+  [NotificationType.EXECUTE_WILL]: ({ willName, recipientName }) => ({
+    subject: `WillChain — Protection period ended for "${willName}" — Execution available`,
+    body: buildEmail(
+      recipientName,
+      `<p>The <strong>protection period</strong> for the digital will
+      <strong>"${willName}"</strong> has <strong>expired</strong>.</p>
+      <p>The security waiting period has elapsed and no veto was exercised by the primary member.
+      As a designated secondary member, you may now proceed with the <strong>execution of the will</strong>
+      on the blockchain.</p>
+      <p>Please log in to your WillChain account to initiate the execution process.</p>`,
+      "Execute Will",
+    ),
+  }),
 };
 
 export function generateEmail(

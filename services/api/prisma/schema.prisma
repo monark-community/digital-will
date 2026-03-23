@@ -23,6 +23,7 @@ enum NotificationType {
   DEATH_CONFIRMED
   VETO_EXERCISED
   ASSETS_SWAPPED
+  EXECUTE_WILL
 }
 
 model User {
@@ -162,8 +163,10 @@ model ProtectionPeriodTimer {
   willId    String   @unique
   expiresAt DateTime
   fired     Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   will      Will     @relation(fields: [willId], references: [willId], onDelete: Cascade)
 
   @@index([fired, expiresAt])
-  @@map("protection_period_timers")
+  @@map("protectionperiodtimers")
 }

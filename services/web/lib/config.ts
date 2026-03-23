@@ -2,6 +2,8 @@
  * Application configuration from environment variables
  */
 
+const _isNonProd = process.env.NODE_ENV !== "production";
+
 export const config = {
   api: {
     baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000",
@@ -15,6 +17,12 @@ export const config = {
   isProduction: process.env.NODE_ENV === "production",
   isDevelopment: process.env.NODE_ENV === "development",
   isLocal: (process.env.NODE_ENV as string) === "local",
+  isLocalOrDev: _isNonProd,
+  securityPeriod: {
+    unit: _isNonProd ? ("minutes" as const) : ("days" as const),
+    min: _isNonProd ? 1 : 28,
+    max: _isNonProd ? 10000 : 154,
+  },
 } as const;
 
 // API Routes

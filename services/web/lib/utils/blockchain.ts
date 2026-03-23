@@ -4,7 +4,8 @@
 
 import { ethers } from "ethers";
 import { WILL_ABI } from "@/lib/contracts/WillABI";
-import { willService} from "@/lib/services";
+import { willService } from "@/lib/services";
+import { config } from "@/lib/config";
 
 /**
  * Get a signer from MetaMask
@@ -27,10 +28,45 @@ export function daysToSeconds(days: number): bigint {
 }
 
 /**
+ * Convert a security period input to seconds.
+ * In local/dev: input is in minutes. In production: input is in days.
+ */
+export function periodToSeconds(value: number): bigint {
+  return config.isLocalOrDev
+    ? BigInt(value * 60)
+    : BigInt(value * 24 * 60 * 60);
+}
+
+/**
  * Convert seconds to days
  */
 export function secondsToDays(seconds: bigint): number {
   return Number(seconds) / (24 * 60 * 60);
+}
+
+/**
+ * Format a security period value (in seconds) for display.
+ * In local/dev: converts to minutes. In production: converts to days.
+ */
+export function displaySecurityPeriod(seconds: number): string {
+  if (config.isLocalOrDev) {
+    return `${Math.round(seconds / 60)} min`;
+  }
+  return `${Math.round(seconds / 86400)} days`;
+}
+
+/**
+ * Format a security period range (in seconds) for display.
+ * In local/dev: converts to minutes. In production: converts to days.
+ */
+export function displaySecurityPeriodRange(
+  minSeconds: number,
+  maxSeconds: number,
+): string {
+  if (config.isLocalOrDev) {
+    return `${Math.round(minSeconds / 60)} – ${Math.round(maxSeconds / 60)} min`;
+  }
+  return `${Math.round(minSeconds / 86400)} – ${Math.round(maxSeconds / 86400)} days`;
 }
 
 /**
@@ -40,7 +76,7 @@ export function secondsToDays(seconds: bigint): number {
  */
 export async function fundWillContract(
   contractAddress: string,
-  amountEth: string
+  amountEth: string,
 ): Promise<string> {
   const signer = await getSigner();
   const provider = new ethers.BrowserProvider(window.ethereum);
@@ -52,7 +88,9 @@ export async function fundWillContract(
   // Rough gas buffer: 0.001 ETH
   const gasBuffer = ethers.parseEther("0.001");
   if (userBalance < amountWei + gasBuffer) {
-    throw new Error(`Insufficient balance. You have ${parseFloat(ethers.formatEther(userBalance)).toFixed(4)} ETH.`);
+    throw new Error(
+      `Insufficient balance. You have ${parseFloat(ethers.formatEther(userBalance)).toFixed(4)} ETH.`,
+    );
   }
 
   const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
@@ -62,8 +100,8 @@ export async function fundWillContract(
   /*
   Delay added instead of waiting 2 block confirmation 
   */
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+
   return tx.hash;
 }
 
@@ -74,14 +112,16 @@ export async function fundWillContract(
  */
 export async function withdrawWillContract(
   contractAddress: string,
-  amountEth: string
+  amountEth: string,
 ): Promise<string> {
   const amountWei = ethers.parseEther(amountEth);
 
-  const contractBalance = await willService.getContractBalance(contractAddress).then(balanceStr => ethers.parseEther(balanceStr));
+  const contractBalance = await willService
+    .getContractBalance(contractAddress)
+    .then((balanceStr) => ethers.parseEther(balanceStr));
   if (contractBalance < amountWei) {
     throw new Error(
-      `Insufficient contract balance. Contract holds ${parseFloat(ethers.formatEther(contractBalance)).toFixed(4)} ETH.`
+      `Insufficient contract balance. Contract holds ${parseFloat(ethers.formatEther(contractBalance)).toFixed(4)} ETH.`,
     );
   }
 
@@ -93,8 +133,8 @@ export async function withdrawWillContract(
   /*
   Delay added instead of waiting 2 block confirmation 
   */
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+
   return tx.hash;
 }
 
@@ -103,7 +143,9 @@ export async function withdrawWillContract(
  * The contract will auto-withdraw all ETH back to the PM.
  * Returns the transaction hash on success.
  */
-export async function cancelWillContract(contractAddress: string): Promise<string> {
+export async function cancelWillContract(
+  contractAddress: string,
+): Promise<string> {
   const signer = await getSigner();
   const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
   const tx = await contract.cancelWill();
@@ -115,7 +157,9 @@ export async function cancelWillContract(contractAddress: string): Promise<strin
  * Veto a death declaration via MetaMask. Resets all DECLARED_DEATH SMs to VALIDATED
  * and starts a cooldown, preventing new declarations for COOLDOWN_PERIOD seconds.
  */
-export async function vetoDeathContract(contractAddress: string): Promise<string> {
+export async function vetoDeathContract(
+  contractAddress: string,
+): Promise<string> {
   const signer = await getSigner();
   const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
   const tx = await contract.vetoDeath();
@@ -124,7 +168,7 @@ export async function vetoDeathContract(contractAddress: string): Promise<string
   /*
   Delay added instead of waiting 2 block confirmation 
   */
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  await new Promise((resolve) => setTimeout(resolve, 2000));
   return tx.hash;
 }
 
@@ -138,15 +182,21 @@ export async function updateWillContract(
   updatedSmList: Array<{ smAddress: string; votePower: number }>,
   addedSmList: Array<{ smAddress: string; votePower: number }>,
   deletedSmList: string[],
-  securityPeriodConfig: { minSecurityPeriod: bigint; maxSecurityPeriod: bigint }
+  securityPeriodConfig: {
+    minSecurityPeriod: bigint;
+    maxSecurityPeriod: bigint;
+  },
 ): Promise<string> {
   const signer = await getSigner();
   const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
   const tx = await contract.updateWill(
-    updatedSmList.map(m => [ethers.getAddress(m.smAddress), m.votePower]),
-    addedSmList.map(m => [ethers.getAddress(m.smAddress), m.votePower]),
-    deletedSmList.map(a => ethers.getAddress(a)),
-    [securityPeriodConfig.minSecurityPeriod, securityPeriodConfig.maxSecurityPeriod]
+    updatedSmList.map((m) => [ethers.getAddress(m.smAddress), m.votePower]),
+    addedSmList.map((m) => [ethers.getAddress(m.smAddress), m.votePower]),
+    deletedSmList.map((a) => ethers.getAddress(a)),
+    [
+      securityPeriodConfig.minSecurityPeriod,
+      securityPeriodConfig.maxSecurityPeriod,
+    ],
   );
   await tx.wait();
   return tx.hash;
