@@ -42,6 +42,13 @@ export const ROUTES = {
   CONTACTS: {
     BASE: "/contacts",
   },
+  NOTIFICATIONS: {
+    BASE: "/notifications",
+    MARK_READ: "/:notifId/read",
+    MARK_ALL_READ: "/read/all",
+    DELETE_ONE: "/:notifId",
+    DELETE_ALL: "/",
+  },
 } as const;
 
 export const RETRY_DELAYS_MS = [
