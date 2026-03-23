@@ -190,7 +190,9 @@ contract Will is WillEvents {
         }
         // Rule 2: all VALIDATED/DECLARED_DEATH → ACTIVE OR declaration in progress
         else {
+            if (willStateS != WillState.ACTIVE) emit EVT_WillChain_WillActivated();
             willStateS = WillState.ACTIVE;
+            
             if (cumulatedVotePowerS > 0) {
                 updatePeriodUntilExecution();
             } else {
@@ -503,7 +505,7 @@ contract Will is WillEvents {
         //Starts cooldown by itself through conditions.
 
         emit EVT_WillChain_VetoExercised();
-    }
+    }function vetoDeatfunction vetoDeatfunction vetoDeat
 
     function resetDeclareSmListState() private {
         uint256 length = smListS.length;

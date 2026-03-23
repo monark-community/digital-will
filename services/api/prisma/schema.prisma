@@ -9,18 +9,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum WillState {
-  DRAFT
-  CANCELED
-  INACTIVE
-  ACTIVE
-  EXECUTED
-}
-
-enum SMState {
-  PENDING
-  VALIDATED
-  DECLARED_DEATH
+enum NotificationType {
+  SIGNATURE_REQUEST
+  WILL_ACTIVATED
+  WILL_CANCELED
+  SM_ADDED
+  SM_UPDATED
+  SM_REMOVED
+  SM_DESISTED
+  SECURITY_PERIOD_UPDATED
+  DEATH_DECLARED
+  DEATH_CONFIRMED
+  VETO_EXERCISED
+  ASSETS_SWAPPED
 }
 
 model User {
@@ -30,6 +31,7 @@ model User {
   email         String          @unique
   phoneNo       String?
   passwordHash  String
+  wantToReceiveMails Boolean    @default(true)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   wallets       Wallet[]
@@ -48,6 +50,7 @@ model Wallet {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   wills            Will[]
+  draftwills       DraftWill[]
   secondaryMembers SecondaryMember[]
 
   @@index([userId])
@@ -74,15 +77,13 @@ model Will {
   willId                      String            @id @default(uuid())
   walletAddress               String
   willName                    String
-  contractAddressInBlockchain String?
-  chainId                     Int?
-  minSecurityPeriod           Int
-  maxSecurityPeriod           Int
-  state                       WillState
+  contractAddressInBlockchain String
+  chainId                     Int
   wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
   secondaryMembers            SecondaryMember[]
   notifications               Notifications[]
   
+  @@unique([chainId, contractAddressInBlockchain])
   @@map("wills")
 }
 
@@ -92,8 +93,6 @@ model SecondaryMember {
   lastName          String
   email             String
   phoneNumber       String?
-  votingPower       Int
-  state             SMState
   tempWalletAddress String? // this is the address used before the SM creates a WillChain account
   walletAddress     String? // this is the address used when the SM has a WillChain account  
   willId            String
@@ -104,17 +103,47 @@ model SecondaryMember {
   @@map("secondarymembers")
 }
 
+model DraftWill {
+  draftWillId                 String            @id @default(uuid())
+  walletAddress               String
+  willName                    String
+  minSecurityPeriod           Int
+  maxSecurityPeriod           Int
+  wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
+  draftsecondarymembers       draftSecondaryMember[]
+  
+  @@map("draftwills") 
+}
+
+
+model draftSecondaryMember {
+  secondaryMemberId String  @id @default(uuid())
+  firstName         String
+  lastName          String
+  email             String
+  phoneNumber       String?
+  votingPower       Int
+  walletAddress     String? 
+  draftWillId       String
+  draftWill         DraftWill    @relation(fields: [draftWillId], references: [draftWillId], onDelete: Cascade)
+  relationship      String?
+
+  @@map("draftsecondarymembers")
+}
+
 model WillFactory {
   willFactoryId               String @id @default(uuid())
   contractAddressInBlockchain String
-  chainId                     Int
-
+  chainId                     Int    @unique
+  blockDeployed               Int    // the block where the willFactory contract has been deployed
+  lastProcessedCursor         String // given by the stream
+  
   @@map("willfactories")
 }
 
 model Notifications {
   notifId    String  @id @default(uuid())
-  content    String
+  notifType    NotificationType @default(WILL_ACTIVATED)
   willId     String
   userId     String
   readStatus Boolean

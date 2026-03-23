@@ -3,15 +3,8 @@
  */
 
 import { ethers } from "ethers";
-import { config } from "@/lib/config";
 import { WILL_ABI } from "@/lib/contracts/WillABI";
-
-/**
- * Get the JSON-RPC provider for the blockchain
- */
-export function getProvider(): ethers.JsonRpcProvider {
-  return new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
-}
+import { willService} from "@/lib/services";
 
 /**
  * Get a signer from MetaMask
@@ -41,23 +34,6 @@ export function secondsToDays(seconds: bigint): number {
 }
 
 /**
- * Wait for a transaction to be mined
- */
-export async function waitForTransaction(hash: string): Promise<ethers.TransactionReceipt | null> {
-  const provider = getProvider();
-  return await provider.waitForTransaction(hash);
-}
-
-/**
- * Get the ETH balance of a contract address, returned as a formatted string (e.g. "0.05")
- */
-export async function getContractBalance(contractAddress: string): Promise<string> {
-  const provider = getProvider();
-  const balanceWei = await provider.getBalance(contractAddress);
-  return ethers.formatEther(balanceWei);
-}
-
-/**
  * Fund a will contract by calling deposit() via MetaMask.
  * Returns the transaction hash on success.
  * Throws if the user has insufficient balance.
@@ -82,6 +58,12 @@ export async function fundWillContract(
   const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
   const tx = await contract.deposit({ value: amountWei });
   await tx.wait();
+
+  /*
+  Delay added instead of waiting 2 block confirmation 
+  */
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
   return tx.hash;
 }
 
@@ -94,10 +76,9 @@ export async function withdrawWillContract(
   contractAddress: string,
   amountEth: string
 ): Promise<string> {
-  const provider = getProvider();
   const amountWei = ethers.parseEther(amountEth);
 
-  const contractBalance = await provider.getBalance(contractAddress);
+  const contractBalance = await willService.getContractBalance(contractAddress).then(balanceStr => ethers.parseEther(balanceStr));
   if (contractBalance < amountWei) {
     throw new Error(
       `Insufficient contract balance. Contract holds ${parseFloat(ethers.formatEther(contractBalance)).toFixed(4)} ETH.`
@@ -108,6 +89,12 @@ export async function withdrawWillContract(
   const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
   const tx = await contract.withdraw(amountWei);
   await tx.wait();
+
+  /*
+  Delay added instead of waiting 2 block confirmation 
+  */
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
   return tx.hash;
 }
 
@@ -133,6 +120,11 @@ export async function vetoDeathContract(contractAddress: string): Promise<string
   const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
   const tx = await contract.vetoDeath();
   await tx.wait();
+
+  /*
+  Delay added instead of waiting 2 block confirmation 
+  */
+  await new Promise(resolve => setTimeout(resolve, 2000));
   return tx.hash;
 }
 

@@ -180,7 +180,7 @@ export default function PrimaryMemberContent() {
               <div key={will.willId} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-[var(--text-primary)] mb-1">Will Contract</h3>
+                    <h3 className="font-semibold text-[var(--text-primary)] mb-1">{will.willName}</h3>
                     <p className="text-xs text-[var(--text-muted-alt)] font-mono truncate">{will.contractAddressInBlockchain}</p>
                   </div>
                   <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ml-2 flex-shrink-0 ${

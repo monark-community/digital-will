@@ -1,10 +1,19 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import { config } from '../config/config';
-import { ConflictError, UnauthorizedError, BadRequestError, NotFoundError } from '../utils/errors';
-import { PASSWORD } from '../utils/constants';
-import { verifyWalletSignature, validateMessageTimestamp, validateWalletAddress } from '../utils/crypto';
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { config } from "../config/config";
+import {
+  ConflictError,
+  UnauthorizedError,
+  BadRequestError,
+  NotFoundError,
+} from "../utils/errors";
+import { PASSWORD } from "../utils/constants";
+import {
+  verifyWalletSignature,
+  validateMessageTimestamp,
+  validateWalletAddress,
+} from "../utils/crypto";
 
 const prisma = new PrismaClient();
 
@@ -86,14 +95,14 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
   });
 
   if (!user) {
-    throw new UnauthorizedError('Invalid email or password');
+    throw new UnauthorizedError("Invalid email or password");
   }
 
   // Verify password
   const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
   if (!isPasswordValid) {
-    throw new UnauthorizedError('Invalid email or password');
+    throw new UnauthorizedError("Invalid email or password");
   }
 
   // Generate JWT token
@@ -117,8 +126,9 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
 /**
  * Check if wallet exists and get associated user
  */
-export async function checkWalletExists(walletAddress: string): Promise<{ exists: boolean; userId?: string }> {
-
+export async function checkWalletExists(
+  walletAddress: string,
+): Promise<{ exists: boolean; userId?: string }> {
   const wallet = await prisma.wallet.findUnique({
     where: { address: walletAddress.toLowerCase() },
     include: { user: true },
@@ -136,7 +146,7 @@ export async function checkWalletExists(walletAddress: string): Promise<{ exists
 export async function walletSignIn(
   walletAddress: string,
   signature: string,
-  message: string
+  message: string,
 ): Promise<AuthResponse> {
   // Validate wallet address format
   validateWalletAddress(walletAddress);
@@ -153,7 +163,7 @@ export async function walletSignIn(
   });
 
   if (!wallet) {
-    throw new NotFoundError('No account found with this wallet address');
+    throw new NotFoundError("No account found with this wallet address");
   }
 
   const user = wallet.user;
@@ -180,17 +190,19 @@ export async function walletSignIn(
 /**
  * Link wallet to existing user account
  */
-export async function linkWallet(userId: string, walletAddress: string): Promise<UserResponse> {
-
-  const existingWallet = await prisma.wallet.findUnique({
-    where: { address: walletAddress.toLowerCase() },
+export async function linkWallet(
+  userId: string,
+  walletAddress: string,
+): Promise<UserResponse> {
+  const existingWallet = await prisma.user.findUnique({
+    where: { walletAddress: walletAddress.toLowerCase() },
   });
 
   if (existingWallet && existingWallet.userId !== userId) {
-    throw new ConflictError('This wallet is already linked to another account');
+    throw new ConflictError("This wallet is already linked to another account");
   }
-  
-  const user = await prisma.user.findUnique({
+
+  const user = await prisma.user.update({
     where: { userId },
   });
 
@@ -220,7 +232,15 @@ export async function createAccountWithWallet(data: {
   signature: string;
   message: string;
 }): Promise<AuthResponse> {
-  const { firstName, lastName, email, phoneNo, walletAddress, signature, message } = data;
+  const {
+    firstName,
+    lastName,
+    email,
+    phoneNo,
+    walletAddress,
+    signature,
+    message,
+  } = data;
 
   validateWalletAddress(walletAddress);
 
@@ -233,7 +253,7 @@ export async function createAccountWithWallet(data: {
   });
 
   if (existingWallet) {
-    throw new ConflictError('This wallet is already linked to an account');
+    throw new ConflictError("This wallet is already linked to an account");
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -241,7 +261,7 @@ export async function createAccountWithWallet(data: {
   });
 
   if (existingUser) {
-    throw new ConflictError('An account with this email already exists');
+    throw new ConflictError("An account with this email already exists");
   }
 
   const randomPassword = Math.random().toString(36).substring(2, 15);
