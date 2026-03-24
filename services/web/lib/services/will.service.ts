@@ -107,7 +107,6 @@ class WillService {
       const checksummedFactoryAddress = ethers.getAddress(
         params.factoryAddress,
       );
-      const checksummedOwner = ethers.getAddress(params.owner);
 
       const factoryContract = new ethers.Contract(
         checksummedFactoryAddress,
@@ -210,9 +209,10 @@ class WillService {
     willId: string,
     params: {
       factoryAddress: string;
+      ownerAddress: string;
       secondaryMembers: Array<{ address: string; power: number }>;
-      minSecurityPeriodDays: number;
-      maxSecurityPeriodDays: number;
+      minSecurityPeriodSeconds: number;
+      maxSecurityPeriodSeconds: number;
       /** Optional ETH amount to send with the createWill tx (e.g. "0.5") */
       initialFundEth?: string;
     },
@@ -221,7 +221,6 @@ class WillService {
       // 1. Préparer les paramètres pour la blockchain
       const blockchainParams = this.prepareCreateWillParams(
         params.factoryAddress,
-        params.ownerAddress,
         params.secondaryMembers.map((m) => ({
           address: m.address,
           power: m.power,
