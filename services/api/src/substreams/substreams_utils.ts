@@ -1,6 +1,5 @@
 import { IMessageTypeRegistry } from "@bufbuild/protobuf";
 import { createRequest } from "@substreams/core";
-import { ModulesProgress } from "@substreams/core/proto";
 import { readPackage } from "@substreams/manifest";
 import { BlockEmitter } from "@substreams/node";
 import { EventsCalls } from "./interfaces/raw/calls_events_interfaces";
@@ -37,8 +36,8 @@ export async function stream(
   // NodeJS Events
   const emitter = new BlockEmitter(
     transport as any,
-    request,
-    registry,
+    request as any,
+    registry as any,
   );
 
   // Track latest committed cursor for resumption on reconnect
@@ -65,7 +64,7 @@ export async function stream(
 
   // Progress — fired each 120 seconds with module processing stats (useful for monitoring sync progress)
   let lastProgressLog = 0;
-  emitter.on("progress", (progress: ModulesProgress) => {
+  emitter.on("progress", (progress: any) => {
     const now = Date.now();
     if (now - lastProgressLog >= 120_000) {
       lastProgressLog = now;
@@ -75,7 +74,7 @@ export async function stream(
   });
 
   return new Promise<{ cursor: string | undefined }>((resolve, reject) => {
-    emitter.on("close", (error) => {
+    (emitter as any).on("close", (error: any) => {
       console.timeEnd("🆗 close");
       if (error) {
         console.error(
@@ -90,7 +89,7 @@ export async function stream(
     });
 
     // Fatal Error
-    emitter.on("fatalError", (error) => {
+    (emitter as any).on("fatalError", (error: any) => {
       console.error(
         "[Substreams] Fatal error occurred:, will reject promise with that error",
         error,
