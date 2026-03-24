@@ -25,7 +25,7 @@ export async function stream(
     `in stream function with startBlockNum: ${startBlockNum} and cursor: ${cursor}`,
   );
 
-  const startBlockNumParsed = parseInt(startBlockNum);  // will be used for startBlockNum when we will deploy the server
+  const startBlockNumParsed = parseInt(startBlockNum); // will be used for startBlockNum when we will deploy the server
 
   const request = createRequest({
     substreamPackage: pkg,

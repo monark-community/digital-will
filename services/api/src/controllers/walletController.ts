@@ -1,12 +1,12 @@
-import { Request, Response } from 'express';
-import { StatusCodes } from 'http-status-codes';
+import { Request, Response } from "express";
+import { StatusCodes } from "http-status-codes";
 import {
   getUserWallets,
   addWallet,
   removeWallet,
   updateWalletLabel,
-} from '../services/walletService';
-import { asyncHandler } from '../middlewares/errorMiddleware';
+} from "../services/walletService";
+import { asyncHandler } from "../middlewares/errorMiddleware";
 
 /**
  * Get all wallets for current user
@@ -21,7 +21,7 @@ export const handleGetWallets = asyncHandler(
       success: true,
       data: { wallets },
     });
-  }
+  },
 );
 
 /**
@@ -42,10 +42,10 @@ export const handleAddWallet = asyncHandler(
 
     res.status(StatusCodes.CREATED).json({
       success: true,
-      message: 'Wallet added successfully',
+      message: "Wallet added successfully",
       data: { wallet },
     });
-  }
+  },
 );
 
 /**
@@ -60,9 +60,9 @@ export const handleRemoveWallet = asyncHandler(
 
     res.status(StatusCodes.OK).json({
       success: true,
-      message: 'Wallet removed successfully',
+      message: "Wallet removed successfully",
     });
-  }
+  },
 );
 
 /**
@@ -78,8 +78,8 @@ export const handleUpdateWalletLabel = asyncHandler(
 
     res.status(StatusCodes.OK).json({
       success: true,
-      message: 'Wallet label updated',
+      message: "Wallet label updated",
       data: { wallet },
     });
-  }
+  },
 );
