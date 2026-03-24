@@ -3,10 +3,7 @@ import {
   NotificationRecipientRole,
   UserNotification,
 } from "../substreams/interfaces/cleaned/model";
-import {
-  getWillByContractAddress,
-  createDraftWillFromCanceledWill,
-} from "../services/willService";
+import { getWillByContractAddress } from "../services/willService";
 import { createInAppNotification as createAppNotification } from "../services/notificationService";
 import {
   sendEmailNotification,
@@ -373,9 +370,6 @@ async function notifyWillAutoCanceled(will: {
   willName: string;
   wallet?: { user?: { userId?: string } } | null;
 }): Promise<void> {
-  // Create a draft will so the MP can redeploy
-  await createDraftWillFromCanceledWill(will.willId);
-
   const pmUserId = will.wallet?.user?.userId;
   if (!pmUserId) return;
   const autoCancelNotifId = await createAppNotification(
