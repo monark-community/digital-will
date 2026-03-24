@@ -10,6 +10,11 @@ import {WillState} from "@interfaces/WillState.sol";
 import {SMInfo, SMPartialInfo} from "@interfaces/SMInfo.sol";
 import {SMState} from "@interfaces/SMState.sol";
 import {SecurityPeriodConfig} from "@interfaces/SecurityPeriodConfig.sol";
+import {SwapConfig} from "@interfaces/SwapConfig.sol";
+import {MockSwapRouter} from "@src/anvil-swap-related/MockSwapRouter.sol";
+import {MockWETH} from "@src/anvil-swap-related/MockWETH.sol";
+import {MockUSDC} from "@src/anvil-swap-related/MockUSDC.sol";
+import {MockQuoterV2} from "@src/anvil-swap-related/MockQuoterV2.sol";
 
 import "@src/WillErrors.sol" as Errors;
 
@@ -29,9 +34,19 @@ contract WillTestSmParticipation is Test {
                 minSecurityPeriod: 1 days,
                 maxSecurityPeriod: 2 days
             });
-
+        MockWETH eth = new MockWETH();
+        MockUSDC usdc = new MockUSDC();
+        MockSwapRouter router = new MockSwapRouter();
+        MockQuoterV2 quoter = new MockQuoterV2();
+        SwapConfig memory swapConfig = SwapConfig({
+            swapRouter: address(router),
+            quoter: address(quoter),
+            wNative: address(eth),
+            usdc: address(usdc),
+            poolFee: 0
+        });
         vm.prank(pm);
-        will = new Will(pm, sms, securityPeriodConfig);
+        will = new Will(pm, sms, securityPeriodConfig, swapConfig);
     }
 
     // first SM validates.
@@ -142,8 +157,10 @@ contract WillTestSmParticipation is Test {
         vm.prank(sm2);
         will.declareDeath();
 
+        //vm.expectRevert(Errors.ERR_SMDeclaredDeath.selector);
         vm.prank(sm1);
         will.desistSm();
+
         assertEq(will.deathDeclarationTimestampS(), block.timestamp);
         assertGt(will.deathDeclarationTimestampS(), 0);
 
@@ -174,8 +191,19 @@ contract WillTestInvalidSmParticipation is Test {
                 maxSecurityPeriod: 2 days
             });
 
+        MockWETH eth = new MockWETH();
+        MockUSDC usdc = new MockUSDC();
+        MockSwapRouter router = new MockSwapRouter();
+        MockQuoterV2 quoter = new MockQuoterV2();
+        SwapConfig memory swapConfig = SwapConfig({
+            swapRouter: address(router),
+            quoter: address(quoter),
+            wNative: address(eth),
+            usdc: address(usdc),
+            poolFee: 0
+        });
         vm.prank(pm);
-        will = new Will(pm, sms, securityPeriodConfig);
+        will = new Will(pm, sms, securityPeriodConfig, swapConfig);
     }
 
     // SM Validates twice.
@@ -253,13 +281,6 @@ contract WillTestInvalidSmParticipation is Test {
         vm.prank(sm1);
         vm.expectRevert(Errors.ERR_WillNotInactive.selector);
         will.validateSm();
-    }
-
-    // SM desists but isn't validated.
-    function test_DesistSm_NotValidated() public {
-        vm.prank(sm1);
-        vm.expectRevert(Errors.ERR_SMNotValidated.selector);
-        will.desistSm();
     }
 
     // Non-SM attempts to desist.

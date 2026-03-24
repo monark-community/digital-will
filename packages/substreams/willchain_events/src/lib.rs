@@ -14,7 +14,7 @@ use {num_traits::cast::ToPrimitive, std::str::FromStr, substreams::scalar::BigDe
 
 substreams_ethereum::init!();
 
-const WILLFACTORY_TRACKED_CONTRACT: [u8; 20] = hex!("6cbd60e8222f5f07d32c773ef15fd01a43ec8328");
+const WILLFACTORY_TRACKED_CONTRACT: [u8; 20] = hex!("b15723d59d48a18ce479b15bf55a2160459086ec");
 
 fn map_willfactory_calls(blk: &eth::Block, calls: &mut contract::Calls) {
     for tx in blk.transactions() {
@@ -47,7 +47,7 @@ fn map_willfactory_calls(blk: &eth::Block, calls: &mut contract::Calls) {
                         call_ordinal: call.begin_ordinal,
                         call_success: !call.state_reverted,
                         output_param0: output_param0,
-                        owner: decoded_call.owner,
+                        owner: tx.from.clone(),
                         new_sm_list,
                         security_period_config,
                         call_value,
@@ -83,17 +83,6 @@ fn map_will_events(
 ) {
     for rcpt in blk.receipts() {
         for log in rcpt.receipt.logs.iter().filter(|log| is_declared_dds_address(&log.address, log.ordinal, dds_store)) {
-            if let Some(event) = abi::will_contract::events::EvtWillChainAssetsDeposited::match_and_decode(log) {
-                events.will_evt_will_chain_assets_depositeds.push(contract::WillEvtWillChainAssetsDeposited {
-                    evt_tx_hash: Hex(&rcpt.transaction.hash).to_string(),
-                    evt_index: log.block_index,
-                    evt_block_time: Some(blk.timestamp().to_owned()),
-                    evt_block_number: blk.number,
-                    evt_address: Hex(&log.address).to_string(),
-                    amount: event.amount.to_string(),
-                });
-                continue;
-            }
             if let Some(event) = abi::will_contract::events::EvtWillChainAssetsSwapped::match_and_decode(log) {
                 events.will_evt_will_chain_assets_swappeds.push(contract::WillEvtWillChainAssetsSwapped {
                     evt_tx_hash: Hex(&rcpt.transaction.hash).to_string(),
@@ -102,27 +91,6 @@ fn map_will_events(
                     evt_block_number: blk.number,
                     evt_address: Hex(&log.address).to_string(),
                     sm_address: event.sm_address,
-                });
-                continue;
-            }
-            if let Some(event) = abi::will_contract::events::EvtWillChainAssetsWithdrawn::match_and_decode(log) {
-                events.will_evt_will_chain_assets_withdrawns.push(contract::WillEvtWillChainAssetsWithdrawn {
-                    evt_tx_hash: Hex(&rcpt.transaction.hash).to_string(),
-                    evt_index: log.block_index,
-                    evt_block_time: Some(blk.timestamp().to_owned()),
-                    evt_block_number: blk.number,
-                    evt_address: Hex(&log.address).to_string(),
-                    amount: event.amount.to_string(),
-                });
-                continue;
-            }
-            if let Some(event) = abi::will_contract::events::EvtWillChainAssetsWithdrawnAll::match_and_decode(log) {
-                events.will_evt_will_chain_assets_withdrawn_alls.push(contract::WillEvtWillChainAssetsWithdrawnAll {
-                    evt_tx_hash: Hex(&rcpt.transaction.hash).to_string(),
-                    evt_index: log.block_index,
-                    evt_block_time: Some(blk.timestamp().to_owned()),
-                    evt_block_number: blk.number,
-                    evt_address: Hex(&log.address).to_string(),
                 });
                 continue;
             }

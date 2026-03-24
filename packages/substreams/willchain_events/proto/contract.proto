@@ -5,10 +5,7 @@ import "google/protobuf/timestamp.proto";
 package contract.v1;
 message Events {
     repeated Willfactory_EvtWillChainWillCreated factory_evt_will_chain_will_createds = 1;
-    repeated Will_EvtWillChainAssetsDeposited will_evt_will_chain_assets_depositeds = 2;
     repeated Will_EvtWillChainAssetsSwapped will_evt_will_chain_assets_swappeds = 3;
-    repeated Will_EvtWillChainAssetsWithdrawn will_evt_will_chain_assets_withdrawns = 4;
-    repeated Will_EvtWillChainAssetsWithdrawnAll will_evt_will_chain_assets_withdrawn_alls = 5;
     repeated Will_EvtWillChainDeathConfirmed will_evt_will_chain_death_confirmeds = 6;
     repeated Will_EvtWillChainDeathDeclared will_evt_will_chain_death_declareds = 7;
     repeated Will_EvtWillChainSmAdded will_evt_will_chain_sm_addeds = 8;
@@ -58,15 +55,6 @@ message Willfactory_EvtWillChainWillCreated {
     bytes mp_address = 6;
 }
     
-message Will_EvtWillChainAssetsDeposited {
-    string evt_tx_hash = 1;
-    uint32 evt_index = 2;
-    google.protobuf.Timestamp evt_block_time = 3;
-    uint64 evt_block_number = 4;
-    string evt_address = 5;
-    string amount = 6;
-}
-    
 message Will_EvtWillChainAssetsSwapped {
     string evt_tx_hash = 1;
     uint32 evt_index = 2;
@@ -74,23 +62,6 @@ message Will_EvtWillChainAssetsSwapped {
     uint64 evt_block_number = 4;
     string evt_address = 5;
     bytes sm_address = 6;
-}
-    
-message Will_EvtWillChainAssetsWithdrawn {
-    string evt_tx_hash = 1;
-    uint32 evt_index = 2;
-    google.protobuf.Timestamp evt_block_time = 3;
-    uint64 evt_block_number = 4;
-    string evt_address = 5;
-    string amount = 6;
-}
-    
-message Will_EvtWillChainAssetsWithdrawnAll {
-    string evt_tx_hash = 1;
-    uint32 evt_index = 2;
-    google.protobuf.Timestamp evt_block_time = 3;
-    uint64 evt_block_number = 4;
-    string evt_address = 5;
 }
     
 message Will_EvtWillChainDeathConfirmed {
