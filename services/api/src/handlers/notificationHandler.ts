@@ -104,7 +104,12 @@ async function broadcastSplit(
   smName?: string,
 ): Promise<void> {
   if (pmUserId) {
-    const pmNotifId = await createAppNotification(type, willId, pmUserId);
+    const pmNotifId = await createAppNotification(
+      type,
+      willId,
+      pmUserId,
+      smName,
+    );
     emitUserNotification(pmUserId, {
       ...buildUserNotif(
         type,
@@ -124,7 +129,7 @@ async function broadcastSplit(
     );
   }
   for (const userId of smUserIds) {
-    const smNotifId = await createAppNotification(type, willId, userId);
+    const smNotifId = await createAppNotification(type, willId, userId, smName);
     emitUserNotification(userId, {
       ...buildUserNotif(
         type,
@@ -291,6 +296,7 @@ async function notifySpecificSm(
       will.willName,
       will.willId,
       NotificationRecipientRole.SM_TARGET,
+      undefined,
     ),
     id: smTargetNotifId,
   });

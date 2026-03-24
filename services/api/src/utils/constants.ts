@@ -61,6 +61,4 @@ export const AWAIT_DELAYS_MS = [
 
 // Protection period poller: 1 minutes in local/dev, 1 hour in production
 export const PROTECTION_PERIOD_POLLER_INTERVAL_MS =
-  process.env.NODE_ENV === "production"
-    ? 60 * 60 * 1_000
-    : 1 * 60 * 1_000;
+  process.env.NODE_ENV === "production" ? 60 * 60 * 1_000 : 0.1 * 60 * 1_000;

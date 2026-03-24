@@ -8,9 +8,16 @@ export async function createInAppNotification(
   notifType: NotificationType,
   willId: string | null,
   userId: string,
+  smName?: string,
 ): Promise<string> {
   const notif = await prisma.notifications.create({
-    data: { notifType, willId, userId, readStatus: false },
+    data: {
+      notifType,
+      willId,
+      userId,
+      smName: smName ?? null,
+      readStatus: false,
+    },
   });
   console.log(`[NotificationService] ${notifType} → user ${userId}`);
   return notif.notifId;

@@ -150,6 +150,7 @@ model Notifications {
   notifType  NotificationType @default(WILL_ACTIVATED)
   willId     String?
   userId     String
+  smName     String?
   readStatus Boolean
   createdAt  DateTime         @default(now())
   will       Will?            @relation(fields: [willId], references: [willId], onDelete: SetNull)
