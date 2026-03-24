@@ -142,7 +142,6 @@ class WillService {
 
       // Send the transaction
       const tx = await factoryContract.createWill(
-        checksummedOwner,
         smList,
         securityConfig,
         txOverrides,
@@ -211,10 +210,9 @@ class WillService {
     willId: string,
     params: {
       factoryAddress: string;
-      ownerAddress: string;
       secondaryMembers: Array<{ address: string; power: number }>;
-      minSecurityPeriodSeconds: number;
-      maxSecurityPeriodSeconds: number;
+      minSecurityPeriodDays: number;
+      maxSecurityPeriodDays: number;
       /** Optional ETH amount to send with the createWill tx (e.g. "0.5") */
       initialFundEth?: string;
     },
@@ -260,7 +258,6 @@ class WillService {
    */
   prepareCreateWillParams(
     factoryAddress: string,
-    ownerAddress: string,
     secondaryMembers: Array<{ address: string; power: number }>,
     minSecurityPeriodSeconds: number,
     maxSecurityPeriodSeconds: number,
@@ -268,7 +265,6 @@ class WillService {
   ): CreateWillParams {
     return {
       factoryAddress,
-      owner: ownerAddress,
       secondaryMembers: secondaryMembers.map((sm) => ({
         smAddress: sm.address,
         votePower: sm.power,

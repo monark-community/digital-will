@@ -27,11 +27,6 @@ export const WILL_FACTORY_ABI = [
     "name": "createWill",
     "inputs": [
       {
-        "name": "owner",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
         "name": "newSmList",
         "type": "tuple[]",
         "internalType": "struct SMPartialInfo[]",

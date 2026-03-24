@@ -16,7 +16,7 @@ error ERR_NotEnoughSMs(); // 0xd3233b0f
 error ERR_DuplicateSM(); // 0x8b97bb50
 error ERR_SMAlreadyValidated(); // 0x76b04149
 error ERR_SMAlreadyDeclaredDeath(); // 0x3b5f6558
-error ERR_SMNotValidated(); // 0x622bb4a8
+//error ERR_SMDeclaredDeath(); // 0x6f3b7ebe commented out cause we change desist.
 error ERR_SMDoesNotExist(); // 0x507ee7d0
 error ERR_UpdatedSMDoesNotExist(); // 0x0c0e2da8
 error ERR_DeletedSMDoesNotExist(); // 0x544a0688

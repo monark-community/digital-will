@@ -1,74 +1,69 @@
 [
   {
+    "type": "function",
+    "name": "createWill",
     "inputs": [
       {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "smAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint8",
-            "name": "votePower",
-            "type": "uint8"
-          }
-        ],
-        "internalType": "struct SMPartialInfo[]",
         "name": "newSmList",
-        "type": "tuple[]"
-      },
-      {
+        "type": "tuple[]",
+        "internalType": "struct SMPartialInfo[]",
         "components": [
           {
-            "internalType": "uint256",
-            "name": "minSecurityPeriod",
-            "type": "uint256"
+            "name": "smAddress",
+            "type": "address",
+            "internalType": "address"
           },
           {
-            "internalType": "uint256",
-            "name": "maxSecurityPeriod",
-            "type": "uint256"
+            "name": "votePower",
+            "type": "uint8",
+            "internalType": "uint8"
           }
-        ],
-        "internalType": "struct SecurityPeriodConfig",
+        ]
+      },
+      {
         "name": "securityPeriodConfig",
-        "type": "tuple"
+        "type": "tuple",
+        "internalType": "struct SecurityPeriodConfig",
+        "components": [
+          {
+            "name": "minSecurityPeriod",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "maxSecurityPeriod",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
       }
     ],
-    "name": "createWill",
     "outputs": [
       {
-        "internalType": "address",
         "name": "",
-        "type": "address"
+        "type": "address",
+        "internalType": "address"
       }
     ],
-    "stateMutability": "payable",
-    "type": "function"
+    "stateMutability": "payable"
   },
   {
-    "anonymous": false,
+    "type": "event",
+    "name": "EVT_WillChain_WillCreated",
     "inputs": [
       {
-        "indexed": true,
-        "internalType": "address",
         "name": "willAddress",
-        "type": "address"
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        "indexed": true,
-        "internalType": "address",
         "name": "mpAddress",
-        "type": "address"
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
-    "name": "EVT_WillChain_WillCreated",
-    "type": "event"
+    "anonymous": false
   }
 ]

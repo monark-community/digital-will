@@ -9,12 +9,18 @@ import {WillState} from "@interfaces/WillState.sol";
 import {SMInfo, SMPartialInfo} from "@interfaces/SMInfo.sol";
 import {SMState} from "@interfaces/SMState.sol";
 import {SecurityPeriodConfig} from "@interfaces/SecurityPeriodConfig.sol";
+import {SwapConfig} from "@interfaces/SwapConfig.sol";
 
+import {
+    ReentrancyGuard
+} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ISwapRouter, IQuoterV2, IWETH} from "@interfaces/SwapConfig.sol";
 import "@src/WillErrors.sol" as Errors;
 
 import "@constants/Will.c.sol" as C_WILL;
 
-contract Will is WillEvents {
+contract Will is WillEvents, ReentrancyGuard {
     /*/////////////////////////////////////////////////////////
                        VARIABLES
     /////////////////////////////////////////////////////////*/
@@ -22,6 +28,7 @@ contract Will is WillEvents {
 
     // Security Period Config. occupies 2 slots bc 2 uint256.
     SecurityPeriodConfig public securityPeriodConfigS;
+    SwapConfig public swapConfigS;
 
     // Timestamp storage slots, 1 per variable.
     uint256 public deathDeclarationTimestampS;
@@ -42,10 +49,12 @@ contract Will is WillEvents {
     constructor(
         address pmAddress,
         SMPartialInfo[] memory newSmList,
-        SecurityPeriodConfig memory securityPeriodConfig
+        SecurityPeriodConfig memory securityPeriodConfig,
+        SwapConfig memory swapConfig
     ) payable {
         PM_I = pmAddress;
-        createWillInitial(newSmList, securityPeriodConfig);
+        swapConfigS = swapConfig;
+        _createWillInitial(newSmList, securityPeriodConfig);
     }
 
     /*/////////////////////////////////////////////////////////
@@ -55,21 +64,21 @@ contract Will is WillEvents {
     /* ========= WILL MANAGEMENT ========= */
     // Necessary because msg.sender is not the PM when the will is created by the factory, so we can't add modifier onlyPm.
     // tx.origin is spoofable, we gotta use msg.sender.
-    function createWillInitial(
+    function _createWillInitial(
         SMPartialInfo[] memory newSmList,
         SecurityPeriodConfig memory securityPeriodConfig
     ) private {
-        createWillInternal(newSmList, securityPeriodConfig);
+        _createWillInternal(newSmList, securityPeriodConfig);
     }
 
     function createNewWill(
         SMPartialInfo[] calldata newSmList,
         SecurityPeriodConfig calldata securityPeriodConfig
-    ) external payable onlyPm willCanceled {
-        createWillInternal(newSmList, securityPeriodConfig);
+    ) external payable onlyPm willCanceled nonReentrant {
+        _createWillInternal(newSmList, securityPeriodConfig);
     }
 
-    function createWillInternal(
+    function _createWillInternal(
         SMPartialInfo[] memory newSmList,
         SecurityPeriodConfig memory securityPeriodConfig
     ) private {
@@ -94,8 +103,8 @@ contract Will is WillEvents {
             }
         }
 
-        initializeWill(securityPeriodConfig);
-        replaceAllSm(newSmList);
+        _initializeWill(securityPeriodConfig);
+        _replaceAllSm(newSmList);
     }
 
     function cancelWill()
@@ -104,13 +113,14 @@ contract Will is WillEvents {
         willNotExecuted
         willNotCanceled
         executionTimeNotPassed
+        nonReentrant
     {
         willStateS = WillState.CANCELED;
-        withdrawAllPm();
+        _withdrawAllPm();
         emit EVT_WillChain_WillCanceled();
     }
 
-    function initializeWill(
+    function _initializeWill(
         SecurityPeriodConfig memory securityPeriodConfig
     ) private {
         willStateS = WillState.INACTIVE;
@@ -135,6 +145,7 @@ contract Will is WillEvents {
         willNotExecuted
         executionTimeNotPassed
         securityPeriodNotStarted
+        nonReentrant
     {
         _validateSecurityPeriod(securityPeriodConfig);
         _validateSmUpdate(updatedSmList, addedSmList, deletedSmList);
@@ -147,9 +158,9 @@ contract Will is WillEvents {
                 securityPeriodConfig.maxSecurityPeriod
             );
         }
-        updateSmList(updatedSmList, addedSmList, deletedSmList);
+        _updateSmList(updatedSmList, addedSmList, deletedSmList);
 
-        checkAndUpdateWillState();
+        _checkAndUpdateWillState();
     }
 
     function _validateSecurityPeriod(
@@ -165,7 +176,7 @@ contract Will is WillEvents {
         ) revert Errors.ERR_InvalidSecurityPeriods();
     }
 
-    function checkAndUpdateWillState() private {
+    function _checkAndUpdateWillState() private {
         totalVotePowerS = 0;
         cumulatedVotePowerS = 0;
         validatedCountS = 0;
@@ -190,11 +201,12 @@ contract Will is WillEvents {
         }
         // Rule 2: all VALIDATED/DECLARED_DEATH → ACTIVE OR declaration in progress
         else {
-            if (willStateS != WillState.ACTIVE) emit EVT_WillChain_WillActivated();
+            if (willStateS != WillState.ACTIVE)
+                emit EVT_WillChain_WillActivated();
             willStateS = WillState.ACTIVE;
-            
+
             if (cumulatedVotePowerS > 0) {
-                updatePeriodUntilExecution();
+                _updatePeriodUntilExecution();
             } else {
                 // if person who declared desisted, maintain executionTimeStamp as is.
                 //TODO: Ask if when the last person who declared leaves
@@ -204,7 +216,7 @@ contract Will is WillEvents {
         }
     }
 
-    function updatePeriodUntilExecution() private {
+    function _updatePeriodUntilExecution() private {
         uint256 newExecutionTimestamp = ((securityPeriodConfigS
             .maxSecurityPeriod - securityPeriodConfigS.minSecurityPeriod) *
             (uint256(totalVotePowerS) - uint256(cumulatedVotePowerS))) /
@@ -222,14 +234,14 @@ contract Will is WillEvents {
 
     /////////////////////////////////////////////////////////
     /* ========= Secondary Member Management ========= */
-    function updateSmList(
+    function _updateSmList(
         SMPartialInfo[] memory updatedSmList,
         SMPartialInfo[] memory addedSmList,
         address[] memory deletedSmList
     ) private {
-        updateExistentSmList(updatedSmList);
-        addNewSmList(addedSmList);
-        deleteSmFromList(deletedSmList);
+        _updateExistentSmList(updatedSmList);
+        _addNewSmList(addedSmList);
+        _deleteSmFromList(deletedSmList);
     }
 
     function _validateSmUpdate(
@@ -280,7 +292,7 @@ contract Will is WillEvents {
         }
     }
 
-    function updateExistentSmList(
+    function _updateExistentSmList(
         SMPartialInfo[] memory updatedSmList
     ) private {
         for (uint256 i = 0; i < updatedSmList.length; i++) {
@@ -295,7 +307,7 @@ contract Will is WillEvents {
         }
     }
 
-    function addNewSmList(SMPartialInfo[] memory newSmList) private {
+    function _addNewSmList(SMPartialInfo[] memory newSmList) private {
         for (uint256 i = 0; i < newSmList.length; i++) {
             smListS.push(newSmList[i].smAddress);
 
@@ -312,7 +324,7 @@ contract Will is WillEvents {
         }
     }
 
-    function deleteSmFromList(address[] memory deletedSmList) private {
+    function _deleteSmFromList(address[] memory deletedSmList) private {
         for (uint256 i = 0; i < deletedSmList.length; i++) {
             uint256 idx = smMappingS[deletedSmList[i]].index - 1;
             uint256 lastIdx = smListS.length - 1;
@@ -332,8 +344,8 @@ contract Will is WillEvents {
         }
     }
 
-    function replaceAllSm(SMPartialInfo[] memory newSmList) private {
-        clearSm();
+    function _replaceAllSm(SMPartialInfo[] memory newSmList) private {
+        _clearSm();
 
         for (uint8 i = 0; i < newSmList.length; i++) {
             smListS.push(newSmList[i].smAddress);
@@ -346,7 +358,7 @@ contract Will is WillEvents {
         }
     }
 
-    function clearSm() private {
+    function _clearSm() private {
         uint256 length = smListS.length;
         for (uint8 i = 0; i < length; i++) {
             delete smMappingS[smListS[i]];
@@ -363,49 +375,102 @@ contract Will is WillEvents {
         onlyPm
         interactableAssets
         executionTimeNotPassed
+        nonReentrant
     {
         if (msg.value == 0) revert Errors.ERR_InvalidDeposit();
-        emit EVT_WillChain_AssetsDeposited(msg.value);
     }
 
     function withdraw(
         uint256 amount
-    ) external onlyPm interactableAssets executionTimeNotPassed {
+    ) external onlyPm interactableAssets executionTimeNotPassed nonReentrant {
         if (amount == 0) revert Errors.ERR_InvalidWithdrawal();
         if (address(this).balance < amount)
             revert Errors.ERR_InsufficientBalance();
 
         (bool callSuccess, ) = payable(PM_I).call{value: amount}("");
         if (!callSuccess) revert Errors.ERR_FailedWithdrawal();
-
-        emit EVT_WillChain_AssetsWithdrawn(amount);
     }
 
-    function withdrawAllPm() private {
+    function _withdrawAllPm() private {
         uint256 balance = address(this).balance;
         if (balance != 0) {
             (bool callSuccess, ) = payable(PM_I).call{value: balance}("");
             if (!callSuccess) revert Errors.ERR_FailedWithdrawal();
-            emit EVT_WillChain_AssetsWithdrawnAll();
         }
+    }
+
+    function _swapExactInputSingle() private returns (uint256) {
+        uint256 ethBalance = address(this).balance;
+        if (ethBalance == 0) revert Errors.ERR_InsufficientBalance();
+
+        // Wrap contract ether
+        IWETH(swapConfigS.wNative).deposit{value: ethBalance}();
+
+        // Approve router to spend our WETH
+        IERC20(swapConfigS.wNative).approve(swapConfigS.swapRouter, ethBalance);
+
+        // Build params for quoterV2
+        IQuoterV2.QuoteExactInputSingleParams memory quoteParams = IQuoterV2
+            .QuoteExactInputSingleParams({
+                tokenIn: swapConfigS.wNative,
+                tokenOut: swapConfigS.usdc,
+                amountIn: ethBalance,
+                fee: swapConfigS.poolFee,
+                sqrtPriceLimitX96: 0
+            });
+
+        // Get quote for the swap
+        (uint256 quotedAmountOut, , , ) = IQuoterV2(swapConfigS.quoter)
+            .quoteExactInputSingle(quoteParams);
+
+        // Slippage protection
+        uint256 amountOut = (quotedAmountOut * 995) / 1000;
+
+        // Build params for router
+        ISwapRouter.ExactInputSingleParams memory routerParams = ISwapRouter
+            .ExactInputSingleParams({
+                tokenIn: swapConfigS.wNative,
+                tokenOut: swapConfigS.usdc,
+                fee: swapConfigS.poolFee,
+                recipient: address(this),
+                deadline: block.timestamp + 300,
+                amountIn: ethBalance,
+                amountOutMinimum: amountOut,
+                sqrtPriceLimitX96: 0
+            });
+
+        // Execute swap
+        return
+            ISwapRouter(swapConfigS.swapRouter).exactInputSingle(routerParams);
     }
 
     function swapAssets()
         external
+        nonReentrant
         onlySm
         willActive
         securityPeriodStarted
         securityPeriodFinished
+        returns (uint256)
     {
-        //TODO : Switch assets to USDC, verify what if no assets.
         willStateS = WillState.EXECUTED;
+        uint256 amountOut = _swapExactInputSingle();
         emit EVT_WillChain_AssetsSwapped(msg.sender);
+        return amountOut;
+    }
+
+    function getWethBalance() external view returns (uint256) {
+        return IERC20(swapConfigS.wNative).balanceOf(address(this)); // in wei
+    }
+
+    function getUsdcBalance() external view returns (uint256) {
+        return IERC20(swapConfigS.usdc).balanceOf(address(this)); // in 6 decimals
     }
 
     /////////////////////////////////////////////////////////
     /* ========= Sm Participation ========= */
 
-    function validateSm() external onlySm willInactive {
+    function validateSm() external onlySm willInactive nonReentrant {
         if (smMappingS[msg.sender].state != SMState.PENDING)
             revert Errors.ERR_SMAlreadyValidated(); // already validated
 
@@ -424,9 +489,11 @@ contract Will is WillEvents {
         willNotCanceled
         willNotExecuted
         executionTimeNotPassed
+        nonReentrant
     {
-        if (smMappingS[msg.sender].state == SMState.PENDING)
-            revert Errors.ERR_SMNotValidated(); // can't desist if didn't give approval previously.
+        // Commented out so that we allow the SM to desist even before participating in contract.
+        // if (smMappingS[msg.sender].state == SMState.DECLARED_DEATH)
+        //     revert Errors.ERR_SMDeclaredDeath(); // can't desist if declared death.
 
         // Remove from datasources
         SMInfo storage sm = smMappingS[msg.sender];
@@ -446,14 +513,14 @@ contract Will is WillEvents {
 
         if (smListS.length == 0) {
             willStateS = WillState.CANCELED;
-            withdrawAllPm();
+            _withdrawAllPm();
             emit EVT_WillChain_SMDesisted(msg.sender);
             emit EVT_WillChain_WillCanceled();
             return;
         } else {
             // This updates the vote power too. It is assumed that substracting desisted points from total preserves the same proportions allst whilst adding points to everyone.
             // In case they ask to distribute points explicitly, change here. TODO
-            checkAndUpdateWillState();
+            _checkAndUpdateWillState();
         }
         emit EVT_WillChain_SMDesisted(msg.sender);
     }
@@ -467,6 +534,7 @@ contract Will is WillEvents {
         willActive
         notOnCooldown
         executionTimeNotPassed
+        nonReentrant
     {
         if (smMappingS[msg.sender].state == SMState.DECLARED_DEATH)
             revert Errors.ERR_SMAlreadyDeclaredDeath();
@@ -481,7 +549,7 @@ contract Will is WillEvents {
         cumulatedVotePowerS += smMappingS[msg.sender].votePower;
         smMappingS[msg.sender].state = SMState.DECLARED_DEATH;
 
-        updatePeriodUntilExecution();
+        _updatePeriodUntilExecution();
     }
 
     function vetoDeath()
@@ -490,6 +558,7 @@ contract Will is WillEvents {
         willActive
         notOnCooldown
         executionTimeNotPassed
+        nonReentrant
     {
         // If no declaration, can't veto.
         if (cumulatedVotePowerS == 0 && deathDeclarationTimestampS == 0)
@@ -499,15 +568,15 @@ contract Will is WillEvents {
         deathDeclarationTimestampS = 0;
         executionTimeStampS = 0;
 
-        resetDeclareSmListState();
-        checkAndUpdateWillState();
+        _resetDeclareSmListState();
+        _checkAndUpdateWillState();
 
         //Starts cooldown by itself through conditions.
 
         emit EVT_WillChain_VetoExercised();
     }
 
-    function resetDeclareSmListState() private {
+    function _resetDeclareSmListState() private {
         uint256 length = smListS.length;
         for (uint8 i = 0; i < length; i++) {
             if (smMappingS[smListS[i]].state == SMState.DECLARED_DEATH)
