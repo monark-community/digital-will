@@ -14,7 +14,7 @@ use {num_traits::cast::ToPrimitive, std::str::FromStr, substreams::scalar::BigDe
 
 substreams_ethereum::init!();
 
-const WILLFACTORY_TRACKED_CONTRACT: [u8; 20] = hex!("6cbd60e8222f5f07d32c773ef15fd01a43ec8328");
+const WILLFACTORY_TRACKED_CONTRACT: [u8; 20] = hex!("b15723D59D48a18ce479b15BF55a2160459086ec");
 
 fn map_willfactory_events(blk: &eth::Block, events: &mut contract::Events) {
     for rcpt in blk.receipts() {

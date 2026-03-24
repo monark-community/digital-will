@@ -14,6 +14,11 @@ Substreams has all the benefits of StreamingFast Firehose, like low-cost caching
 
 Full documentation for installing, running and working with Substreams is available at: https://docs.substreams.dev.
 
+## How to repackage for a new factory address
+1. Update WILLFACTORY_TRACKED_CONTRACT in lib.rs:16
+2. Update the blockFilter address + initialBlock in substreams.yaml:34
+3. Run Substreams build to generate new spkg
+
 ## Contributing
 
 **Please first refer to the general
