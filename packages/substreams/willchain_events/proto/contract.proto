@@ -4,7 +4,7 @@ import "google/protobuf/timestamp.proto";
 
 package contract.v1;
 message Events {
-    repeated Willfactory_EvtWillChainWillCreated willfactory_evt_will_chain_will_createds = 1;
+    repeated Willfactory_EvtWillChainWillCreated factory_evt_will_chain_will_createds = 1;
     repeated Will_EvtWillChainAssetsDeposited will_evt_will_chain_assets_depositeds = 2;
     repeated Will_EvtWillChainAssetsSwapped will_evt_will_chain_assets_swappeds = 3;
     repeated Will_EvtWillChainAssetsWithdrawn will_evt_will_chain_assets_withdrawns = 4;
@@ -23,30 +23,19 @@ message Events {
 }
 message Calls {
     repeated Willfactory_CreateWillCall willfactory_call_create_wills = 1;
-    repeated Will_CancelWillCall will_call_cancel_wills = 2;
-    repeated Will_CreateNewWillCall will_call_create_new_wills = 3;
-    repeated Will_DeclareDeathCall will_call_declare_deaths = 4;
-    repeated Will_DepositCall will_call_deposits = 5;
-    repeated Will_DesistSmCall will_call_desist_sms = 6;
-    repeated Will_SwapAssetsCall will_call_swap_assets = 7;
-    repeated Will_UpdateWillCall will_call_update_wills = 8;
-    repeated Will_ValidateSmCall will_call_validate_sms = 9;
-    repeated Will_VetoDeathCall will_call_veto_deaths = 10;
-    repeated Will_WithdrawCall will_call_withdraws = 11;
 }
 message EventsCalls {
     Events events = 1;
     Calls calls = 2;
 }
-message Willfactory_EvtWillChainWillCreated {
-    string evt_tx_hash = 1;
-    uint32 evt_index = 2;
-    google.protobuf.Timestamp evt_block_time = 3;
-    uint64 evt_block_number = 4;
-    bytes will_address = 5;
-    bytes mp_address = 6;
+message SmPartialInfo {
+    bytes sm_address = 1;
+    uint32 vote_power = 2;
 }
-  
+message SecurityPeriodConfig {
+    string min_security_period = 1;
+    string max_security_period = 2;
+}
 message Willfactory_CreateWillCall {
     string call_tx_hash = 1;
     google.protobuf.Timestamp call_block_time = 2;
@@ -55,6 +44,18 @@ message Willfactory_CreateWillCall {
     bool call_success = 5;
     bytes owner = 6;
     bytes output_param0 = 7;
+    repeated SmPartialInfo new_sm_list = 8;
+    SecurityPeriodConfig security_period_config = 9;
+    string call_value = 10; // ETH sent with the call, in wei (decimal string)
+}
+
+message Willfactory_EvtWillChainWillCreated {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    bytes will_address = 5;
+    bytes mp_address = 6;
 }
     
 message Will_EvtWillChainAssetsDeposited {
@@ -190,16 +191,7 @@ message Will_EvtWillChainWillCanceled {
     uint64 evt_block_number = 4;
     string evt_address = 5;
 }
-    
-message Will_CancelWillCall {
-    string call_tx_hash = 1;
-    google.protobuf.Timestamp call_block_time = 2;
-    uint64 call_block_number = 3;
-    uint64 call_ordinal = 4;
-    bool call_success = 5;
-    string call_address = 6;
-}
-    
+        
 message Will_CreateNewWillCall {
     string call_tx_hash = 1;
     google.protobuf.Timestamp call_block_time = 2;
@@ -208,77 +200,5 @@ message Will_CreateNewWillCall {
     bool call_success = 5;
     string call_address = 6;
 }
+
     
-message Will_DeclareDeathCall {
-    string call_tx_hash = 1;
-    google.protobuf.Timestamp call_block_time = 2;
-    uint64 call_block_number = 3;
-    uint64 call_ordinal = 4;
-    bool call_success = 5;
-    string call_address = 6;
-}
-    
-message Will_DepositCall {
-    string call_tx_hash = 1;
-    google.protobuf.Timestamp call_block_time = 2;
-    uint64 call_block_number = 3;
-    uint64 call_ordinal = 4;
-    bool call_success = 5;
-    string call_address = 6;
-}
-    
-message Will_DesistSmCall {
-    string call_tx_hash = 1;
-    google.protobuf.Timestamp call_block_time = 2;
-    uint64 call_block_number = 3;
-    uint64 call_ordinal = 4;
-    bool call_success = 5;
-    string call_address = 6;
-}
-    
-message Will_SwapAssetsCall {
-    string call_tx_hash = 1;
-    google.protobuf.Timestamp call_block_time = 2;
-    uint64 call_block_number = 3;
-    uint64 call_ordinal = 4;
-    bool call_success = 5;
-    string call_address = 6;
-}
-    
-message Will_UpdateWillCall {
-    string call_tx_hash = 1;
-    google.protobuf.Timestamp call_block_time = 2;
-    uint64 call_block_number = 3;
-    uint64 call_ordinal = 4;
-    bool call_success = 5;
-    string call_address = 6;
-    repeated bytes deleted_sm_list = 7;
-}
-    
-message Will_ValidateSmCall {
-    string call_tx_hash = 1;
-    google.protobuf.Timestamp call_block_time = 2;
-    uint64 call_block_number = 3;
-    uint64 call_ordinal = 4;
-    bool call_success = 5;
-    string call_address = 6;
-}
-    
-message Will_VetoDeathCall {
-    string call_tx_hash = 1;
-    google.protobuf.Timestamp call_block_time = 2;
-    uint64 call_block_number = 3;
-    uint64 call_ordinal = 4;
-    bool call_success = 5;
-    string call_address = 6;
-}
-    
-message Will_WithdrawCall {
-    string call_tx_hash = 1;
-    google.protobuf.Timestamp call_block_time = 2;
-    uint64 call_block_number = 3;
-    uint64 call_ordinal = 4;
-    bool call_success = 5;
-    string call_address = 6;
-    string amount = 7;
-}

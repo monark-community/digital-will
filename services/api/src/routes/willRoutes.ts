@@ -1,5 +1,18 @@
 import { Router } from "express";
-import { handleGetWills, handleGetAssociatedWills, handleCreateDraft, handleUpdateDraft, handleDeployWill, handleDeleteDraft, handleCancelWillOnChain, handleUpdateDeployedWill } from "../controllers/willController";
+import { 
+  handleGetWills, 
+  handleGetAssociatedWills, 
+  handleCreateDraft, 
+  handleUpdateDraft, 
+  handleDeployWill, 
+  handleDeleteDraft, 
+  handleCancelWillOnChain, 
+  handleUpdateDeployedWill,
+  handleValidateForDeployment,
+  handleGetContractBalance,
+  handleGetEnrichedWills,
+  handleRemoveSecondaryMember
+} from "../controllers/willController";
 import { verifyToken } from "../middlewares/authMiddleware";
 
 const router = Router();
@@ -21,6 +34,27 @@ router.get("/associated", handleGetAssociatedWills);
 router.get("/:walletAddress", handleGetWills);
 
 /**
+ * @route   GET /wills/:walletAddress/enriched
+ * @desc    Get all wills enriched with blockchain state
+ * @access  Private
+ */
+router.get("/:walletAddress/enriched", handleGetEnrichedWills);
+
+/**
+ * @route   GET /wills/validate/:willId
+ * @desc    Validate a will for deployment readiness
+ * @access  Private
+ */
+router.get("/validate/:willId", handleValidateForDeployment);
+
+/**
+ * @route   GET /wills/balance/:contractAddress
+ * @desc    Get contract balance
+ * @access  Private
+ */
+router.get("/balance/:contractAddress", handleGetContractBalance);
+
+/**
  * @route   POST /wills/draft
  * @desc    Create a new draft will (off-chain only)
  * @access  Private
@@ -36,7 +70,7 @@ router.put("/draft/:willId", handleUpdateDraft);
 
 /**
  * @route   POST /wills/:willId/deploy
- * @desc    Deploy a will to blockchain and mark as INACTIVE
+ * @desc    Deploy a will to blockchain, delete draft and create will
  * @access  Private
  */
 router.post("/:willId/deploy", handleDeployWill);
@@ -61,5 +95,12 @@ router.post("/:willId/cancel", handleCancelWillOnChain);
  * @access  Private
  */
 router.put("/:willId/members", handleUpdateDeployedWill);
+
+/**
+ * @route   DELETE /wills/:willId/secondary-member
+ * @desc    Remove the authenticated user as a secondary member from a will (after desist)
+ * @access  Private
+ */
+router.delete("/:willId/secondary-member", handleRemoveSecondaryMember);
 
 export default router;

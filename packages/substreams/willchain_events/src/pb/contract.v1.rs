@@ -4,7 +4,7 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Events {
     #[prost(message, repeated, tag="1")]
-    pub willfactory_evt_will_chain_will_createds: ::prost::alloc::vec::Vec<WillfactoryEvtWillChainWillCreated>,
+    pub factory_evt_will_chain_will_createds: ::prost::alloc::vec::Vec<WillfactoryEvtWillChainWillCreated>,
     #[prost(message, repeated, tag="2")]
     pub will_evt_will_chain_assets_depositeds: ::prost::alloc::vec::Vec<WillEvtWillChainAssetsDeposited>,
     #[prost(message, repeated, tag="3")]
@@ -41,26 +41,6 @@ pub struct Events {
 pub struct Calls {
     #[prost(message, repeated, tag="1")]
     pub willfactory_call_create_wills: ::prost::alloc::vec::Vec<WillfactoryCreateWillCall>,
-    #[prost(message, repeated, tag="2")]
-    pub will_call_cancel_wills: ::prost::alloc::vec::Vec<WillCancelWillCall>,
-    #[prost(message, repeated, tag="3")]
-    pub will_call_create_new_wills: ::prost::alloc::vec::Vec<WillCreateNewWillCall>,
-    #[prost(message, repeated, tag="4")]
-    pub will_call_declare_deaths: ::prost::alloc::vec::Vec<WillDeclareDeathCall>,
-    #[prost(message, repeated, tag="5")]
-    pub will_call_deposits: ::prost::alloc::vec::Vec<WillDepositCall>,
-    #[prost(message, repeated, tag="6")]
-    pub will_call_desist_sms: ::prost::alloc::vec::Vec<WillDesistSmCall>,
-    #[prost(message, repeated, tag="7")]
-    pub will_call_swap_assets: ::prost::alloc::vec::Vec<WillSwapAssetsCall>,
-    #[prost(message, repeated, tag="8")]
-    pub will_call_update_wills: ::prost::alloc::vec::Vec<WillUpdateWillCall>,
-    #[prost(message, repeated, tag="9")]
-    pub will_call_validate_sms: ::prost::alloc::vec::Vec<WillValidateSmCall>,
-    #[prost(message, repeated, tag="10")]
-    pub will_call_veto_deaths: ::prost::alloc::vec::Vec<WillVetoDeathCall>,
-    #[prost(message, repeated, tag="11")]
-    pub will_call_withdraws: ::prost::alloc::vec::Vec<WillWithdrawCall>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -72,19 +52,19 @@ pub struct EventsCalls {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct WillfactoryEvtWillChainWillCreated {
-    #[prost(string, tag="1")]
-    pub evt_tx_hash: ::prost::alloc::string::String,
+pub struct SmPartialInfo {
+    #[prost(bytes="vec", tag="1")]
+    pub sm_address: ::prost::alloc::vec::Vec<u8>,
     #[prost(uint32, tag="2")]
-    pub evt_index: u32,
-    #[prost(message, optional, tag="3")]
-    pub evt_block_time: ::core::option::Option<::prost_types::Timestamp>,
-    #[prost(uint64, tag="4")]
-    pub evt_block_number: u64,
-    #[prost(bytes="vec", tag="5")]
-    pub will_address: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="6")]
-    pub mp_address: ::prost::alloc::vec::Vec<u8>,
+    pub vote_power: u32,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SecurityPeriodConfig {
+    #[prost(string, tag="1")]
+    pub min_security_period: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub max_security_period: ::prost::alloc::string::String,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -103,6 +83,29 @@ pub struct WillfactoryCreateWillCall {
     pub owner: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes="vec", tag="7")]
     pub output_param0: ::prost::alloc::vec::Vec<u8>,
+    #[prost(message, repeated, tag="8")]
+    pub new_sm_list: ::prost::alloc::vec::Vec<SmPartialInfo>,
+    #[prost(message, optional, tag="9")]
+    pub security_period_config: ::core::option::Option<SecurityPeriodConfig>,
+    /// ETH sent with the call, in wei (decimal string)
+    #[prost(string, tag="10")]
+    pub call_value: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct WillfactoryEvtWillChainWillCreated {
+    #[prost(string, tag="1")]
+    pub evt_tx_hash: ::prost::alloc::string::String,
+    #[prost(uint32, tag="2")]
+    pub evt_index: u32,
+    #[prost(message, optional, tag="3")]
+    pub evt_block_time: ::core::option::Option<::prost_types::Timestamp>,
+    #[prost(uint64, tag="4")]
+    pub evt_block_number: u64,
+    #[prost(bytes="vec", tag="5")]
+    pub will_address: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes="vec", tag="6")]
+    pub mp_address: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -344,22 +347,6 @@ pub struct WillEvtWillChainWillCanceled {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct WillCancelWillCall {
-    #[prost(string, tag="1")]
-    pub call_tx_hash: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="2")]
-    pub call_block_time: ::core::option::Option<::prost_types::Timestamp>,
-    #[prost(uint64, tag="3")]
-    pub call_block_number: u64,
-    #[prost(uint64, tag="4")]
-    pub call_ordinal: u64,
-    #[prost(bool, tag="5")]
-    pub call_success: bool,
-    #[prost(string, tag="6")]
-    pub call_address: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct WillCreateNewWillCall {
     #[prost(string, tag="1")]
     pub call_tx_hash: ::prost::alloc::string::String,
@@ -373,137 +360,5 @@ pub struct WillCreateNewWillCall {
     pub call_success: bool,
     #[prost(string, tag="6")]
     pub call_address: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct WillDeclareDeathCall {
-    #[prost(string, tag="1")]
-    pub call_tx_hash: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="2")]
-    pub call_block_time: ::core::option::Option<::prost_types::Timestamp>,
-    #[prost(uint64, tag="3")]
-    pub call_block_number: u64,
-    #[prost(uint64, tag="4")]
-    pub call_ordinal: u64,
-    #[prost(bool, tag="5")]
-    pub call_success: bool,
-    #[prost(string, tag="6")]
-    pub call_address: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct WillDepositCall {
-    #[prost(string, tag="1")]
-    pub call_tx_hash: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="2")]
-    pub call_block_time: ::core::option::Option<::prost_types::Timestamp>,
-    #[prost(uint64, tag="3")]
-    pub call_block_number: u64,
-    #[prost(uint64, tag="4")]
-    pub call_ordinal: u64,
-    #[prost(bool, tag="5")]
-    pub call_success: bool,
-    #[prost(string, tag="6")]
-    pub call_address: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct WillDesistSmCall {
-    #[prost(string, tag="1")]
-    pub call_tx_hash: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="2")]
-    pub call_block_time: ::core::option::Option<::prost_types::Timestamp>,
-    #[prost(uint64, tag="3")]
-    pub call_block_number: u64,
-    #[prost(uint64, tag="4")]
-    pub call_ordinal: u64,
-    #[prost(bool, tag="5")]
-    pub call_success: bool,
-    #[prost(string, tag="6")]
-    pub call_address: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct WillSwapAssetsCall {
-    #[prost(string, tag="1")]
-    pub call_tx_hash: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="2")]
-    pub call_block_time: ::core::option::Option<::prost_types::Timestamp>,
-    #[prost(uint64, tag="3")]
-    pub call_block_number: u64,
-    #[prost(uint64, tag="4")]
-    pub call_ordinal: u64,
-    #[prost(bool, tag="5")]
-    pub call_success: bool,
-    #[prost(string, tag="6")]
-    pub call_address: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct WillUpdateWillCall {
-    #[prost(string, tag="1")]
-    pub call_tx_hash: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="2")]
-    pub call_block_time: ::core::option::Option<::prost_types::Timestamp>,
-    #[prost(uint64, tag="3")]
-    pub call_block_number: u64,
-    #[prost(uint64, tag="4")]
-    pub call_ordinal: u64,
-    #[prost(bool, tag="5")]
-    pub call_success: bool,
-    #[prost(string, tag="6")]
-    pub call_address: ::prost::alloc::string::String,
-    #[prost(bytes="vec", repeated, tag="7")]
-    pub deleted_sm_list: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct WillValidateSmCall {
-    #[prost(string, tag="1")]
-    pub call_tx_hash: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="2")]
-    pub call_block_time: ::core::option::Option<::prost_types::Timestamp>,
-    #[prost(uint64, tag="3")]
-    pub call_block_number: u64,
-    #[prost(uint64, tag="4")]
-    pub call_ordinal: u64,
-    #[prost(bool, tag="5")]
-    pub call_success: bool,
-    #[prost(string, tag="6")]
-    pub call_address: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct WillVetoDeathCall {
-    #[prost(string, tag="1")]
-    pub call_tx_hash: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="2")]
-    pub call_block_time: ::core::option::Option<::prost_types::Timestamp>,
-    #[prost(uint64, tag="3")]
-    pub call_block_number: u64,
-    #[prost(uint64, tag="4")]
-    pub call_ordinal: u64,
-    #[prost(bool, tag="5")]
-    pub call_success: bool,
-    #[prost(string, tag="6")]
-    pub call_address: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct WillWithdrawCall {
-    #[prost(string, tag="1")]
-    pub call_tx_hash: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="2")]
-    pub call_block_time: ::core::option::Option<::prost_types::Timestamp>,
-    #[prost(uint64, tag="3")]
-    pub call_block_number: u64,
-    #[prost(uint64, tag="4")]
-    pub call_ordinal: u64,
-    #[prost(bool, tag="5")]
-    pub call_success: bool,
-    #[prost(string, tag="6")]
-    pub call_address: ::prost::alloc::string::String,
-    #[prost(string, tag="7")]
-    pub amount: ::prost::alloc::string::String,
 }
 // @@protoc_insertion_point(module)

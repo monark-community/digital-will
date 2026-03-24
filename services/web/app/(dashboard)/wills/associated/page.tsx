@@ -6,7 +6,6 @@ import { ethers } from "ethers";
 import Header from "@/app/components/ui/Header";
 import { willService, authService, type AssociatedWill } from "@/lib/services";
 import { WILL_ABI } from "@/lib/contracts/WillABI";
-import { enrichWillsWithChainState } from "@/lib/utils/chainState";
 import { useCurrentUser, useWallets } from "@/lib/hooks";
 import type { User } from "@/lib/types";
 import { SecurityPeriodCountdown, CooldownCountdown } from "@/app/components/ui/SecurityPeriodCountdown";
@@ -52,6 +51,7 @@ const SM_ACTIONS: ActionDef[] = [
     description: 'Start the security period countdown.',
     disabledReason: (w) => {
       if (w.state !== 'ACTIVE') return `Will must be ACTIVE (currently ${w.state})`;
+      if (w.myMembership.state !== 'VALIDATED') return 'You must be a validated member to declare death';
       const nowSec = Math.floor(Date.now() / 1000);
       const cooldownEnd = w.cooldownTimestampOnChain ?? 0;
       if (cooldownEnd > nowSec) {
@@ -76,6 +76,7 @@ const SM_ACTIONS: ActionDef[] = [
     description: 'Distribute assets after security period.',
     disabledReason: (w) => {
       if (w.state !== 'ACTIVE') return `Will must be ACTIVE (currently ${w.state})`;
+      if (w.myMembership.state === 'PENDING') return 'You must be validated to execute the will';
       const anyDeclared = w.secondaryMembers.some(sm => sm.state === 'DECLARED_DEATH');
       if (!anyDeclared) return 'No SM has declared death yet. Security period not started';
       const execTs = w.executionTimestampOnChain;
@@ -165,32 +166,29 @@ export default function AssociatedWillsPage() {
   }, []);
 
 
-  const enrichWithChainState = useCallback(async (wills: AssociatedWill[]): Promise<AssociatedWill[]> => {
-    const enriched = await enrichWillsWithChainState(wills);
-    return enriched.map((will) => {
-      const myEnriched = will.secondaryMembers.find(
-        (sm) => sm.secondaryMemberId === will.myMembership.secondaryMemberId,
-      );
-      return {
-        ...will,
-        myMembership: { ...will.myMembership, state: myEnriched?.state ?? will.myMembership.state },
-      };
-    });
-  }, []);
-
   const fetchAssociatedWills = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await willService.getAssociatedWills();
-      const enriched = await enrichWithChainState(data);
-      setWills(enriched);
+      const enrichedWills = await willService.getAssociatedWills();
+      
+      const willsWithUpdatedMembership = enrichedWills.map((will) => {
+        const myEnriched = will.secondaryMembers.find(
+          (sm) => sm.secondaryMemberId === will.myMembership.secondaryMemberId,
+        );
+        return {
+          ...will,
+          myMembership: { ...will.myMembership, state: myEnriched?.state ?? will.myMembership.state },
+        };
+      });
+      
+      setWills(willsWithUpdatedMembership);
     } catch (err: any) {
       setError(err.message || "Failed to load associated wills");
     } finally {
       setIsLoading(false);
     }
-  }, [enrichWithChainState]);
+  }, []);
 
   const handleSmAction = useCallback(async (will: AssociatedWill, action: ActionDef) => {
     if (!will.contractAddressInBlockchain) return;
@@ -216,7 +214,26 @@ export default function AssociatedWillsPage() {
         case 'declareDeath': tx = await contract.declareDeath(); break;
         case 'swapAssets':   tx = await contract.swapAssets();  break;
       }
-      await tx.wait();
+      const receipt = await tx.wait();
+      
+      /*
+      2 seconds delay added instead of waiting 2 block confirmation 
+      */
+      await new Promise(resolve => setTimeout(resolve, 2000)); 
+
+      if (action.id === 'desist') {
+        console.log('🔵 Desist confirmed, removing from database...');
+        try {
+          await willService.removeSecondaryMember(will.willId);
+          console.log('🔵 Successfully removed from database');
+        } catch (dbError: any) {
+          console.error('🔴 Failed to remove from database:', dbError);
+          setActionError(prev => ({ ...prev, [id]: 'Blockchain transaction succeeded, but failed to update database. Please refresh.' }));
+          setActionLoading(prev => ({ ...prev, [id]: null }));
+          return;
+        }
+      }
+
       setActionSuccess(prev => ({ ...prev, [id]: `"${action.label}" confirmed!` }));
       await fetchAssociatedWills();
     } catch (err: any) {

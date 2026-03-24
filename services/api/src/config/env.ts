@@ -1,22 +1,54 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
+let envLoaded = false;
+
 /**
  * Load environment variables from .env file
  */
 function loadEnvironment() {
-  // Resolve to project root (services/api/.env)
-  const envPath = path.resolve(__dirname, '../../.env');
+  if (envLoaded) return;
+  envLoaded = true;
 
+  const envLocalPath = path.resolve(__dirname, '../../.env.local');
+  const envPath = path.resolve(__dirname, '../../.env');
+  const rootEnvPath = path.resolve(__dirname, '../../../.env');
+
+  let loaded = false;
   try {
-    const result = dotenv.config({ path: envPath });
+    const result = dotenv.config({ path: envLocalPath, override: false });
     if (!result.error) {
-      console.log(`Loaded .env file from ${envPath}`);
-    } else {
-      console.warn(`Could not load .env file from ${envPath}`);
+      console.log(`Loaded .env.local file from ${envLocalPath}`);
+      loaded = true;
     }
   } catch (error) {
-    console.warn('Error loading .env file:', error);
+  }
+
+  if (!loaded) {
+    try {
+      const result = dotenv.config({ path: envPath, override: false });
+      if (!result.error) {
+        console.log(`Loaded .env file from ${envPath}`);
+        loaded = true;
+      }
+    } catch (error) {
+    }
+  }
+
+  if (!loaded) {
+    try {
+      const result = dotenv.config({ path: rootEnvPath, override: false });
+      if (!result.error) {
+        console.log(`Loaded root .env file from ${rootEnvPath}`);
+        loaded = true;
+      }
+    } catch (error) {
+      console.warn('Error loading .env file:', error);
+    }
+  }
+
+  if (!loaded) {
+    console.warn('No .env or .env.local file found');
   }
 }
 
