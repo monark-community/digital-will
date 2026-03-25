@@ -50,7 +50,8 @@ export async function checkDeleteEligibility(userId: string): Promise<DeleteElig
 
   const ownedDeployedWills = await prisma.will.findMany({
     where: {
-      walletAddress: { in: walletAddresses }
+      walletAddress: { in: walletAddresses },
+      isDeletedByUser: false
     },
     select: { willName: true }
   });

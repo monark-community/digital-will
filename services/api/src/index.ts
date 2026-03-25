@@ -10,6 +10,7 @@ import { NotFoundError } from "./utils/errors";
 import { ROUTES } from "./utils/constants";
 import { startSubstreamsListener } from "./substreams/substreams";
 import { initGateway } from "./gateways/userNotificationGateway";
+import { startProtectionPeriodPoller } from "./services/protectionPeriodService";
 
 // Load environment variables
 loadEnvironment();

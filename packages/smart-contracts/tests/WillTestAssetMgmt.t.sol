@@ -9,7 +9,12 @@ import {Will} from "@src/Will.sol";
 import {WillState} from "@interfaces/WillState.sol";
 import {SMPartialInfo} from "@interfaces/SMInfo.sol";
 import {SecurityPeriodConfig} from "@interfaces/SecurityPeriodConfig.sol";
-
+import {SwapConfig} from "@interfaces/SwapConfig.sol";
+import {ConfigUtils} from "@src/ConfigUtils.sol";
+import {MockSwapRouter} from "@src/anvil-swap-related/MockSwapRouter.sol";
+import {MockWETH} from "@src/anvil-swap-related/MockWETH.sol";
+import {MockUSDC} from "@src/anvil-swap-related/MockUSDC.sol";
+import {MockQuoterV2} from "@src/anvil-swap-related/MockQuoterV2.sol";
 import "@src/WillErrors.sol" as Errors;
 
 // Used for testing failed withdrawals on payable call.
@@ -35,9 +40,19 @@ contract WillTestAssetMgmt is Test {
                 minSecurityPeriod: 1 days,
                 maxSecurityPeriod: 2 days
             });
-
+        MockWETH eth = new MockWETH();
+        MockUSDC usdc = new MockUSDC();
+        MockSwapRouter router = new MockSwapRouter();
+        MockQuoterV2 quoter = new MockQuoterV2();
+        SwapConfig memory swapConfig = SwapConfig({
+            swapRouter: address(router),
+            quoter: address(quoter),
+            wNative: address(eth),
+            usdc: address(usdc),
+            poolFee: 0
+        });
         vm.prank(pm);
-        will = new Will(pm, sms, securityPeriodConfig);
+        will = new Will(pm, sms, securityPeriodConfig, swapConfig);
     }
 
     // deposit valid funds.
@@ -83,6 +98,12 @@ contract WillTestAssetMgmt is Test {
         vm.prank(sm1);
         will.swapAssets();
         assertEq(uint8(will.getState()), uint8(WillState.EXECUTED));
+
+        vm.prank(sm1);
+        assertTrue(will.getWethBalance() == 0);
+
+        vm.prank(sm1);
+        assertTrue(will.getUsdcBalance() > 0);
     }
 }
 
@@ -104,9 +125,19 @@ contract WillTestInvalidAssetMgmt is Test {
                 minSecurityPeriod: 1 days,
                 maxSecurityPeriod: 2 days
             });
-
+        MockWETH eth = new MockWETH();
+        MockUSDC usdc = new MockUSDC();
+        MockSwapRouter router = new MockSwapRouter();
+        MockQuoterV2 quoter = new MockQuoterV2();
+        SwapConfig memory swapConfig = SwapConfig({
+            swapRouter: address(router),
+            quoter: address(quoter),
+            wNative: address(eth),
+            usdc: address(usdc),
+            poolFee: 0
+        });
         vm.prank(pm);
-        will = new Will(pm, sms, securityPeriodConfig);
+        will = new Will(pm, sms, securityPeriodConfig, swapConfig);
     }
 
     // deposit funds as non-pm.
@@ -304,13 +335,14 @@ contract WillTestInvalidAssetMgmt is Test {
                 minSecurityPeriod: 1 days,
                 maxSecurityPeriod: 2 days
             });
-
+        SwapConfig memory swapConfig = ConfigUtils.getConfig();
         RejectEther rejectPm = new RejectEther();
 
         will = new Will{value: 1 ether}(
             address(rejectPm),
             sms,
-            securityPeriodConfig
+            securityPeriodConfig,
+            swapConfig
         );
 
         vm.prank(address(rejectPm));
@@ -328,13 +360,24 @@ contract WillTestInvalidAssetMgmt is Test {
                 minSecurityPeriod: 1 days,
                 maxSecurityPeriod: 2 days
             });
-
+        MockWETH eth = new MockWETH();
+        MockUSDC usdc = new MockUSDC();
+        MockSwapRouter router = new MockSwapRouter();
+        MockQuoterV2 quoter = new MockQuoterV2();
+        SwapConfig memory swapConfig = SwapConfig({
+            swapRouter: address(router),
+            quoter: address(quoter),
+            wNative: address(eth),
+            usdc: address(usdc),
+            poolFee: 0
+        });
         RejectEther rejectPm = new RejectEther();
 
         will = new Will{value: 1 ether}(
             address(rejectPm),
             sms,
-            securityPeriodConfig
+            securityPeriodConfig,
+            swapConfig
         );
 
         vm.prank(address(rejectPm));
@@ -463,6 +506,47 @@ contract WillTestInvalidAssetMgmt is Test {
         // Try to swap assets before security period finishes.
         vm.prank(sm1);
         vm.expectRevert(Errors.ERR_SecurityPeriodNotFinished.selector);
+        will.swapAssets();
+    }
+
+    // swap assets with no balance.
+    function test_SwapAssets_NoBalance() public {
+        SMPartialInfo[] memory sms = new SMPartialInfo[](2);
+        sms[0] = SMPartialInfo({smAddress: sm1, votePower: 1});
+        sms[1] = SMPartialInfo({smAddress: sm2, votePower: 1});
+        SecurityPeriodConfig
+            memory securityPeriodConfig = SecurityPeriodConfig({
+                minSecurityPeriod: 1 days,
+                maxSecurityPeriod: 2 days
+            });
+        MockWETH eth = new MockWETH();
+        MockUSDC usdc = new MockUSDC();
+        MockSwapRouter router = new MockSwapRouter();
+        MockQuoterV2 quoter = new MockQuoterV2();
+        SwapConfig memory swapConfig = SwapConfig({
+            swapRouter: address(router),
+            quoter: address(quoter),
+            wNative: address(eth),
+            usdc: address(usdc),
+            poolFee: 0
+        });
+
+        will = new Will(address(pm), sms, securityPeriodConfig, swapConfig);
+        vm.prank(sm1);
+        will.validateSm();
+        vm.prank(sm2);
+        will.validateSm();
+
+        vm.prank(sm1);
+        will.declareDeath();
+        vm.prank(sm2);
+        will.declareDeath();
+
+        // Fast forward time to make the will active.
+        vm.warp(block.timestamp + 1 days);
+        // Try to swap assets owith 0 balance
+        vm.prank(sm1);
+        vm.expectRevert(Errors.ERR_InsufficientBalance.selector);
         will.swapAssets();
     }
 }

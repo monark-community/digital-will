@@ -28,9 +28,6 @@ abstract contract WillEvents {
 
     // ========================
     // Assets-related events
-    event EVT_WillChain_AssetsDeposited(uint256 indexed amount); // 0x442a5acf
-    event EVT_WillChain_AssetsWithdrawn(uint256 indexed amount); // 0x58ad67d2
-    event EVT_WillChain_AssetsWithdrawnAll(); // 0xed373ad6
     event EVT_WillChain_AssetsSwapped(address indexed smAddress); // 0x02b3c875
 
     // ========================

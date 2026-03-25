@@ -1,6 +1,5 @@
 import { IMessageTypeRegistry } from "@bufbuild/protobuf";
 import { createRequest } from "@substreams/core";
-import { BlockUndoSignal, ModulesProgress } from "@substreams/core/proto";
 import { readPackage } from "@substreams/manifest";
 import { BlockEmitter } from "@substreams/node";
 import { EventsCalls } from "./interfaces/raw/calls_events_interfaces";
@@ -21,13 +20,12 @@ export async function stream(
   onMessage: (message: EventsCalls, chainId: string) => Promise<void>,
   chainId: string,
   cursor?: string,
-  onUndo?: (signal: BlockUndoSignal, chainId: string) => Promise<void>,
 ): Promise<{ cursor: string | undefined }> {
   console.log(
     `in stream function with startBlockNum: ${startBlockNum} and cursor: ${cursor}`,
   );
 
-  const startBlockNumParsed = parseInt(startBlockNum);
+  const startBlockNumParsed = parseInt(startBlockNum); // will be used for startBlockNum when we will deploy the server
 
   const request = createRequest({
     substreamPackage: pkg,
@@ -37,9 +35,9 @@ export async function stream(
 
   // NodeJS Events
   const emitter = new BlockEmitter(
-    transport as unknown as any,
-    request,
-    registry,
+    transport as any,
+    request as any,
+    registry as any,
   );
 
   // Track latest committed cursor for resumption on reconnect
@@ -64,20 +62,9 @@ export async function stream(
     lastCursor = cursor;
   });
 
-  // Block Undo Signal — fired on chain reorg; data from rolled-back blocks must be reversed
-  emitter.on("undo", async (signal: BlockUndoSignal) => {
-    console.warn(
-      `[Substreams] Reorg detected. Rolling back to cursor: ${signal.lastValidCursor}`,
-    );
-    lastCursor = signal.lastValidCursor;
-    if (onUndo) {
-      await onUndo(signal, chainId);
-    }
-  });
-
   // Progress — fired each 120 seconds with module processing stats (useful for monitoring sync progress)
   let lastProgressLog = 0;
-  emitter.on("progress", (progress: ModulesProgress) => {
+  emitter.on("progress", (progress: any) => {
     const now = Date.now();
     if (now - lastProgressLog >= 120_000) {
       lastProgressLog = now;
@@ -87,7 +74,7 @@ export async function stream(
   });
 
   return new Promise<{ cursor: string | undefined }>((resolve, reject) => {
-    emitter.on("close", (error) => {
+    (emitter as any).on("close", (error: any) => {
       console.timeEnd("🆗 close");
       if (error) {
         console.error(
@@ -102,7 +89,7 @@ export async function stream(
     });
 
     // Fatal Error
-    emitter.on("fatalError", (error) => {
+    (emitter as any).on("fatalError", (error: any) => {
       console.error(
         "[Substreams] Fatal error occurred:, will reject promise with that error",
         error,

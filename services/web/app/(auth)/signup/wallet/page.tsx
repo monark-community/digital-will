@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCreateAccountWithWallet } from "@/lib/hooks";
 
-export default function WalletSignupPage() {
+function WalletSignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const walletAddress = searchParams.get("address");
@@ -213,5 +213,17 @@ export default function WalletSignupPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function WalletSignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
+        <div className="text-[var(--text-primary)]">Loading...</div>
+      </div>
+    }>
+      <WalletSignupContent />
+    </Suspense>
   );
 }

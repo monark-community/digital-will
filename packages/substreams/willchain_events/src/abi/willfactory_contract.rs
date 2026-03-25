@@ -8,7 +8,6 @@ pub mod functions {
     use super::INTERNAL_ERR;
     #[derive(Debug, Clone, PartialEq)]
     pub struct CreateWill {
-        pub owner: Vec<u8>,
         pub new_sm_list: Vec<(Vec<u8>, substreams::scalar::BigInt)>,
         pub security_period_config: (
             substreams::scalar::BigInt,
@@ -16,7 +15,7 @@ pub mod functions {
         ),
     }
     impl CreateWill {
-        const METHOD_ID: [u8; 4] = [203u8, 134u8, 245u8, 167u8];
+        const METHOD_ID: [u8; 4] = [69u8, 93u8, 159u8, 128u8];
         pub fn decode(
             call: &substreams_ethereum::pb::eth::v2::Call,
         ) -> Result<Self, String> {
@@ -26,7 +25,6 @@ pub mod functions {
             }
             let mut values = ethabi::decode(
                     &[
-                        ethabi::ParamType::Address,
                         ethabi::ParamType::Array(
                             Box::new(
                                 ethabi::ParamType::Tuple(
@@ -48,13 +46,6 @@ pub mod functions {
                 .map_err(|e| format!("unable to decode call.input: {:?}", e))?;
             values.reverse();
             Ok(Self {
-                owner: values
-                    .pop()
-                    .expect(INTERNAL_ERR)
-                    .into_address()
-                    .expect(INTERNAL_ERR)
-                    .as_bytes()
-                    .to_vec(),
                 new_sm_list: values
                     .pop()
                     .expect(INTERNAL_ERR)
@@ -114,7 +105,6 @@ pub mod functions {
         pub fn encode(&self) -> Vec<u8> {
             let data = ethabi::encode(
                 &[
-                    ethabi::Token::Address(ethabi::Address::from_slice(&self.owner)),
                     {
                         let v = self
                             .new_sm_list

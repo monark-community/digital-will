@@ -5,6 +5,7 @@ import contactsRoutes from './contactRoutes';
 import { ROUTES } from '../utils/constants';
 import willRoutes from './willRoutes';
 import userRoutes from './userRoutes';
+import notificationRoutes from "./notificationRoutes";
 
 const router = Router();
 
@@ -27,5 +28,11 @@ router.use(ROUTES.WILLS.BASE, willRoutes);
 
 // User routes
 router.use(ROUTES.USERS.BASE, userRoutes);
+
+// Notification routes
+router.use(ROUTES.NOTIFICATIONS.BASE, notificationRoutes);
+
+// Future routes
+// router.use(ROUTES.USERS.BASE, userRoutes);
 
 export default router;

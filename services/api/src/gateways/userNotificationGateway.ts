@@ -68,6 +68,7 @@ export function initGateway(httpServer: HttpServer): void {
             n.notifType as NotificationType,
             willName,
             role,
+            n.smName ?? undefined,
           );
           return {
             id: n.notifId,
@@ -78,7 +79,7 @@ export function initGateway(httpServer: HttpServer): void {
             willId: n.willId,
             willName,
             read: n.readStatus,
-            createdAt: new Date().toISOString(),
+            createdAt: n.createdAt.toISOString(),
           };
         });
         callback(notifications);
@@ -104,7 +105,7 @@ export function initGateway(httpServer: HttpServer): void {
 
 export function emitUserNotification(
   userId: string,
-  notification: UserNotification,
+  notification: UserNotification & { id: string },
 ): void {
   if (!io) {
     console.warn("[WS] Gateway not initialized — cannot emit notification");

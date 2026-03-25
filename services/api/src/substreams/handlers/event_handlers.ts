@@ -45,6 +45,10 @@ import {
   notifyWillActivated,
   notifyWillCanceled,
 } from "../../handlers/notificationHandler";
+import {
+  upsertProtectionPeriodTimer,
+  cancelProtectionPeriodTimer,
+} from "../../services/protectionPeriodService";
 
 export async function handleAssetsSwapped(
   evt: Will_EvtWillChainAssetsSwapped,
@@ -60,6 +64,7 @@ export async function handleAssetsSwapped(
     event_WillAssetsSwapped.willAddress,
     event_WillAssetsSwapped.smAddress,
   );
+  await cancelProtectionPeriodTimer(event_WillAssetsSwapped.willAddress);
 }
 
 export async function handleDeathConfirmed(
@@ -77,6 +82,7 @@ export async function handleDeathConfirmed(
     event_WillDeathConfirmed.willAddress,
     event_WillDeathConfirmed.smAddress,
   );
+  await upsertProtectionPeriodTimer(event_WillDeathConfirmed.willAddress);
 }
 
 export async function handleDeathDeclared(
@@ -94,6 +100,7 @@ export async function handleDeathDeclared(
     event_WillDeathDeclared.willAddress,
     event_WillDeathDeclared.smAddress,
   );
+  await upsertProtectionPeriodTimer(event_WillDeathDeclared.willAddress);
 }
 
 export async function handleSmAdded(
@@ -198,6 +205,7 @@ export async function handleVetoExercised(
     { depth: null, colors: true },
   );
   await notifyVetoExercised(event_WillVetoExercised.willAddress);
+  await cancelProtectionPeriodTimer(event_WillVetoExercised.willAddress);
 }
 
 export async function handleWillActivated(
@@ -225,4 +233,5 @@ export async function handleWillCanceled(
     { depth: null, colors: true },
   );
   await notifyWillCanceled(event_WillCanceled.willAddress);
+  await cancelProtectionPeriodTimer(event_WillCanceled.willAddress);
 }

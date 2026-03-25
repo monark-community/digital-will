@@ -38,34 +38,52 @@ export function validateForDeployment(will: {
   for (let i = 0; i < will.secondaryMembers.length; i++) {
     const member = will.secondaryMembers[i];
     const address = member.walletAddress || member.tempWalletAddress;
-    
+
     if (!address) {
-      errors.push(`Member ${i + 1} (${member.firstName} ${member.lastName}) has no wallet address`);
+      errors.push(
+        `Member ${i + 1} (${member.firstName} ${member.lastName}) has no wallet address`,
+      );
     } else if (!isValidEthereumAddress(address)) {
-      errors.push(`Member ${i + 1} (${member.firstName} ${member.lastName}) has invalid wallet address format`);
+      errors.push(
+        `Member ${i + 1} (${member.firstName} ${member.lastName}) has invalid wallet address format`,
+      );
     }
 
     // 3. Validate voting power (1-255)
     if (member.votingPower < 1 || member.votingPower > 255) {
-      errors.push(`Member ${i + 1} (${member.firstName} ${member.lastName}) has invalid voting power (must be 1-255)`);
+      errors.push(
+        `Member ${i + 1} (${member.firstName} ${member.lastName}) has invalid voting power (must be 1-255)`,
+      );
     }
   }
 
   // 4. Check for unique addresses
   const addresses = will.secondaryMembers
-    .map(m => (m.walletAddress || m.tempWalletAddress)?.toLowerCase())
+    .map((m) => (m.walletAddress || m.tempWalletAddress)?.toLowerCase())
     .filter(Boolean);
   const uniqueAddresses = new Set(addresses);
   if (addresses.length !== uniqueAddresses.size) {
     errors.push("Duplicate member addresses are not allowed");
   }
 
-  // 5. Validate security periods
-  if (will.minSecurityPeriod < 28 || will.maxSecurityPeriod < 28) {
-    errors.push("Security periods must be at least 28 days (4 weeks)");
+  // 5. Validate security periods (received in seconds from frontend)
+  const isLocalOrDev = process.env.NODE_ENV !== "production";
+  const minLimitSeconds = isLocalOrDev ? 1 * 60 : 28 * 86400; // 1 min or 28 days
+  const maxLimitSeconds = isLocalOrDev ? 10000 * 60 : 154 * 86400; // 10000 min or 154 days
+
+  if (
+    will.minSecurityPeriod < minLimitSeconds ||
+    will.maxSecurityPeriod < minLimitSeconds
+  ) {
+    const minLabel = isLocalOrDev ? "1 minute" : "28 days";
+    errors.push(`Security periods must be at least ${minLabel}`);
   }
-  if (will.minSecurityPeriod > 154 || will.maxSecurityPeriod > 154) {
-    errors.push("Security periods cannot exceed 154 days (22 weeks)");
+  if (
+    will.minSecurityPeriod > maxLimitSeconds ||
+    will.maxSecurityPeriod > maxLimitSeconds
+  ) {
+    const maxLabel = isLocalOrDev ? "10000 minutes" : "154 days";
+    errors.push(`Security periods cannot exceed ${maxLabel}`);
   }
   if (will.minSecurityPeriod > will.maxSecurityPeriod) {
     errors.push("Minimum security period cannot be greater than maximum");
@@ -73,7 +91,7 @@ export function validateForDeployment(will: {
 
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
@@ -96,26 +114,36 @@ export function validateDraftForm(data: {
   }
 
   // Filter members with any data
-  const membersWithData = data.secondaryMembers.filter(m => 
-    m.firstName || m.lastName || m.email || (m.walletAddress || m.tempWalletAddress)
+  const membersWithData = data.secondaryMembers.filter(
+    (m) =>
+      m.firstName ||
+      m.lastName ||
+      m.email ||
+      m.walletAddress ||
+      m.tempWalletAddress,
   );
 
   // Validate each member with data
   for (let i = 0; i < data.secondaryMembers.length; i++) {
     const member = data.secondaryMembers[i];
-    const hasAnyField = member.firstName || member.lastName || member.email || 
-                        (member.walletAddress || member.tempWalletAddress) || member.phoneNumber;
+    const hasAnyField =
+      member.firstName ||
+      member.lastName ||
+      member.email ||
+      member.walletAddress ||
+      member.tempWalletAddress ||
+      member.phoneNumber;
 
     if (hasAnyField) {
       // If any field is filled, require essential fields
       if (!member.firstName?.trim()) {
         errors.push(`Member ${i + 1}: First name is required`);
       }
-      
+
       if (!member.lastName?.trim()) {
         errors.push(`Member ${i + 1}: Last name is required`);
       }
-      
+
       if (!member.email?.trim()) {
         errors.push(`Member ${i + 1}: Email is required`);
       } else {
@@ -139,7 +167,10 @@ export function validateDraftForm(data: {
         errors.push(`Member ${i + 1}: Invalid wallet address format`);
       }
 
-      if (member.votingPower !== undefined && (member.votingPower < 1 || member.votingPower > 255)) {
+      if (
+        member.votingPower !== undefined &&
+        (member.votingPower < 1 || member.votingPower > 255)
+      ) {
         errors.push(`Member ${i + 1}: Power must be between 1 and 255`);
       }
     }
@@ -158,7 +189,10 @@ export function validateDraftForm(data: {
     }
   }
 
-  if (data.minSecurityPeriod !== undefined && data.maxSecurityPeriod !== undefined) {
+  if (
+    data.minSecurityPeriod !== undefined &&
+    data.maxSecurityPeriod !== undefined
+  ) {
     if (data.minSecurityPeriod > data.maxSecurityPeriod) {
       errors.push("Minimum security period cannot be greater than maximum");
     }
@@ -166,7 +200,7 @@ export function validateDraftForm(data: {
 
   // Check for duplicate addresses
   const addresses = membersWithData
-    .map(m => (m.walletAddress || m.tempWalletAddress)?.toLowerCase())
+    .map((m) => (m.walletAddress || m.tempWalletAddress)?.toLowerCase())
     .filter(Boolean);
   const uniqueAddresses = new Set(addresses);
   if (addresses.length !== uniqueAddresses.size) {
@@ -175,6 +209,6 @@ export function validateDraftForm(data: {
 
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 }

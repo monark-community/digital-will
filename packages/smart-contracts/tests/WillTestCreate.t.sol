@@ -10,6 +10,8 @@ import {WillState} from "@interfaces/WillState.sol";
 import {SMInfo, SMPartialInfo} from "@interfaces/SMInfo.sol";
 import {SMState} from "@interfaces/SMState.sol";
 import {SecurityPeriodConfig} from "@interfaces/SecurityPeriodConfig.sol";
+import {SwapConfig} from "@interfaces/SwapConfig.sol";
+import {ConfigUtils} from "@src/ConfigUtils.sol";
 
 import "@src/WillErrors.sol" as Errors;
 
@@ -35,9 +37,15 @@ contract WillTestCreate is Test {
                 maxSecurityPeriod: 365 days
             });
 
+        SwapConfig memory swapConfig = ConfigUtils.getConfig();
         vm.deal(pm, 2 ether);
         vm.prank(pm);
-        will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
     }
 
     /* ========= Creation validation ========= */
@@ -147,10 +155,16 @@ contract WillTestInvalidCreate is Test {
                 maxSecurityPeriod: 365 days
             });
 
+        SwapConfig memory swapConfig = ConfigUtils.getConfig();
         vm.deal(pm, 2 ether);
         vm.prank(pm);
         vm.expectRevert(Errors.ERR_NotEnoughSMs.selector);
-        will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
     }
 
     function test_CreateWill_TooMuchSM() public {
@@ -168,10 +182,16 @@ contract WillTestInvalidCreate is Test {
                 maxSecurityPeriod: 365 days
             });
 
+        SwapConfig memory swapConfig = ConfigUtils.getConfig();
         vm.deal(pm, 2 ether);
         vm.prank(pm);
         vm.expectRevert(Errors.ERR_TooManySMs.selector);
-        will = new Will{value: 1 ether}(pm, smList, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            smList,
+            securityPeriodConfig,
+            swapConfig
+        );
     }
 
     function test_CreateWill_ImproperSecurityPeriod() public {
@@ -184,10 +204,16 @@ contract WillTestInvalidCreate is Test {
                 maxSecurityPeriod: 1 days
             });
 
+        SwapConfig memory swapConfig = ConfigUtils.getConfig();
         vm.deal(pm, 2 ether);
         vm.prank(pm);
         vm.expectRevert(Errors.ERR_InvalidSecurityPeriods.selector);
-        will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
 
         securityPeriodConfig = SecurityPeriodConfig({
             minSecurityPeriod: 1 days,
@@ -197,7 +223,12 @@ contract WillTestInvalidCreate is Test {
         vm.deal(pm, 2 ether);
         vm.prank(pm);
         vm.expectRevert(Errors.ERR_InvalidSecurityPeriods.selector);
-        will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
 
         securityPeriodConfig = SecurityPeriodConfig({
             minSecurityPeriod: 0 days,
@@ -207,7 +238,12 @@ contract WillTestInvalidCreate is Test {
         vm.deal(pm, 2 ether);
         vm.prank(pm);
         vm.expectRevert(Errors.ERR_InvalidSecurityPeriods.selector);
-        will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
     }
 
     function test_CreateWill_PmIsSm() public {
@@ -220,10 +256,16 @@ contract WillTestInvalidCreate is Test {
                 maxSecurityPeriod: 365 days
             });
 
+        SwapConfig memory swapConfig = ConfigUtils.getConfig();
         vm.deal(pm, 2 ether);
         vm.prank(pm);
         vm.expectRevert(Errors.ERR_PMIsSM.selector);
-        will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
     }
 
     function test_CreateWill_SmDuplicates() public {
@@ -236,10 +278,16 @@ contract WillTestInvalidCreate is Test {
                 maxSecurityPeriod: 365 days
             });
 
+        SwapConfig memory swapConfig = ConfigUtils.getConfig();
         vm.deal(pm, 2 ether);
         vm.prank(pm);
         vm.expectRevert(Errors.ERR_DuplicateSM.selector);
-        will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
     }
 
     function test_CreateWill_InvalidVotePower() public {
@@ -252,10 +300,16 @@ contract WillTestInvalidCreate is Test {
                 maxSecurityPeriod: 365 days
             });
 
+        SwapConfig memory swapConfig = ConfigUtils.getConfig();
         vm.deal(pm, 2 ether);
         vm.prank(pm);
         vm.expectRevert(Errors.ERR_SMVotePowerInvalid.selector);
-        will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
 
         sms[0] = SMPartialInfo({smAddress: sm1, votePower: 1});
         sms[1] = SMPartialInfo({smAddress: sm2, votePower: 0});
@@ -263,7 +317,12 @@ contract WillTestInvalidCreate is Test {
         vm.deal(pm, 2 ether);
         vm.prank(pm);
         vm.expectRevert(Errors.ERR_SMVotePowerInvalid.selector);
-        will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
 
         sms[0] = SMPartialInfo({smAddress: sm1, votePower: 0});
         sms[1] = SMPartialInfo({smAddress: sm2, votePower: 0});
@@ -271,7 +330,12 @@ contract WillTestInvalidCreate is Test {
         vm.deal(pm, 2 ether);
         vm.prank(pm);
         vm.expectRevert(Errors.ERR_SMVotePowerInvalid.selector);
-        will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
     }
 
     function test_CreateWill_CantCreateNewIfCanceled() public {
@@ -284,9 +348,15 @@ contract WillTestInvalidCreate is Test {
                 maxSecurityPeriod: 365 days
             });
 
+        SwapConfig memory swapConfig = ConfigUtils.getConfig();
         vm.deal(pm, 2 ether);
         vm.prank(pm);
-        will = new Will{value: 1 ether}(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
 
         vm.prank(pm);
         vm.expectRevert(Errors.ERR_WillNotCanceled.selector);

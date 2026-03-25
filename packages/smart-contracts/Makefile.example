@@ -65,12 +65,15 @@ WILL_ADDR := $(shell cat $(WILL_ADDR_FILE))
 # -----------------------
 # Testing related-variables
 # -----------------------
-DEPOSIT_AMOUNT = 1000000000000000000  # 1ETH
-WITHDRAW_AMOUNT = 1000000000000000000 # 1ETH
+DEPOSIT_AMOUNT = 100000000000000000  # 1ETH
+WITHDRAW_AMOUNT = 100000000000000000 # 1ETH
 
 install:
 	@echo "Installing dependencies..."
 	@forge install foundry-rs/forge-std --no-git
+	@forge install uniswap/v3-core
+	@forge install uniswap/v3-periphery
+	@forge install OpenZeppelin/openzeppelin-contracts@v4.9.3
 
 clean:
 	@echo "Cleaning deploy artifacts..."
@@ -112,7 +115,31 @@ deploy-will:
 	echo "$$WILL_ADDR" > "$(WILL_ADDR_FILE)"; \
 	echo "Will deployed at: $$WILL_ADDR"
 
-# Example of calling a function on deployed will contract
+deploy-all-exec-mocks:
+	@echo "Deploying all mocks..."
+	@MOCK_ETH_ADDR=$$(forge script scripts/MockEthDeploy.s.sol \
+		--broadcast \
+		--rpc-url $(RPC_URL) \
+		--private-key $(USER_PK) | grep -E -o "0x[0-9a-fA-F]{40}" | tail -n 1); \
+	MOCK_USDC_ADDR=$$(forge script scripts/MockUSDCDeploy.s.sol \
+		--broadcast \
+		--rpc-url $(RPC_URL) \
+		--private-key $(USER_PK) | grep -E -o "0x[0-9a-fA-F]{40}" | tail -n 1); \
+	MOCK_SWAP_ROUTER_ADDR=$$(forge script scripts/MockSwapRouterDeploy.s.sol \
+		--broadcast \
+		--rpc-url $(RPC_URL) \
+		--private-key $(USER_PK) | grep -E -o "0x[0-9a-fA-F]{40}" | tail -n 1); \
+	MOCK_QUOTER_ADDR=$$(forge script scripts/MockQuoterDeploy.s.sol \
+		--broadcast \
+		--rpc-url $(RPC_URL) \
+		--private-key $(USER_PK) | grep -E -o "0x[0-9a-fA-F]{40}" | tail -n 1); \
+	echo ""; \
+	echo "=== Deployment complete ==="; \
+	echo "MockSwapRouter:    $$MOCK_SWAP_ROUTER_ADDR"; \
+	echo "MockQuoter:        $$MOCK_QUOTER_ADDR"; \
+	echo "MockWETH:          $$MOCK_ETH_ADDR"; \
+	echo "MockUSDC:          $$MOCK_USDC_ADDR"; \
+	echo "=============================="
 
 # ---------------------------------------------------------------------
 # 							Calling contract functions
@@ -131,10 +158,20 @@ call-get-sm-list:
 	@RAW=$$(cast call $(WILL_ADDR) "getSmList()" --rpc-url $(RPC_URL)); \
 	cast decode-abi "getSmList()(address[])" $$RAW --json
 
-call-get-balance:
+call-get-balance-sepeth:
 	@echo "Fetching contract balance with user $(USER_KEY)..."
 	@RAW=$$(cast call $(WILL_ADDR) "getBalance()" --rpc-url $(RPC_URL)); \
 	cast decode-abi "getBalance()(uint256)" $$RAW --json
+
+call-get-balance-weth:
+	@echo "Fetching WETH balance with user $(USER_KEY)..."
+	@RAW=$$(cast call $(WILL_ADDR) "getWethBalance()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "getWETHBalance()(uint256)" $$RAW --json
+
+call-get-balance-usdc:
+	@echo "Fetching USDC balance with user $(USER_KEY)..."
+	@RAW=$$(cast call $(WILL_ADDR) "getUsdcBalance()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "getUSDCBalance()(uint256)" $$RAW --json
 
 call-get-cooldown-end-time:
 	@echo "Fetching cooldown left with user $(USER_KEY)..."
@@ -179,12 +216,7 @@ call-withdraw:
 	
 call-swapAssets:
 	@echo "Switching coins by user $(SM_KEY)."
-	@cast send $(WILL_ADDR) "swapAssets()" --private-key $(SM_PK) --rpc-url $(RPC_URL); \
-	if [ $$? -eq 0 ]; then \
-		echo "Status: Success"; \
-	else \
-		echo "Status: Failed"; \
-	fi
+	@RAW=$$(cast send $(WILL_ADDR) "swapAssets()" --private-key $(SM_PK) --rpc-url $(RPC_URL)); \
 
 # -----------------
 # 	SM-participation
@@ -311,5 +343,22 @@ call-update-sec-upd:
 		echo "Status: Success"; \
 	else \
 		echo "Status: Failed"; \
+	fi
+
+##########################
+# Mocks related
+##########################
+MOCK_SWAP_ROUTER_ADDR=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0#For anvil.
+WETH_ADDR=0x5FbDB2315678afecb367f032d93F642f64180aa3#For anvil.
+call-withdraw-weth-as-eth-from-router:
+	@echo "Withdrawing WETH as ETH from router at $(MOCK_SWAP_ROUTER_ADDR) by user $(USER_KEY)..."
+	@cast send $(MOCK_SWAP_ROUTER_ADDR) \
+		"withdrawAll(address)" \
+		"$(WETH_ADDR)" \
+		--private-key $(USER_PK) --rpc-url $(RPC_URL); \
+	if [ $$? -eq 0 ]; then \
+		echo "Withdrawal transaction sent successfully"; \
+	else \
+		echo "Withdrawal failed"; \
 	fi
 

@@ -9,7 +9,11 @@ import {Will} from "@src/Will.sol";
 import {SMInfo, SMPartialInfo} from "@interfaces/SMInfo.sol";
 import {SMState} from "@interfaces/SMState.sol";
 import {SecurityPeriodConfig} from "@interfaces/SecurityPeriodConfig.sol";
-
+import {SwapConfig} from "@interfaces/SwapConfig.sol";
+import {MockSwapRouter} from "@src/anvil-swap-related/MockSwapRouter.sol";
+import {MockWETH} from "@src/anvil-swap-related/MockWETH.sol";
+import {MockUSDC} from "@src/anvil-swap-related/MockUSDC.sol";
+import {MockQuoterV2} from "@src/anvil-swap-related/MockQuoterV2.sol";
 import "@src/WillErrors.sol" as Errors;
 
 import "@constants/Will.c.sol" as C_WILL;
@@ -33,13 +37,33 @@ contract WillTestDeclaration is Test {
                 maxSecurityPeriod: 2 days
             });
 
+        MockWETH eth = new MockWETH();
+        MockUSDC usdc = new MockUSDC();
+        MockSwapRouter router = new MockSwapRouter();
+        MockQuoterV2 quoter = new MockQuoterV2();
+        SwapConfig memory swapConfig = SwapConfig({
+            swapRouter: address(router),
+            quoter: address(quoter),
+            wNative: address(eth),
+            usdc: address(usdc),
+            poolFee: 0
+        });
+        vm.deal(pm, 2 ether);
         vm.prank(pm);
-        will = new Will(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
 
+        vm.deal(sm1, 2 ether);
         vm.prank(sm1);
         will.validateSm();
+        vm.deal(sm2, 2 ether);
         vm.prank(sm2);
         will.validateSm();
+        vm.deal(sm3, 2 ether);
         vm.prank(sm3);
         will.validateSm();
     }
@@ -168,9 +192,25 @@ contract WillTestInvalidDeclaration is Test {
                 maxSecurityPeriod: 2 days
             });
 
+        MockWETH eth = new MockWETH();
+        MockUSDC usdc = new MockUSDC();
+        MockSwapRouter router = new MockSwapRouter();
+        MockQuoterV2 quoter = new MockQuoterV2();
+        SwapConfig memory swapConfig = SwapConfig({
+            swapRouter: address(router),
+            quoter: address(quoter),
+            wNative: address(eth),
+            usdc: address(usdc),
+            poolFee: 0
+        });
+        vm.deal(pm, 2 ether);
         vm.prank(pm);
-        will = new Will(pm, sms, securityPeriodConfig);
-
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
         vm.prank(sm1);
         will.validateSm();
         vm.prank(sm2);
@@ -198,8 +238,25 @@ contract WillTestInvalidDeclaration is Test {
                 maxSecurityPeriod: 2 days
             });
 
+        MockWETH eth = new MockWETH();
+        MockUSDC usdc = new MockUSDC();
+        MockSwapRouter router = new MockSwapRouter();
+        MockQuoterV2 quoter = new MockQuoterV2();
+        SwapConfig memory swapConfig = SwapConfig({
+            swapRouter: address(router),
+            quoter: address(quoter),
+            wNative: address(eth),
+            usdc: address(usdc),
+            poolFee: 0
+        });
+        vm.deal(pm, 2 ether);
         vm.prank(pm);
-        will = new Will(pm, sms, securityPeriodConfig);
+        will = new Will{value: 1 ether}(
+            pm,
+            sms,
+            securityPeriodConfig,
+            swapConfig
+        );
 
         vm.prank(sm1);
         will.validateSm();
