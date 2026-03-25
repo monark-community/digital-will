@@ -40,7 +40,7 @@ async function getWillContract(contractAddress: string) {
 }
 
 interface ActionDef {
-  id: "validate" | "desist" | "declareDeath" | "swapAssets";
+  id: 'validate' | 'refuse' | 'declareDeath' | 'swapAssets';
   label: string;
   description: string;
   disabledReason: (will: AssociatedWill) => string | null;
@@ -62,15 +62,13 @@ const ACTIONS: ActionDef[] = [
     color: "green",
   },
   {
-    id: "desist",
-    label: "Desist",
-    description: "Withdraw your participation from this will.",
+    id: 'refuse',
+    label: 'Refuse',
+    description: 'Refuse to participate in this will.',
     disabledReason: (will) => {
-      if (will.state === "CANCELED") return "Will is canceled";
-      if (will.state === "EXECUTED") return "Will is already executed";
-      if (will.state === "DRAFT") return "Will is not yet deployed";
-      if (will.myMembership.state === "PENDING")
-        return "You must validate before you can desist";
+      if (will.state === 'CANCELED') return 'Will is canceled';
+      if (will.state === 'EXECUTED') return 'Will is already executed';
+      if (will.state === 'DRAFT')    return 'Will is not yet deployed';
       return null;
     },
     color: "yellow",
@@ -137,22 +135,22 @@ function WillCard({ will, onRefresh }: WillCardProps) {
         );
         let tx: ethers.TransactionResponse;
 
-        switch (action.id) {
-          case "validate":
-            tx = await contract.validateSm();
-            break;
-          case "desist":
-            tx = await contract.desistSm();
-            break;
-          case "declareDeath":
-            tx = await contract.declareDeath();
-            break;
-          case "swapAssets":
-            tx = await contract.swapAssets();
-            break;
-          default:
-            throw new Error(`Unknown action: ${action.id}`);
-        }
+      switch (action.id) {
+        case 'validate':
+          tx = await contract.validateSm();
+          break;
+        case 'refuse':
+          tx = await contract.desistSm();
+          break;
+        case 'declareDeath':
+          tx = await contract.declareDeath();
+          break;
+        case 'swapAssets':
+          tx = await contract.swapAssets();
+          break;
+        default:
+          throw new Error(`Unknown action: ${action.id}`);
+      }
 
         console.log("Transaction sent:", tx.hash);
         const receipt = await tx.wait();
@@ -162,22 +160,18 @@ function WillCard({ will, onRefresh }: WillCardProps) {
       */
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        console.log("Transaction confirmed:", receipt?.hash);
-
-        if (action.id === "desist") {
-          console.log("Desist confirmed, removing from database...");
-          try {
-            await willService.removeSecondaryMember(will.willId);
-            console.log("Successfully removed from database");
-          } catch (dbError: any) {
-            console.error("Failed to remove from database:", dbError);
-            setError(
-              "Blockchain transaction succeeded, but failed to update database. Please refresh.",
-            );
-            setLoadingAction(null);
-            return;
-          }
+      if (action.id === 'refuse') {
+        console.log('Refuse confirmed, removing from database...');
+        try {
+          await willService.removeSecondaryMember(will.willId);
+          console.log('Successfully removed from database');
+        } catch (dbError: any) {
+          console.error('Failed to remove from database:', dbError);
+          setError('Blockchain transaction succeeded, but failed to update database. Please refresh.');
+          setLoadingAction(null);
+          return;
         }
+      }
 
         setSuccess(`"${action.label}" transaction confirmed!`);
         onRefresh();
@@ -258,8 +252,8 @@ function WillCard({ will, onRefresh }: WillCardProps) {
           const isLoading = loadingAction === action.id;
           const anyLoading = loadingAction !== null;
 
-          if (action.id === "desist") {
-            console.log("Desist button state:", {
+          if (action.id === 'refuse') {
+            console.log('Refuse button state:', {
               willState: will.state,
               membershipState: will.myMembership.state,
               contractAddress: will.contractAddressInBlockchain,

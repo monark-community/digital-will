@@ -33,7 +33,7 @@ model User {
   email         String          @unique
   phoneNo       String?
   passwordHash  String
-  wantToReceiveMails Boolean    @default(true)
+  wantToReceiveMails Boolean    @default(false)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   wallets       Wallet[]

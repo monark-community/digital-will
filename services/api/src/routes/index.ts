@@ -3,6 +3,8 @@ import authRoutes from './authRoutes';
 
 const router = Router();
 
+// NOT EVEN USED, router.ts IS USED INSTEAD, TO DELETE LATER I THINK
+
 /**
  * Central route configuration
  * All route modules are registered here

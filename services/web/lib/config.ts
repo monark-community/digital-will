@@ -36,6 +36,12 @@ export const API_ROUTES = {
     WALLET_SIGNIN: "/api/auth/wallet/signin",
     WALLET_CREATE: "/api/auth/wallet/create",
   },
+  USERS:{
+    BASE: "/api/users",
+    RECEIVE_EMAILS: "/api/users/receive-emails",
+    DELETE_ELIGIBILITY: "/api/users/delete-eligibility",
+    DELETE: "/api/users/delete",
+  },
   WALLETS: {
     BASE: "/api/wallets",
     BY_ID: (walletId: string) => `/api/wallets/${walletId}`,

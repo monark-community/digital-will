@@ -1,9 +1,10 @@
-import { Router } from "express";
-import authRoutes from "./authRoutes";
-import walletRoutes from "./walletRoutes";
-import contactsRoutes from "./contactRoutes";
-import { ROUTES } from "../utils/constants";
-import willRoutes from "./willRoutes";
+import { Router } from 'express';
+import authRoutes from './authRoutes';
+import walletRoutes from './walletRoutes';
+import contactsRoutes from './contactRoutes';
+import { ROUTES } from '../utils/constants';
+import willRoutes from './willRoutes';
+import userRoutes from './userRoutes';
 import notificationRoutes from "./notificationRoutes";
 
 const router = Router();
@@ -24,6 +25,9 @@ router.use(ROUTES.CONTACTS.BASE, contactsRoutes);
 
 // Will routes
 router.use(ROUTES.WILLS.BASE, willRoutes);
+
+// User routes
+router.use(ROUTES.USERS.BASE, userRoutes);
 
 // Notification routes
 router.use(ROUTES.NOTIFICATIONS.BASE, notificationRoutes);

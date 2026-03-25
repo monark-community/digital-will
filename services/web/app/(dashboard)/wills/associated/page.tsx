@@ -14,7 +14,7 @@ import {
 } from "@/app/components/ui/SecurityPeriodCountdown";
 import { displaySecurityPeriodRange } from "@/lib/utils/blockchain";
 
-type ActionId = "validate" | "desist" | "declareDeath" | "swapAssets";
+type ActionId = 'validate' | 'refuse' |  'declareDeath' | 'swapAssets';
 
 interface ActionDef {
   id: ActionId;
@@ -39,18 +39,16 @@ const SM_ACTIONS: ActionDef[] = [
     colorActive: "bg-emerald-600 hover:bg-emerald-500 text-white",
   },
   {
-    id: "desist",
-    label: "Desist",
-    description: "Withdraw your participation.",
+    id: 'refuse',
+    label: 'Refuse',
+    description: 'Refuse to participate.',
     disabledReason: (w) => {
-      if (w.state === "CANCELED") return "Will is canceled";
-      if (w.state === "EXECUTED") return "Will is already executed";
-      if (w.state === "DRAFT") return "Will is not yet deployed";
-      if (w.myMembership.state === "PENDING")
-        return "Validate first before desisting";
+      if (w.state === 'CANCELED') return 'Will is canceled';
+      if (w.state === 'EXECUTED') return 'Will is already executed';
+      if (w.state === 'DRAFT')    return 'Will is not yet deployed';
       return null;
     },
-    colorActive: "bg-yellow-600 hover:bg-yellow-500 text-white",
+    colorActive: 'bg-red-600 hover:bg-red-500 text-white',
   },
   {
     id: "declareDeath",
@@ -218,62 +216,60 @@ export default function AssociatedWillsPage() {
     }
   }, []);
 
-  const handleSmAction = useCallback(
-    async (will: AssociatedWill, action: ActionDef) => {
-      if (!will.contractAddressInBlockchain) return;
-      const id = will.willId;
-      setActionError((prev) => ({ ...prev, [id]: null }));
-      setActionSuccess((prev) => ({ ...prev, [id]: null }));
-      setActionLoading((prev) => ({ ...prev, [id]: action.id }));
-      try {
-        if (typeof window === "undefined" || !(window as any).ethereum) {
-          throw new Error("No Web3 provider found. Please install MetaMask.");
-        }
-        const provider = new ethers.BrowserProvider((window as any).ethereum);
-        const signer = await provider.getSigner();
-        const contract = new ethers.Contract(
-          ethers.getAddress(will.contractAddressInBlockchain),
-          WILL_ABI,
-          signer,
-        );
-        let tx: ethers.TransactionResponse;
-        switch (action.id) {
-          case "validate":
-            tx = await contract.validateSm();
-            break;
-          case "desist":
-            tx = await contract.desistSm();
-            break;
-          case "declareDeath":
-            tx = await contract.declareDeath();
-            break;
-          case "swapAssets":
-            tx = await contract.swapAssets();
-            break;
-        }
-        const receipt = await tx.wait();
-
-        /*
-      2 seconds delay added instead of waiting 2 block confirmation 
+  const handleSmAction = useCallback(async (will: AssociatedWill, action: ActionDef) => {
+    if (!will.contractAddressInBlockchain) return;
+    const id = will.willId;
+    setActionError(prev  => ({ ...prev, [id]: null }));
+    setActionSuccess(prev => ({ ...prev, [id]: null }));
+    setActionLoading(prev => ({ ...prev, [id]: action.id }));
+    try {
+      if (typeof window === 'undefined' || !(window as any).ethereum) {
+        throw new Error('No Web3 provider found. Please install MetaMask.');
+      }
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer   = await provider.getSigner();
+      const contract = new ethers.Contract(
+        ethers.getAddress(will.contractAddressInBlockchain),
+        WILL_ABI,
+        signer
+      );
+      let tx: ethers.TransactionResponse;
+      switch (action.id) {
+        case 'validate':
+          tx = await contract.validateSm();
+          break;
+        case 'refuse':
+          tx = await contract.desistSm();
+          break;
+        case 'declareDeath':
+          tx = await contract.declareDeath();
+        break;
+        case 'swapAssets':
+          tx = await contract.swapAssets();
+          break;
+      }
+      const receipt = await tx.wait();
+      
+      /*
+      2 seconds delay added instead of waiting 2 block confirmation
       */
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        if (action.id === "desist") {
-          console.log("🔵 Desist confirmed, removing from database...");
-          try {
-            await willService.removeSecondaryMember(will.willId);
-            console.log("🔵 Successfully removed from database");
-          } catch (dbError: any) {
-            console.error("🔴 Failed to remove from database:", dbError);
-            setActionError((prev) => ({
+      if (action.id === 'refuse') {
+        console.log('🔵 Refuse confirmed, removing from database...');
+        try {
+          await willService.removeSecondaryMember(will.willId);
+          console.log('🔵 Successfully removed from database');
+        } catch (dbError: any) {
+          console.error('🔴 Failed to remove from database:', dbError);
+          setActionError((prev) => ({
               ...prev,
               [id]: "Blockchain transaction succeeded, but failed to update database. Please refresh.",
             }));
             setActionLoading((prev) => ({ ...prev, [id]: null }));
-            return;
-          }
+          return;
         }
-
+      }
         setActionSuccess((prev) => ({
           ...prev,
           [id]: `"${action.label}" confirmed!`,

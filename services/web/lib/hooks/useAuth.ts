@@ -16,12 +16,14 @@ import { AxiosError } from "axios";
  */
 export function useSignIn() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: SignInRequest) => authService.signIn(data),
     onSuccess: (response) => {
       authService.setToken(response.token);
       authService.setUser(response.user);
+      queryClient.clear(); 
       router.push("/dashboard");
     },
     onError: (error: AxiosError<{ message: string }>) => {
@@ -35,12 +37,14 @@ export function useSignIn() {
  */
 export function useSignUp() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: SignUpRequest) => authService.signUp(data),
     onSuccess: (response) => {
       authService.setToken(response.token);
       authService.setUser(response.user);
+      queryClient.clear();
       router.push("/dashboard");
     },
     onError: (error: AxiosError<{ message: string }>) => {
@@ -97,12 +101,14 @@ export function useCheckWallet() {
  */
 export function useWalletSignIn() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: WalletAuthRequest) => authService.walletSignIn(data),
     onSuccess: (response) => {
       authService.setToken(response.token);
       authService.setUser(response.user);
+      queryClient.clear();
       router.push("/dashboard");
     },
     onError: (error: AxiosError<{ message: string }>) => {
@@ -116,6 +122,7 @@ export function useWalletSignIn() {
  */
 export function useCreateAccountWithWallet() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: CreateAccountWithWalletRequest) => 
@@ -123,6 +130,7 @@ export function useCreateAccountWithWallet() {
     onSuccess: (response) => {
       authService.setToken(response.token);
       authService.setUser(response.user);
+      queryClient.clear();
       router.push("/dashboard");
     },
     onError: (error: AxiosError<{ message: string }>) => {
