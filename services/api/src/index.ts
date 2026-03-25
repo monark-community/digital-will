@@ -77,7 +77,7 @@ httpServer.listen(config.port, config.hostname, () => {
   console.log(`  Log Level: ${config.logLevel}\n`);
 
   // Start the Substreams listener in the background (non-blocking)
-  /* startSubstreamsListener().catch((error) => {
+  startSubstreamsListener().catch((error) => {
     console.error("[Substreams] Listener crashed:", error);
-  }); */
+  });
 });
