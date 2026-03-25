@@ -53,15 +53,14 @@ const handleToggleEmailNotifications = async () => {
   try {
     const updatedUser = await userService.updateEmailNotifications(!user.wantToReceiveMails);
     setUser(updatedUser);
-    authService.setUser(updatedUser); // Met à jour le cache local
+    authService.setUser(updatedUser);
   } catch (error: any) {
-    setDeleteError(error.message); // ou un state d'erreur spécifique
+    setDeleteError(error.message);
   } finally {
     setIsUpdatingPreferences(false);
   }
 };
 
-  // Fonction pour vérifier l'éligibilité avant d'ouvrir le modal
   const handleCheckDeleteEligibility = async () => {
     setIsLoading(true);
     setDeleteError(null);
@@ -76,7 +75,6 @@ const handleToggleEmailNotifications = async () => {
     }
   };
 
-  // Fonction pour supprimer le compte
   const handleDeleteAccount = async () => {
     if (confirmText !== "DELETE") {
       setDeleteError('Please type "DELETE" to confirm');
@@ -94,7 +92,6 @@ const handleToggleEmailNotifications = async () => {
     }
   };
 
-  // Pendant le chargement côté serveur ou client, afficher un loader
   if (!mounted || isPending || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
@@ -228,7 +225,6 @@ const handleToggleEmailNotifications = async () => {
         </div>
       </div>
 
-      {/* Modal - placé à l'extérieur de la carte principale */}
       {showDeleteModal && deleteEligibility && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
@@ -248,7 +244,6 @@ const handleToggleEmailNotifications = async () => {
 
             <div className="p-6 space-y-4">
               {!deleteEligibility.canDelete ? (
-                // Cas avec obstacles
                 <>
                   <p className="text-[var(--text-primary)]">
                     Before deleting your account, you must:
@@ -285,7 +280,6 @@ const handleToggleEmailNotifications = async () => {
                   </p>
                 </>
               ) : (
-                // Cas sans obstacles - confirmation
                 <>
                   <p className="text-red-500 font-semibold">
                     This action is PERMANENT and IRREVERSIBLE.

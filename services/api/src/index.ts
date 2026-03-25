@@ -80,4 +80,7 @@ httpServer.listen(config.port, config.hostname, () => {
   startSubstreamsListener().catch((error) => {
     console.error("[Substreams] Listener crashed:", error);
   });
+
+  // Start the protection period expiration poller (non-blocking)
+  startProtectionPeriodPoller();
 });

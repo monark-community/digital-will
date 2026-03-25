@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import { NotFoundError } from '../utils/errors';
-import { SMState } from "../substreams/interfaces/cleaned/model";
 
 const prisma = new PrismaClient();
 
@@ -38,9 +37,8 @@ export async function updateEmailNotifications(userId: string, wantToReceiveMail
  * - They are not a secondary member in any deployed will
  */
 export async function checkDeleteEligibility(userId: string): Promise<DeleteEligibilityResponse> {
-  // 1. Find all deployed wills where the user is the owner
-  // A user is owner of a will if they own the wallet that deployed it
-  // We need to find wallets belonging to this user, then find wills from those wallets
+  
+  // 1. Find all deployed wills owned by the user
   const userWallets = await prisma.wallet.findMany({
     where: { userId },
     select: { address: true }
@@ -71,6 +69,11 @@ export async function checkDeleteEligibility(userId: string): Promise<DeleteElig
       AND: [
         { walletAddress: { in: walletAddresses } },
         { email: user.email },
+        { will: 
+          { 
+            isDeletedByUser: false 
+          } 
+        }
       ]
     },
     include: {
