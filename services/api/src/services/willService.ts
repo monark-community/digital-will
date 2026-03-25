@@ -63,9 +63,9 @@ export const getDeployedWillsByWalletAddress = async (
     throw new NotFoundError("Wallet not found");
   }
 
-  // Get only deployed wills (exclude canceled)
+  // Get only deployed wills (exclude deleted)
   const deployedWills = await prisma.will.findMany({
-    where: { walletAddress: walletAddress.toLowerCase(), isCanceled: false },
+    where: { walletAddress: walletAddress.toLowerCase(), isDeletedByUser: false },
     include: { secondaryMembers: true },
   });
 
@@ -234,9 +234,9 @@ export async function createDraftWillFromCanceledWill(
 export async function cleanupCanceledWill(willId: string): Promise<void> {
   const will = await prisma.will.findUnique({
     where: { willId },
-    select: { isCanceled: true },
+    select: { isDeletedByUser: true },
   });
-  if (!will?.isCanceled) return;
+  if (!will?.isDeletedByUser) return;
 
   const remaining = await prisma.notifications.count({
     where: { willId },
@@ -247,14 +247,14 @@ export async function cleanupCanceledWill(willId: string): Promise<void> {
 }
 
 /**
- * Mark a will as canceled by its contract address (used by event handlers for auto-cancel).
+ * Mark a will as deleted by its contract address (used by event handlers for auto-delete).
  */
-export async function markWillAsCanceled(
+export async function markWillAsDeleted(
   contractAddress: string,
 ): Promise<void> {
   await prisma.will.updateMany({
     where: { contractAddressInBlockchain: contractAddress.toLowerCase() },
-    data: { isCanceled: true },
+    data: { isDeletedByUser: true },
   });
 }
 
@@ -294,7 +294,7 @@ export const getAssociatedWills = async (userId: string) => {
   const secondaryMemberRecords = await prisma.secondaryMember.findMany({
     where: {
       OR: orConditions,
-      will: { isCanceled: false },
+      will: { isDeletedByUser: false },
     },
     include: {
       will: {
@@ -620,7 +620,7 @@ export const cancelWillOnChain = async (
     // Marquer le will comme annulé (les secondaryMembers restent pour les notifications)
     await tx.will.update({
       where: { willId },
-      data: { isCanceled: true },
+      data: { isDeletedByUser: true },
     });
 
     const draftWillWithMembers = await tx.draftWill.findUnique({

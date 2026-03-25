@@ -81,7 +81,7 @@ model Will {
   willName                    String
   contractAddressInBlockchain String
   chainId                     Int
-  isCanceled                  Boolean           @default(false)
+  isDeletedByUser             Boolean           @default(false)   // when the user deletes/keeps the will as draft. Will not deleted for notifications.
   wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
   secondaryMembers            SecondaryMember[]
   notifications               Notifications[]
