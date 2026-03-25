@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCurrentUser, useWallets, useContacts } from "@/lib/hooks";
 import Header from "@/app/components/ui/Header";
 import {
@@ -89,6 +90,9 @@ interface EditWillMember {
 }
 
 export default function WillsPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { data: user } = useCurrentUser();
   const { data: wallets } = useWallets();
   const { data: contacts } = useContacts();
@@ -201,6 +205,25 @@ export default function WillsPage() {
   const [editWillMaxPeriod, setEditWillMaxPeriod] = useState("");
   const [isUpdatingWill, setIsUpdatingWill] = useState(false);
   const [editWillError, setEditWillError] = useState<string | null>(null);
+
+  const clearOpenCreateParam = useCallback(() => {
+    if (!searchParams.has("openCreate")) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("openCreate");
+    const queryString = params.toString();
+
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+  }, [pathname, router, searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get("openCreate") === "true") {
+      setShowCreateForm(true);
+      clearOpenCreateParam();
+    }
+  }, [clearOpenCreateParam, searchParams]);
 
   useEffect(() => {
     if (!fundModal) {
@@ -1396,6 +1419,7 @@ export default function WillsPage() {
     setErrorMessage(null);
     setSuccessMessage(null);
     setEditingWillId(null);
+    clearOpenCreateParam();
   };
 
   const selectedWallet = wallets?.find((w) => w.walletId === selectedWalletId);
