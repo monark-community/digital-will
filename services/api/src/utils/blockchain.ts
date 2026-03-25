@@ -15,19 +15,21 @@ export function getProvider(): ethers.JsonRpcProvider {
   if (!providerInstance) {
     // Create provider with staticNetwork to skip auto-detection
     // This prevents the "failed to detect network" errors
-    const network = config.blockchain.chainId 
+    const network = config.blockchain.chainId
       ? ethers.Network.from(config.blockchain.chainId)
       : undefined;
-    
-    console.log(`[Blockchain] Initializing provider with RPC: ${config.blockchain.rpcUrl}, Chain ID: ${config.blockchain.chainId}`);
-    
+
+    console.log(
+      `[Blockchain] Initializing provider with RPC: ${config.blockchain.rpcUrl}, Chain ID: ${config.blockchain.chainId}`,
+    );
+
     providerInstance = new ethers.JsonRpcProvider(
       config.blockchain.rpcUrl,
       network,
-      { 
+      {
         staticNetwork: network,
-        batchMaxCount: 1 // Disable batching for better compatibility
-      }
+        batchMaxCount: 1, // Disable batching for better compatibility
+      },
     );
   }
   return providerInstance;
@@ -50,14 +52,16 @@ export function secondsToDays(seconds: bigint): number {
 /**
  * Get the ETH balance of a contract address, returned as a formatted string (e.g. "0.05")
  */
-export async function getContractBalance(contractAddress: string): Promise<string> {
+export async function getContractBalance(
+  contractAddress: string,
+): Promise<string> {
   try {
     // Validate and checksum the address
     if (!ethers.isAddress(contractAddress)) {
       console.error(`Invalid address format: ${contractAddress}`);
-      return '0';
+      return "0";
     }
-    
+
     const checksummedAddress = ethers.getAddress(contractAddress);
     const provider = getProvider();
     const balanceWei = await provider.getBalance(checksummedAddress);
@@ -65,7 +69,7 @@ export async function getContractBalance(contractAddress: string): Promise<strin
     return formattedBalance;
   } catch (error) {
     console.error(`Error fetching balance for ${contractAddress}:`, error);
-    return '0'; // Return 0 instead of throwing on error
+    return "0"; // Return 0 instead of throwing on error
   }
 }
 
@@ -78,5 +82,31 @@ export function isValidEthereumAddress(address: string): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+const GET_SM_LIST_ABI = ["function getSmList() view returns (address[])"];
+
+/**
+ * Calls getSmList() on the Will smart contract and returns the list of SM addresses.
+ * Returns an empty array on failure.
+ */
+export async function getSmListFromChain(
+  contractAddress: string,
+): Promise<string[]> {
+  try {
+    const provider = getProvider();
+    const contract = new ethers.Contract(
+      ethers.getAddress(contractAddress),
+      GET_SM_LIST_ABI,
+      provider,
+    );
+    return await contract.getSmList();
+  } catch (error) {
+    console.error(
+      `[Blockchain] Failed to call getSmList for ${contractAddress}:`,
+      error,
+    );
+    return [];
   }
 }

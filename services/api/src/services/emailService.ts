@@ -32,12 +32,13 @@ export async function sendEmailNotification(
   willName: string,
   userId: string,
   role: NotificationRecipientRole = NotificationRecipientRole.SM,
+  smName?: string,
 ): Promise<void> {
   const user = await findUserById(userId);
   if (!user || !user.wantToReceiveMails) return;
 
   const name = user.firstName + " " + user.lastName;
-  const { subject, body } = generateEmail(type, willName, name, role);
+  const { subject, body } = generateEmail(type, willName, name, role, smName);
 
   const { error } = await throttledSend({
     from: config.email.from,
@@ -82,13 +83,80 @@ export async function sendSignatureRequestToSm(
   }
 }
 
+/**
+ * Sends a WILL_CANCELED email directly to a secondary member who does not have
+ * a WillChain account, using their stored contact details.
+ */
+export async function sendWillCanceledToUnregisteredSm(
+  willName: string,
+  smFirstName: string,
+  smLastName: string,
+  smEmail: string,
+): Promise<void> {
+  const name = `${smFirstName} ${smLastName}`;
+  const { subject, body } = generateEmail(
+    NotificationType.WILL_CANCELED,
+    willName,
+    name,
+    NotificationRecipientRole.SM,
+  );
+
+  const { error } = await throttledSend({
+    from: config.email.from,
+    to: smEmail,
+    subject,
+    html: body,
+  });
+
+  if (error) {
+    console.error(
+      `[EmailService] Failed to send WILL_CANCELED to ${smEmail}:`,
+      error,
+    );
+  }
+}
+
+/**
+ * Sends a SM_REMOVED email directly to a secondary member who does not have
+ * a WillChain account, using their stored contact details.
+ */
+export async function sendSmRemovedToUnregisteredSm(
+  willName: string,
+  smFirstName: string,
+  smLastName: string,
+  smEmail: string,
+): Promise<void> {
+  const name = `${smFirstName} ${smLastName}`;
+  const { subject, body } = generateEmail(
+    NotificationType.SM_REMOVED,
+    willName,
+    name,
+    NotificationRecipientRole.SM_TARGET,
+  );
+
+  const { error } = await throttledSend({
+    from: config.email.from,
+    to: smEmail,
+    subject,
+    html: body,
+  });
+
+  if (error) {
+    console.error(
+      `[EmailService] Failed to send SM_REMOVED to ${smEmail}:`,
+      error,
+    );
+  }
+}
+
 export async function sendEmailNotifications(
   type: NotificationType,
   willName: string,
   userIds: string[],
   role: NotificationRecipientRole = NotificationRecipientRole.SM,
+  smName?: string,
 ): Promise<void> {
   for (const userId of userIds) {
-    await sendEmailNotification(type, willName, userId, role);
+    await sendEmailNotification(type, willName, userId, role, smName);
   }
 }

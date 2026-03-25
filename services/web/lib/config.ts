@@ -2,17 +2,27 @@
  * Application configuration from environment variables
  */
 
+const _isNonProd = process.env.NODE_ENV !== "production";
+
 export const config = {
   api: {
     baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000",
   },
   blockchain: {
     rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || "http://localhost:8545",
-    willFactoryAddress: process.env.NEXT_PUBLIC_WILL_FACTORY_ADDRESS || "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    willFactoryAddress:
+      process.env.NEXT_PUBLIC_WILL_FACTORY_ADDRESS ||
+      "0x5FbDB2315678afecb367f032d93F642f64180aa3",
   },
   isProduction: process.env.NODE_ENV === "production",
   isDevelopment: process.env.NODE_ENV === "development",
   isLocal: (process.env.NODE_ENV as string) === "local",
+  isLocalOrDev: _isNonProd,
+  securityPeriod: {
+    unit: _isNonProd ? ("minutes" as const) : ("days" as const),
+    min: _isNonProd ? 1 : 28,
+    max: _isNonProd ? 10000 : 154,
+  },
 } as const;
 
 // API Routes
@@ -42,10 +52,18 @@ export const API_ROUTES = {
     DEPLOY: (willId: string) => `/api/wills/${willId}/deploy`,
     CANCEL: (willId: string) => `/api/wills/${willId}/cancel`,
     UPDATE_MEMBERS: (willId: string) => `/api/wills/${willId}/members`,
-    REMOVE_SECONDARY_MEMBER: (willId: string) => `/api/wills/${willId}/secondary-member`,
+    REMOVE_SECONDARY_MEMBER: (willId: string) =>
+      `/api/wills/${willId}/secondary-member`,
     BY_WALLET: (walletAddress: string) => `/api/wills/${walletAddress}`,
     ENRICHED: (walletAddress: string) => `/api/wills/${walletAddress}/enriched`,
     VALIDATE: (willId: string) => `/api/wills/validate/${willId}`,
-    BALANCE: (contractAddress: string) => `/api/wills/balance/${contractAddress}`,
+    BALANCE: (contractAddress: string) =>
+      `/api/wills/balance/${contractAddress}`,
+  },
+  NOTIFICATIONS: {
+    TOGGLE_READ: (notifId: string) => `/api/notifications/${notifId}/read`,
+    MARK_ALL_READ: "/api/notifications/read/all",
+    DELETE: (notifId: string) => `/api/notifications/${notifId}`,
+    DELETE_ALL: "/api/notifications",
   },
 } as const;

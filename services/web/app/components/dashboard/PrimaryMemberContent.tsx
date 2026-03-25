@@ -1,11 +1,17 @@
-'use client';
+"use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
-import { STUB_METRICS, STUB_WILL, STUB_ASSETS, formatCurrency } from './stub-data';
-import { useWalletContext } from './WalletContext';
-import { getMultiNetworkBalances, NETWORKS } from '@/lib/utils/wallet';
-import { willService, type WillFromDB } from '@/lib/services';
+import React, { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import {
+  STUB_METRICS,
+  STUB_WILL,
+  STUB_ASSETS,
+  formatCurrency,
+} from "./stub-data";
+import { useWalletContext } from "./WalletContext";
+import { getMultiNetworkBalances, NETWORKS } from "@/lib/utils/wallet";
+import { willService, type WillFromDB } from "@/lib/services";
+import { displaySecurityPeriod } from "@/lib/utils/blockchain";
 
 interface WalletBalances {
   sepolia: string;
@@ -17,8 +23,12 @@ interface WalletBalances {
 }
 
 export default function PrimaryMemberContent() {
-  const progressPercent = Math.min(100, (365 - STUB_WILL.inactivityDaysRemaining) / 365 * 100);
-  const { selectedWallet, setSelectedWallet, wallets, isLoading } = useWalletContext();
+  const progressPercent = Math.min(
+    100,
+    ((365 - STUB_WILL.inactivityDaysRemaining) / 365) * 100,
+  );
+  const { selectedWallet, setSelectedWallet, wallets, isLoading } =
+    useWalletContext();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [balances, setBalances] = useState<WalletBalances | null>(null);
@@ -28,13 +38,16 @@ export default function PrimaryMemberContent() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -42,17 +55,25 @@ export default function PrimaryMemberContent() {
       setLoadingBalances(true);
       getMultiNetworkBalances(selectedWallet.address)
         .then(setBalances)
-        .catch(err => {
-          console.error('Error fetching balances:', err);
-          setBalances({ sepolia: '0', mainnet: '0', bnb: '0', avax: '0', total: 0, totalCAD: 0 });
+        .catch((err) => {
+          console.error("Error fetching balances:", err);
+          setBalances({
+            sepolia: "0",
+            mainnet: "0",
+            bnb: "0",
+            avax: "0",
+            total: 0,
+            totalCAD: 0,
+          });
         })
         .finally(() => setLoadingBalances(false));
 
       setLoadingWills(true);
-      willService.getWillsByWallet(selectedWallet.address)
-        .then(wills => setRealWills(wills.filter(w => w.state !== 'DRAFT')))
-        .catch(err => {
-          console.error('Error fetching wills:', err);
+      willService
+        .getWillsByWallet(selectedWallet.address)
+        .then((wills) => setRealWills(wills.filter((w) => w.state !== "DRAFT")))
+        .catch((err) => {
+          console.error("Error fetching wills:", err);
           setRealWills([]);
         })
         .finally(() => setLoadingWills(false));
@@ -87,18 +108,25 @@ export default function PrimaryMemberContent() {
           >
             <div className="flex-1 text-left">
               <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
-                {selectedWallet.label || `Wallet ${selectedWallet.address.slice(0, 8)}...`}
+                {selectedWallet.label ||
+                  `Wallet ${selectedWallet.address.slice(0, 8)}...`}
               </h3>
-              <p className="text-sm text-[var(--text-muted-alt)] font-mono">wallet id : {selectedWallet.address}</p>
+              <p className="text-sm text-[var(--text-muted-alt)] font-mono">
+                wallet id : {selectedWallet.address}
+              </p>
             </div>
-            <svg 
-              className={`w-6 h-6 text-[var(--text-primary)] transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth={2} 
+            <svg
+              className={`w-6 h-6 text-[var(--text-primary)] transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
               viewBox="0 0 24 24"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19 9l-7 7-7-7"
+              />
             </svg>
           </button>
 
@@ -114,13 +142,18 @@ export default function PrimaryMemberContent() {
                     key={wallet.walletId}
                     onClick={() => handleWalletSelect(wallet)}
                     className={`w-full p-4 text-left hover:bg-[var(--bg-section)] transition-colors border-b border-[var(--border-section)] last:border-b-0 ${
-                      wallet.walletId === selectedWallet.walletId ? 'bg-[var(--bg-section)]' : ''
+                      wallet.walletId === selectedWallet.walletId
+                        ? "bg-[var(--bg-section)]"
+                        : ""
                     }`}
                   >
                     <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
-                      {wallet.label || `Wallet ${wallet.address.slice(0, 8)}...`}
+                      {wallet.label ||
+                        `Wallet ${wallet.address.slice(0, 8)}...`}
                     </h3>
-                    <p className="text-sm text-[var(--text-muted-alt)] font-mono">wallet id : {wallet.address}</p>
+                    <p className="text-sm text-[var(--text-muted-alt)] font-mono">
+                      wallet id : {wallet.address}
+                    </p>
                   </button>
                 ))
               )}
@@ -134,16 +167,22 @@ export default function PrimaryMemberContent() {
               <h3 className="text-base font-semibold text-[var(--text-muted-alt)] mb-1">
                 No wallet selected
               </h3>
-              <p className="text-sm text-[var(--text-muted-alt)]">Please add a wallet to continue</p>
+              <p className="text-sm text-[var(--text-muted-alt)]">
+                Please add a wallet to continue
+              </p>
             </div>
-            <svg 
-              className="w-6 h-6 text-[var(--text-muted-alt)]" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth={2} 
+            <svg
+              className="w-6 h-6 text-[var(--text-muted-alt)]"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
               viewBox="0 0 24 24"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19 9l-7 7-7-7"
+              />
             </svg>
           </div>
         </div>
@@ -152,7 +191,9 @@ export default function PrimaryMemberContent() {
       <div className="grid lg:grid-cols-2 gap-8">
         <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-[var(--text-primary)]">My Wills</h2>
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">
+              My Wills
+            </h2>
             <Link
               href="/wills"
               className="text-sm text-[var(--accent)] hover:opacity-80 transition-opacity"
@@ -164,11 +205,15 @@ export default function PrimaryMemberContent() {
             {loadingWills ? (
               <div className="text-center py-8">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent)]"></div>
-                <p className="text-[var(--text-muted-alt)] mt-4 text-sm">Loading wills...</p>
+                <p className="text-[var(--text-muted-alt)] mt-4 text-sm">
+                  Loading wills...
+                </p>
               </div>
             ) : realWills.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-[var(--text-muted-alt)] mb-2">No wills created yet</p>
+                <p className="text-[var(--text-muted-alt)] mb-2">
+                  No wills created yet
+                </p>
                 <Link
                   href="/wills"
                   className="text-sm text-[var(--accent)] hover:opacity-80 transition-opacity"
@@ -176,170 +221,280 @@ export default function PrimaryMemberContent() {
                   Create your first will →
                 </Link>
               </div>
-            ) : realWills.map((will) => (
-              <div key={will.willId} className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-[var(--text-primary)] mb-1">{will.willName}</h3>
-                    <p className="text-xs text-[var(--text-muted-alt)] font-mono truncate">{will.contractAddressInBlockchain}</p>
+            ) : (
+              realWills.map((will) => (
+                <div
+                  key={will.willId}
+                  className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-[var(--text-primary)] mb-1">
+                        {will.willName}
+                      </h3>
+                      <p className="text-xs text-[var(--text-muted-alt)] font-mono truncate">
+                        {will.contractAddressInBlockchain}
+                      </p>
+                    </div>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ml-2 flex-shrink-0 ${
+                        will.state === "ACTIVE"
+                          ? "bg-emerald-500/20 text-emerald-400"
+                          : will.state === "INACTIVE"
+                            ? "bg-blue-500/20 text-blue-400"
+                            : will.state === "CANCELED"
+                              ? "bg-red-500/20 text-red-400"
+                              : "bg-gray-500/20 text-gray-400"
+                      }`}
+                    >
+                      {will.state}
+                    </span>
                   </div>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ml-2 flex-shrink-0 ${
-                    will.state === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' :
-                    will.state === 'INACTIVE' ? 'bg-blue-500/20 text-blue-400' :
-                    will.state === 'CANCELED' ? 'bg-red-500/20 text-red-400' :
-                    'bg-gray-500/20 text-gray-400'
-                  }`}>
-                    {will.state}
-                  </span>
-                </div>
 
-                <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
-                  <div>
-                    <p className="text-[var(--text-muted-alt)]">Network</p>
-                    <p className="font-medium text-[var(--text-primary)]">{will.chainId === 11155111 ? 'Sepolia' : will.chainId === 1 ? 'Mainnet' : will.chainId ?? '—'}</p>
+                  <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                    <div>
+                      <p className="text-[var(--text-muted-alt)]">Network</p>
+                      <p className="font-medium text-[var(--text-primary)]">
+                        {will.chainId === 11155111
+                          ? "Sepolia"
+                          : will.chainId === 1
+                            ? "Mainnet"
+                            : (will.chainId ?? "—")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[var(--text-muted-alt)]">Members</p>
+                      <p className="font-medium text-[var(--text-primary)]">
+                        {will.secondaryMembers.length}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[var(--text-muted-alt)]">Min Period</p>
+                      <p className="font-medium text-[var(--text-primary)]">
+                        {displaySecurityPeriod(will.minSecurityPeriod)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[var(--text-muted-alt)]">Max Period</p>
+                      <p className="font-medium text-[var(--text-primary)]">
+                        {displaySecurityPeriod(will.maxSecurityPeriod)}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[var(--text-muted-alt)]">Members</p>
-                    <p className="font-medium text-[var(--text-primary)]">{will.secondaryMembers.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-[var(--text-muted-alt)]">Min Period</p>
-                    <p className="font-medium text-[var(--text-primary)]">{will.minSecurityPeriod}d</p>
-                  </div>
-                  <div>
-                    <p className="text-[var(--text-muted-alt)]">Max Period</p>
-                    <p className="font-medium text-[var(--text-primary)]">{will.maxSecurityPeriod}d</p>
-                  </div>
-                </div>
 
-                <div className="border-t border-[var(--border-section)] pt-3 space-y-1.5">
-                  {will.secondaryMembers.slice(0, 2).map((member: WillFromDB['secondaryMembers'][0]) => {
-                    const addr = member.walletAddress || member.tempWalletAddress;
-                    return (
-                      <div key={member.secondaryMemberId} className="flex items-center justify-between text-xs">
-                        <span className="text-[var(--text-primary)] font-medium">{member.firstName} {member.lastName}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[var(--text-muted-alt)] font-mono">{addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : <span className="italic text-[var(--text-muted-alt)]">no address</span>}</span>
-                          <span className="px-1.5 py-0.5 rounded bg-violet-500/15 text-[10px]">
-                            <span className="text-violet-400/70">pwr </span>
-                            <span className="text-violet-300 font-semibold">{member.votingPower}</span>
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {will.secondaryMembers.length > 2 && (
-                    <p className="text-[var(--text-muted-alt)] text-[10px]">+{will.secondaryMembers.length - 2} more</p>
-                  )}
-                </div>
+                  <div className="border-t border-[var(--border-section)] pt-3 space-y-1.5">
+                    {will.secondaryMembers
+                      .slice(0, 2)
+                      .map((member: WillFromDB["secondaryMembers"][0]) => {
+                        const addr =
+                          member.walletAddress || member.tempWalletAddress;
+                        return (
+                          <div
+                            key={member.secondaryMemberId}
+                            className="flex items-center justify-between text-xs"
+                          >
+                            <span className="text-[var(--text-primary)] font-medium">
+                              {member.firstName} {member.lastName}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[var(--text-muted-alt)] font-mono">
+                                {addr ? (
+                                  `${addr.slice(0, 6)}…${addr.slice(-4)}`
+                                ) : (
+                                  <span className="italic text-[var(--text-muted-alt)]">
+                                    no address
+                                  </span>
+                                )}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-violet-500/15 text-[10px]">
+                                <span className="text-violet-400/70">pwr </span>
+                                <span className="text-violet-300 font-semibold">
+                                  {member.votingPower}
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    {will.secondaryMembers.length > 2 && (
+                      <p className="text-[var(--text-muted-alt)] text-[10px]">
+                        +{will.secondaryMembers.length - 2} more
+                      </p>
+                    )}
+                  </div>
 
-                <div className="mt-3">
-                  <Link
-                    href="/wills"
-                    className="block w-full px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors text-center"
-                  >
-                    Manage →
-                  </Link>
+                  <div className="mt-3">
+                    <Link
+                      href="/wills"
+                      className="block w-full px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors text-center"
+                    >
+                      Manage →
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
         <div className="space-y-8">
           {/* Total Assets */}
           <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
-            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-6">Total Assets</h2>
+            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-6">
+              Total Assets
+            </h2>
             {loadingBalances ? (
               <div className="flex items-center justify-center py-8">
-                <div className="text-[var(--text-muted-alt)]">Loading balances...</div>
+                <div className="text-[var(--text-muted-alt)]">
+                  Loading balances...
+                </div>
               </div>
             ) : balances ? (
               <div className="space-y-4">
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-[var(--text-primary)]">{balances.totalCAD.toFixed(2)} CAD</p>
-                  <p className="text-sm text-[var(--text-muted-alt)] mt-1">Total Balance (All Networks)</p>
+                  <p className="text-4xl font-bold text-[var(--text-primary)]">
+                    {balances.totalCAD.toFixed(2)} CAD
+                  </p>
+                  <p className="text-sm text-[var(--text-muted-alt)] mt-1">
+                    Total Balance (All Networks)
+                  </p>
                 </div>
               </div>
             ) : (
               <div className="flex items-center justify-center py-8">
-                <p className="text-[var(--text-muted-alt)]">No wallet selected</p>
+                <p className="text-[var(--text-muted-alt)]">
+                  No wallet selected
+                </p>
               </div>
             )}
           </div>
 
           {/* Assets Overview */}
           <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
-            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-6">Assets Overview</h2>
+            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-6">
+              Assets Overview
+            </h2>
             {loadingBalances ? (
               <div className="flex items-center justify-center py-8">
-                <div className="text-[var(--text-muted-alt)]">Loading balances...</div>
+                <div className="text-[var(--text-muted-alt)]">
+                  Loading balances...
+                </div>
               </div>
             ) : balances ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/30">
                   <div className="flex items-center gap-3">
-                    <div className={"w-10 h-10 rounded-full bg-gradient-to-br " + NETWORKS.SEPOLIA.iconBg + " flex items-center justify-center text-white font-semibold text-sm"}>
+                    <div
+                      className={
+                        "w-10 h-10 rounded-full bg-gradient-to-br " +
+                        NETWORKS.SEPOLIA.iconBg +
+                        " flex items-center justify-center text-white font-semibold text-sm"
+                      }
+                    >
                       SEP
                     </div>
                     <div>
-                      <p className="font-semibold text-[var(--text-primary)]">{NETWORKS.SEPOLIA.name}</p>
-                      <p className="text-xs text-[var(--text-muted-alt)]">Testnet</p>
+                      <p className="font-semibold text-[var(--text-primary)]">
+                        {NETWORKS.SEPOLIA.name}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted-alt)]">
+                        Testnet
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium text-[var(--text-primary)]">{balances.sepolia} {NETWORKS.SEPOLIA.symbol}</p>
+                    <p className="font-medium text-[var(--text-primary)]">
+                      {balances.sepolia} {NETWORKS.SEPOLIA.symbol}
+                    </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between p-3 rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/30">
                   <div className="flex items-center gap-3">
-                    <div className={"w-10 h-10 rounded-full bg-gradient-to-br " + NETWORKS.MAINNET.iconBg + " flex items-center justify-center text-white font-semibold text-sm"}>
+                    <div
+                      className={
+                        "w-10 h-10 rounded-full bg-gradient-to-br " +
+                        NETWORKS.MAINNET.iconBg +
+                        " flex items-center justify-center text-white font-semibold text-sm"
+                      }
+                    >
                       ETH
                     </div>
                     <div>
-                      <p className="font-semibold text-[var(--text-primary)]">{NETWORKS.MAINNET.name}</p>
-                      <p className="text-xs text-[var(--text-muted-alt)]">Mainnet</p>
+                      <p className="font-semibold text-[var(--text-primary)]">
+                        {NETWORKS.MAINNET.name}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted-alt)]">
+                        Mainnet
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium text-[var(--text-primary)]">{balances.mainnet} {NETWORKS.MAINNET.symbol}</p>
+                    <p className="font-medium text-[var(--text-primary)]">
+                      {balances.mainnet} {NETWORKS.MAINNET.symbol}
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between p-3 rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/30">
                   <div className="flex items-center gap-3">
-                    <div className={"w-10 h-10 rounded-full bg-gradient-to-br " + NETWORKS.BNB.iconBg + " flex items-center justify-center text-white font-semibold text-sm"}>
+                    <div
+                      className={
+                        "w-10 h-10 rounded-full bg-gradient-to-br " +
+                        NETWORKS.BNB.iconBg +
+                        " flex items-center justify-center text-white font-semibold text-sm"
+                      }
+                    >
                       BNB
                     </div>
                     <div>
-                      <p className="font-semibold text-[var(--text-primary)]">{NETWORKS.BNB.name}</p>
-                      <p className="text-xs text-[var(--text-muted-alt)]">Mainnet</p>
+                      <p className="font-semibold text-[var(--text-primary)]">
+                        {NETWORKS.BNB.name}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted-alt)]">
+                        Mainnet
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium text-[var(--text-primary)]">{balances.bnb} {NETWORKS.BNB.symbol}</p>
+                    <p className="font-medium text-[var(--text-primary)]">
+                      {balances.bnb} {NETWORKS.BNB.symbol}
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between p-3 rounded-lg border border-[var(--border-section)] bg-[var(--bg-section)]/30">
                   <div className="flex items-center gap-3">
-                    <div className={"w-10 h-10 rounded-full bg-gradient-to-br " + NETWORKS.AVAX.iconBg + " flex items-center justify-center text-white font-semibold text-sm"}>
+                    <div
+                      className={
+                        "w-10 h-10 rounded-full bg-gradient-to-br " +
+                        NETWORKS.AVAX.iconBg +
+                        " flex items-center justify-center text-white font-semibold text-sm"
+                      }
+                    >
                       AVAX
                     </div>
                     <div>
-                      <p className="font-semibold text-[var(--text-primary)]">{NETWORKS.AVAX.name}</p>
-                      <p className="text-xs text-[var(--text-muted-alt)]">Mainnet</p>
+                      <p className="font-semibold text-[var(--text-primary)]">
+                        {NETWORKS.AVAX.name}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted-alt)]">
+                        Mainnet
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium text-[var(--text-primary)]">{balances.avax} {NETWORKS.AVAX.symbol}</p>
+                    <p className="font-medium text-[var(--text-primary)]">
+                      {balances.avax} {NETWORKS.AVAX.symbol}
+                    </p>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="flex items-center justify-center py-8">
-                <p className="text-[var(--text-muted-alt)]">No wallet selected</p>
+                <p className="text-[var(--text-muted-alt)]">
+                  No wallet selected
+                </p>
               </div>
             )}
           </div>

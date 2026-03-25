@@ -13,6 +13,7 @@ enum NotificationType {
   SIGNATURE_REQUEST
   WILL_ACTIVATED
   WILL_CANCELED
+  WILL_CANCELED_ALL_SM_LEFT
   SM_ADDED
   SM_UPDATED
   SM_REMOVED
@@ -22,6 +23,7 @@ enum NotificationType {
   DEATH_CONFIRMED
   VETO_EXERCISED
   ASSETS_SWAPPED
+  EXECUTE_WILL
 }
 
 model User {
@@ -79,9 +81,11 @@ model Will {
   willName                    String
   contractAddressInBlockchain String
   chainId                     Int
+  isDeletedByUser             Boolean           @default(false)   // when the user deletes/keeps the will as draft. Will not deleted for notifications.
   wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
   secondaryMembers            SecondaryMember[]
   notifications               Notifications[]
+  protectionPeriodTimer       ProtectionPeriodTimer?
   
   @@unique([chainId, contractAddressInBlockchain])
   @@map("wills")
@@ -142,13 +146,28 @@ model WillFactory {
 }
 
 model Notifications {
-  notifId    String  @id @default(uuid())
-  notifType    NotificationType @default(WILL_ACTIVATED)
-  willId     String
+  notifId    String           @id @default(uuid())
+  notifType  NotificationType @default(WILL_ACTIVATED)
+  willId     String?
   userId     String
+  smName     String?
   readStatus Boolean
-  will       Will    @relation(fields: [willId], references: [willId], onDelete: Cascade)
-  user       User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+  will       Will?            @relation(fields: [willId], references: [willId], onDelete: SetNull)
+  user       User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model ProtectionPeriodTimer {
+  timerId   String   @id @default(uuid())
+  willId    String   @unique
+  expiresAt DateTime
+  fired     Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  will      Will     @relation(fields: [willId], references: [willId], onDelete: Cascade)
+
+  @@index([fired, expiresAt])
+  @@map("protectionperiodtimers")
 }

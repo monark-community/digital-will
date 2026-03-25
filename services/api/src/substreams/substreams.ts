@@ -71,7 +71,7 @@ export async function startSubstreamsListener(): Promise<void> {
     baseUrl: SUBSTREAMS_URL,
     httpVersion: "2",
     interceptors: [apiKeyInterceptor],
-  });
+  } as Parameters<typeof createGrpcTransport>[0]);
 
   // Exponential backoff state
   let backoffMs = 1_000;

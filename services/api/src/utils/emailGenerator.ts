@@ -16,6 +16,7 @@ type TemplateArgs = {
   willName: string;
   recipientName: string;
   role: NotificationRecipientRole;
+  smName?: string;
 };
 
 const LOGIN_URL = `${config.webUrl}/login`;
@@ -175,6 +176,22 @@ const templates: Record<
     ),
   }),
 
+  [NotificationType.WILL_CANCELED_ALL_SM_LEFT]: ({
+    willName,
+    recipientName,
+  }) => ({
+    subject: `WillChain — Your will "${willName}" has been automatically canceled`,
+    body: buildEmail(
+      recipientName,
+      `<p>We are writing to inform you that your digital will <strong>"${willName}"</strong> has been
+      <strong style="color:#dc2626;">automatically canceled</strong> because all designated secondary members
+      have left the will.</p>
+      <p>Without any secondary members, the will cannot be executed. Your will has been <strong>moved back to draft</strong>
+      so you can update it and redeploy it with new secondary members at any time from your dashboard.</p>`,
+      "Go to My Dashboard",
+    ),
+  }),
+
   [NotificationType.SIGNATURE_REQUEST]: ({ willName, recipientName }) => ({
     subject: `WillChain — Action Required: You have been added to the will "${willName}"`,
     body: buildEmail(
@@ -192,14 +209,14 @@ const templates: Record<
     ),
   }),
 
-  [NotificationType.SM_ADDED]: ({ willName, recipientName, role }) =>
-    role === NotificationRecipientRole.PM
+  [NotificationType.SM_ADDED]: ({ willName, recipientName, role, smName }) => {
+    const name = smName ?? "A secondary member";
+    return role === NotificationRecipientRole.PM
       ? {
           subject: `WillChain — A member validated their participation in "${willName}"`,
           body: buildEmail(
             recipientName,
-            `<p>Good news! A secondary member of your digital will <strong>"${willName}"</strong> has
-            successfully validated their participation on WillChain.</p>
+            `<p>Good news! <strong>${name}</strong> has successfully validated their participation in your digital will <strong>"${willName}"</strong>.</p>
             <p>The overall status of your will has been updated accordingly. Once all designated secondary
             members have completed their validation, your will shall be automatically activated on the
             blockchain.</p>
@@ -212,15 +229,15 @@ const templates: Record<
           subject: `WillChain — A new member joined the will "${willName}"`,
           body: buildEmail(
             recipientName,
-            `<p>We would like to inform you that a fellow secondary member has successfully validated their
-            participation in the digital will <strong>"${willName}"</strong>.</p>
+            `<p><strong>${name}</strong> has successfully validated their participation in the digital will <strong>"${willName}"</strong>.</p>
             <p>The will is progressing towards full activation. Once all participants have confirmed their
             involvement, the will shall become active on the blockchain.</p>
             <p>You can log in to your WillChain account to view the updated participant list and monitor
             the activation status.</p>`,
             "View Will Status",
           ),
-        },
+        };
+  },
 
   [NotificationType.SM_UPDATED]: ({ willName, recipientName, role }) =>
     role === NotificationRecipientRole.SM_TARGET
@@ -249,8 +266,14 @@ const templates: Record<
           ),
         },
 
-  [NotificationType.SM_REMOVED]: ({ willName, recipientName, role }) =>
-    role === NotificationRecipientRole.SM_TARGET
+  [NotificationType.SM_REMOVED]: ({
+    willName,
+    recipientName,
+    role,
+    smName,
+  }) => {
+    const name = smName ?? "A secondary member";
+    return role === NotificationRecipientRole.SM_TARGET
       ? {
           subject: `WillChain — You have been removed from the will "${willName}"`,
           body: buildEmail(
@@ -269,26 +292,33 @@ const templates: Record<
           subject: `WillChain — A member was removed from "${willName}"`,
           body: buildEmail(
             recipientName,
-            `<p>We would like to inform you that a secondary member has been removed from the digital will
+            `<p><strong>${name}</strong> has been removed from the digital will
             <strong>"${willName}"</strong> by its owner.</p>
             <p>The structure of the will has been updated accordingly. You can log in to your WillChain
             account to review the current list of participants and the updated will configuration.</p>`,
             "View Will Details",
           ),
-        },
+        };
+  },
 
-  [NotificationType.SM_DESISTED]: ({ willName, recipientName, role }) =>
-    role === NotificationRecipientRole.PM
+  [NotificationType.SM_DESISTED]: ({
+    willName,
+    recipientName,
+    role,
+    smName,
+  }) => {
+    const name = smName ?? "A secondary member";
+    return role === NotificationRecipientRole.PM
       ? {
           subject: `WillChain — A secondary member desisted from "${willName}"`,
           body: buildEmail(
             recipientName,
-            `<p>We are writing to inform you that a secondary member has <strong>withdrawn their participation</strong>
+            `<p><strong>${name}</strong> has <strong>withdrawn their participation</strong>
             from your digital will <strong>"${willName}"</strong>.</p>
             <p>As a result, the will cannot be activated until the vacant position is filled by a new
             secondary member. We recommend logging in to your WillChain account promptly to review the
             current status and, if necessary, designate a replacement participant.</p>
-            <p>Your will remains saved and accessible. No data has been lost — only the secondary member's
+            <p>Your will remains saved and accessible. No data has been lost — only this secondary member's
             participation has been removed.</p>`,
             "Manage My Will",
           ),
@@ -297,14 +327,15 @@ const templates: Record<
           subject: `WillChain — A member has withdrawn from "${willName}"`,
           body: buildEmail(
             recipientName,
-            `<p>We would like to inform you that a secondary member has withdrawn their participation from
+            `<p><strong>${name}</strong> has withdrawn their participation from
             the digital will <strong>"${willName}"</strong>.</p>
             <p>The will owner has been notified and may take steps to designate a replacement. The
             activation of the will may be temporarily delayed as a result.</p>
             <p>You can log in to your WillChain account to review the updated status of the will.</p>`,
             "View Will Status",
           ),
-        },
+        };
+  },
 
   [NotificationType.SECURITY_PERIOD_UPDATED]: ({
     willName,
@@ -324,8 +355,14 @@ const templates: Record<
     ),
   }),
 
-  [NotificationType.DEATH_DECLARED]: ({ willName, recipientName, role }) =>
-    role === NotificationRecipientRole.PM
+  [NotificationType.DEATH_DECLARED]: ({
+    willName,
+    recipientName,
+    role,
+    smName,
+  }) => {
+    const name = smName ?? "A secondary member";
+    return role === NotificationRecipientRole.PM
       ? {
           subject: `⚠️ WillChain — URGENT: A death declaration was submitted for your will "${willName}"`,
           body: buildEmail(
@@ -333,7 +370,7 @@ const templates: Record<
             `<p style="background-color:#3b1515;border-left:4px solid #ef4444;padding:16px 20px;border-radius:4px;color:#fca5a5;font-weight:600;">
               ⚠️ URGENT — Immediate action may be required.
             </p>
-            <p>A <strong>death declaration</strong> has been submitted against your digital will
+            <p><strong>${name}</strong> has submitted a <strong>death declaration</strong> against your digital will
             <strong>"${willName}"</strong> on WillChain. The security period is now active.</p>
             <p><strong>If you are still alive</strong>, you must log in to your WillChain account
             <strong>immediately</strong> and exercise your veto right before the security period expires.
@@ -349,8 +386,8 @@ const templates: Record<
           subject: `WillChain — Death declaration submitted for "${willName}"`,
           body: buildEmail(
             recipientName,
-            `<p>We are writing to inform you that a <strong>death declaration</strong> has been submitted
-            for the digital will <strong>"${willName}"</strong>, in which you are a designated participant.</p>
+            `<p><strong>${name}</strong> has submitted a <strong>death declaration</strong> for the digital will
+            <strong>"${willName}"</strong>, in which you are a designated participant.</p>
             <p>The security period has now begun. During this period, the primary member of the will has
             the opportunity to exercise their veto right if they believe the declaration is erroneous.</p>
             <p>If no veto is exercised before the security period expires, the death declaration will be
@@ -360,16 +397,23 @@ const templates: Record<
             in real time.</p>`,
             "Monitor Will Status",
           ),
-        },
+        };
+  },
 
-  [NotificationType.DEATH_CONFIRMED]: ({ willName, recipientName, role }) =>
-    role === NotificationRecipientRole.PM
+  [NotificationType.DEATH_CONFIRMED]: ({
+    willName,
+    recipientName,
+    role,
+    smName,
+  }) => {
+    const name = smName ?? "A secondary member";
+    return role === NotificationRecipientRole.PM
       ? {
           subject: `WillChain — Death declaration confirmed for will "${willName}"`,
           body: buildEmail(
             recipientName,
-            `<p>We are writing to inform you that the death declaration submitted for your digital will
-            <strong>"${willName}"</strong> has been <strong>officially confirmed</strong>.</p>
+            `<p>We are writing to inform you that the death declaration submitted by <strong>${name}</strong>
+            for your digital will <strong>"${willName}"</strong> has been <strong>officially confirmed</strong>.</p>
             <p>The security period has elapsed without a veto being exercised. As a result, the
             will execution process has been automatically initiated on the blockchain, in accordance
             with the terms you defined.</p>
@@ -382,8 +426,8 @@ const templates: Record<
           subject: `WillChain — Will execution started for "${willName}"`,
           body: buildEmail(
             recipientName,
-            `<p>We are writing to inform you that the death declaration for the digital will
-            <strong>"${willName}"</strong> has been <strong>officially confirmed</strong>.</p>
+            `<p><strong>${name}</strong> has confirmed the death declaration for the digital will
+            <strong>"${willName}"</strong>, which is now <strong>officially confirmed</strong>.</p>
             <p>The security period has elapsed and no veto was exercised. The will execution process
             has now been automatically initiated on the blockchain. Asset allocations will be processed
             in accordance with the terms defined by the will owner.</p>
@@ -391,18 +435,25 @@ const templates: Record<
             your designated asset allocation.</p>`,
             "View My Asset Allocation",
           ),
-        },
+        };
+  },
 
-  [NotificationType.ASSETS_SWAPPED]: ({ willName, recipientName, role }) =>
-    role === NotificationRecipientRole.PM
+  [NotificationType.ASSETS_SWAPPED]: ({
+    willName,
+    recipientName,
+    role,
+    smName,
+  }) => {
+    const name = smName ?? "A secondary member";
+    return role === NotificationRecipientRole.PM
       ? {
           subject: `WillChain — Asset swap executed in your will "${willName}"`,
           body: buildEmail(
             recipientName,
-            `<p>We are writing to inform you that an <strong>asset swap</strong> has been executed
+            `<p><strong>${name}</strong> has executed an <strong>asset swap</strong>
             within your digital will <strong>"${willName}"</strong>.</p>
-            <p>The asset allocations defined in your will have been adjusted as part of an automated
-            or manually triggered swap operation. The updated allocation is now recorded on the blockchain.</p>
+            <p>The asset allocations defined in your will have been adjusted as part of this operation.
+            The updated allocation is now recorded on the blockchain.</p>
             <p>Please log in to your WillChain account to review the new asset distribution and ensure
             it accurately reflects your intentions.</p>`,
             "Review Asset Allocation",
@@ -412,7 +463,7 @@ const templates: Record<
           subject: `WillChain — Asset swap executed in "${willName}"`,
           body: buildEmail(
             recipientName,
-            `<p>We are writing to inform you that an <strong>asset swap</strong> has been executed
+            `<p><strong>${name}</strong> has executed an <strong>asset swap</strong>
             in the digital will <strong>"${willName}"</strong>, in which you are a designated participant.</p>
             <p>The asset allocations within the will have been updated accordingly. The new distribution
             is now recorded on the blockchain.</p>
@@ -420,7 +471,8 @@ const templates: Record<
             to your participation.</p>`,
             "View My Allocation",
           ),
-        },
+        };
+  },
 
   [NotificationType.VETO_EXERCISED]: ({ willName, recipientName }) => ({
     subject: `WillChain — Death declaration vetoed for will "${willName}"`,
@@ -436,6 +488,20 @@ const templates: Record<
       "View Will Status",
     ),
   }),
+
+  [NotificationType.EXECUTE_WILL]: ({ willName, recipientName }) => ({
+    subject: `WillChain — Protection period ended for "${willName}" — Execution available`,
+    body: buildEmail(
+      recipientName,
+      `<p>The <strong>protection period</strong> for the digital will
+      <strong>"${willName}"</strong> has <strong>expired</strong>.</p>
+      <p>The security waiting period has elapsed and no veto was exercised by the primary member.
+      As a designated secondary member, you may now proceed with the <strong>execution of the will</strong>
+      on the blockchain.</p>
+      <p>Please log in to your WillChain account to initiate the execution process.</p>`,
+      "Execute Will",
+    ),
+  }),
 };
 
 export function generateEmail(
@@ -443,8 +509,9 @@ export function generateEmail(
   willName: string,
   recipientName: string,
   role: NotificationRecipientRole = NotificationRecipientRole.SM,
+  smName?: string,
 ): EmailContent {
-  return templates[type]({ willName, recipientName, role });
+  return templates[type]({ willName, recipientName, role, smName });
 }
 
 /**

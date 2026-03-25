@@ -1,11 +1,14 @@
 import { PrismaClient, Prisma } from "@prisma/client";
+import { ethers } from "ethers";
 import { BadRequestError, NotFoundError } from "../utils/errors";
 import { WillFromDB } from "./chainStateService";
+import { getProvider } from "../utils/blockchain";
 
 const prisma = new PrismaClient();
 
 /**
  * Maps a draft will to the WillFromDB format expected by the frontend
+ * Returns security periods in SECONDS for consistency with deployed wills
  */
 const mapDraftWillToWillFromDB = (
   draftWill: Prisma.DraftWillGetPayload<{
@@ -13,6 +16,7 @@ const mapDraftWillToWillFromDB = (
   }>,
 ): WillFromDB => {
   const { draftsecondarymembers, draftWillId, ...dw } = draftWill;
+
   return {
     ...dw,
     state: "DRAFT" as const,
@@ -59,9 +63,9 @@ export const getDeployedWillsByWalletAddress = async (
     throw new NotFoundError("Wallet not found");
   }
 
-  // Get only deployed wills
+  // Get only deployed wills (exclude deleted)
   const deployedWills = await prisma.will.findMany({
-    where: { walletAddress: walletAddress.toLowerCase() },
+    where: { walletAddress: walletAddress.toLowerCase(), isDeletedByUser: false },
     include: { secondaryMembers: true },
   });
 
@@ -123,6 +127,137 @@ export async function getWillByContractAddress(
   });
 }
 
+const SECURITY_PERIOD_ABI = [
+  "function getSecurityPeriodConfig() view returns (tuple(uint256 minSecurityPeriod, uint256 maxSecurityPeriod))",
+];
+
+/**
+ * Private helper: creates a DraftWill + DraftSecondaryMembers inside an existing transaction.
+ */
+async function createDraftInTransaction(
+  tx: Prisma.TransactionClient,
+  will: {
+    walletAddress: string;
+    willName: string;
+    secondaryMembers: Array<{
+      secondaryMemberId: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      phoneNumber?: string | null;
+      walletAddress?: string | null;
+      tempWalletAddress?: string | null;
+      relationship?: string | null;
+    }>;
+  },
+  minSecurityPeriod: number,
+  maxSecurityPeriod: number,
+  votingPowers: Record<string, number> = {},
+) {
+  const draftWill = await tx.draftWill.create({
+    data: {
+      walletAddress: will.walletAddress,
+      willName: will.willName,
+      minSecurityPeriod,
+      maxSecurityPeriod,
+    },
+  });
+
+  if (will.secondaryMembers.length > 0) {
+    await tx.draftSecondaryMember.createMany({
+      data: will.secondaryMembers.map((sm) => ({
+        firstName: sm.firstName,
+        lastName: sm.lastName,
+        email: sm.email,
+        phoneNumber: sm.phoneNumber ?? null,
+        walletAddress: sm.walletAddress ?? sm.tempWalletAddress ?? null,
+        votingPower: votingPowers[sm.secondaryMemberId] ?? 1,
+        draftWillId: draftWill.draftWillId,
+        relationship: sm.relationship ?? null,
+      })),
+    });
+  }
+
+  return draftWill;
+}
+
+/**
+ * Creates a DraftWill from a canceled will, reading security periods from the chain.
+ * Called when a will is auto-canceled so the MP can redeploy from a draft.
+ */
+export async function createDraftWillFromCanceledWill(
+  willId: string,
+): Promise<void> {
+  const will = await prisma.will.findUnique({
+    where: { willId },
+    include: { secondaryMembers: true },
+  });
+  if (!will) return;
+
+  let minSecurityPeriod = 0;
+  let maxSecurityPeriod = 0;
+
+  try {
+    const provider = getProvider();
+    const contract = new ethers.Contract(
+      ethers.getAddress(will.contractAddressInBlockchain),
+      SECURITY_PERIOD_ABI,
+      provider,
+    );
+    const config = await contract.getSecurityPeriodConfig();
+    minSecurityPeriod = Number(config.minSecurityPeriod) / 86400;
+    maxSecurityPeriod = Number(config.maxSecurityPeriod) / 86400;
+  } catch (err) {
+    console.error(
+      `[WillService] createDraftWillFromCanceledWill: failed to read security period config for ${will.contractAddressInBlockchain}:`,
+      err,
+    );
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await createDraftInTransaction(
+      tx,
+      will,
+      minSecurityPeriod,
+      maxSecurityPeriod,
+    );
+  });
+
+  console.log(
+    `[WillService] Draft will created for auto-canceled will ${willId}`,
+  );
+}
+
+/**
+ * If a will is canceled and has no remaining notifications, delete it.
+ */
+export async function cleanupCanceledWill(willId: string): Promise<void> {
+  const will = await prisma.will.findUnique({
+    where: { willId },
+    select: { isDeletedByUser: true },
+  });
+  if (!will?.isDeletedByUser) return;
+
+  const remaining = await prisma.notifications.count({
+    where: { willId },
+  });
+  if (remaining === 0) {
+    await prisma.will.delete({ where: { willId } });
+  }
+}
+
+/**
+ * Mark a will as deleted by its contract address (used by event handlers for auto-delete).
+ */
+export async function markWillAsDeleted(
+  contractAddress: string,
+): Promise<void> {
+  await prisma.will.updateMany({
+    where: { contractAddressInBlockchain: contractAddress.toLowerCase() },
+    data: { isDeletedByUser: true },
+  });
+}
+
 /**
  * Get a single draft will by ID
  */
@@ -159,6 +294,7 @@ export const getAssociatedWills = async (userId: string) => {
   const secondaryMemberRecords = await prisma.secondaryMember.findMany({
     where: {
       OR: orConditions,
+      will: { isDeletedByUser: false },
     },
     include: {
       will: {
@@ -471,40 +607,20 @@ export const cancelWillOnChain = async (
   const { minSecurityPeriod, maxSecurityPeriod, secondaryMembersVotingPowers } =
     input;
 
-  // Supprimer le will et créer un draftWill dans une transaction
+  // Marquer le will comme annulé et créer un draftWill dans une transaction
   return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    // Créer le draftWill avec les mêmes informations
-    const draftWill = await tx.draftWill.create({
-      data: {
-        walletAddress: will.walletAddress,
-        willName: will.willName,
-        minSecurityPeriod,
-        maxSecurityPeriod,
-      },
-    });
+    const draftWill = await createDraftInTransaction(
+      tx,
+      will,
+      minSecurityPeriod,
+      maxSecurityPeriod,
+      secondaryMembersVotingPowers,
+    );
 
-    // Créer les draftSecondaryMembers à partir des secondaryMembers supprimés
-    if (will.secondaryMembers.length > 0) {
-      const membersData = will.secondaryMembers.map((member) => ({
-        firstName: member.firstName,
-        lastName: member.lastName,
-        email: member.email,
-        phoneNumber: member.phoneNumber ?? null,
-        walletAddress: member.walletAddress ?? member.tempWalletAddress ?? null,
-        votingPower:
-          secondaryMembersVotingPowers[member.secondaryMemberId] ?? 1,
-        draftWillId: draftWill.draftWillId,
-        relationship: member.relationship ?? null,
-      }));
-
-      await tx.draftSecondaryMember.createMany({
-        data: membersData,
-      });
-    }
-
-    // Supprimer le will (les secondaryMembers seront supprimés en cascade)
-    await tx.will.delete({
+    // Marquer le will comme annulé (les secondaryMembers restent pour les notifications)
+    await tx.will.update({
       where: { willId },
+      data: { isDeletedByUser: true },
     });
 
     const draftWillWithMembers = await tx.draftWill.findUnique({
@@ -631,7 +747,7 @@ export const updateDeployedWillInDB = async (
  */
 export const removeSecondaryMemberByAddress = async (
   willId: string,
-  userWalletAddresses: string[]
+  userWalletAddresses: string[],
 ) => {
   const will = await prisma.will.findUnique({ where: { willId } });
   if (!will) {
