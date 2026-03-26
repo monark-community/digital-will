@@ -366,7 +366,7 @@ export function getErrorMessage(error: any, fallbackMessage?: string): string {
 
   // Check for contract deployment/address issues
   if (isContractAddressError(error)) {
-    return 'Contract error: The contract may not be deployed on this network, or the contract address is incorrect. Please verify you are connected to the correct network and the contract is deployed.';
+    return 'Contract call failed (CALL_EXCEPTION): No data returned. The contract may not be deployed on this network, or the address is incorrect.';
   }
 
   // Try to extract and decode contract error
