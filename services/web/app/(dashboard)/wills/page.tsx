@@ -1002,8 +1002,6 @@ export default function WillsPage() {
     setErrorMessage(null);
     setSuccessMessage(null);
     setDeployingWillId(will.willId);
-    setDeployModal(null);
-    setDeployFundAmount("");
     setDeployFundError(null);
 
     try {
@@ -1022,14 +1020,16 @@ export default function WillsPage() {
           fundEth && parseFloat(fundEth) > 0 ? fundEth : undefined,
       });
 
+      setDeployModal(null);
+      setDeployFundAmount("");
       setSuccessMessage(
         `Will deployed successfully! Contract: ${deployedWill.contractAddressInBlockchain}`,
       );
 
       setTimeout(() => window.location.reload(), 2000);
     } catch (error: any) {
-      // Error is displayed in UI via setErrorMessage
-      setErrorMessage(getErrorMessage(error, "Failed to deploy will."));
+      const errorMsg = getErrorMessage(error, "Failed to deploy will.");
+      setDeployFundError(errorMsg);
     } finally {
       setDeployingWillId(null);
     }
@@ -3685,21 +3685,21 @@ export default function WillsPage() {
                   ETH
                 </span>
               </div>
-              <div className="flex items-center justify-between mt-1.5">
-                {deployFundError ? (
-                  <p className="text-red-400 text-xs">{deployFundError}</p>
-                ) : (
-                  <span />
-                )}
-                {deployWalletBalance !== null && (
-                  <p className="text-xs text-[var(--text-muted-alt)] ml-auto">
+              {deployWalletBalance !== null && (
+                <div className="flex justify-end mt-1.5">
+                  <p className="text-xs text-[var(--text-muted-alt)]">
                     Balance:{" "}
                     <span className="font-semibold text-[var(--text-primary)]">
                       {parseFloat(deployWalletBalance).toFixed(4)} ETH
                     </span>
                   </p>
-                )}
-              </div>
+                </div>
+              )}
+              {deployFundError && (
+                <div className="mt-2">
+                  <p className="text-red-400 text-xs">{deployFundError}</p>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2">
@@ -3709,15 +3709,17 @@ export default function WillsPage() {
                   setDeployFundAmount("");
                   setDeployFundError(null);
                 }}
-                className="px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+                disabled={deployingWillId === deployModal.willId}
+                className="px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleConfirmDeploy(undefined)}
-                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+                disabled={deployingWillId === deployModal.willId}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Fund Later
+                {deployingWillId === deployModal.willId ? 'Deploying...' : 'Fund Later'}
               </button>
               <button
                 onClick={() => {
@@ -3728,11 +3730,19 @@ export default function WillsPage() {
                   }
                   handleConfirmDeploy(deployFundAmount || undefined);
                 }}
-                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent)] text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                disabled={deployingWillId === deployModal.willId}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent)] text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {deployFundAmount && parseFloat(deployFundAmount) > 0
-                  ? "Deploy & Fund"
-                  : "Deploy Now"}
+                {deployingWillId === deployModal.willId ? (
+                  <>
+                    <span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    Deploying...
+                  </>
+                ) : (
+                  deployFundAmount && parseFloat(deployFundAmount) > 0
+                    ? "Deploy & Fund"
+                    : "Deploy Now"
+                )}
               </button>
             </div>
           </div>
