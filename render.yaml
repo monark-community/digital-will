@@ -1,0 +1,70 @@
+services:
+  - type: web
+    name: willchain-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./services/api/Dockerfile
+    dockerContext: .
+    dockerTarget: development
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      # ── Environment ──
+      - key: NODE_ENV
+        value: development
+      - key: PORT
+        value: "4000"
+      - key: HOSTNAME
+        value: "0.0.0.0"
+
+      # ── Database (your existing Render DB — set manually in dashboard) ──
+      - key: DATABASE_URL
+        sync: false
+
+      # ── Logging ──
+      - key: LOG_LEVEL
+        value: info
+
+      # ── CORS ──
+      - key: CORS_ORIGIN
+        sync: false # set manually in Render dashboard
+
+      # ── Auth / JWT ──
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+
+      # ── WebSocket ──
+      - key: WEBSOCKET_CORS_ORIGIN
+        sync: false # set manually in Render dashboard
+
+      # ── Web URL (frontend) ──
+      - key: WEB_URL
+        sync: false # set manually in Render dashboard
+
+      # ── Email (Resend) ──
+      - key: RESEND_API_KEY
+        sync: false # set manually in Render dashboard
+      - key: EMAIL_FROM
+        sync: false # set manually in Render dashboard
+
+      # ── Blockchain ──
+      - key: RPC_URL
+        sync: false # set manually in Render dashboard
+      - key: CHAIN_ID
+        value: "11155111"
+
+      # ── Substreams ──
+      - key: MANIFEST
+        value: /app/spkg/willchain-events-v0.1.0.spkg
+      - key: SUBSTREAMS_URL
+        value: https://sepolia.substreams.pinax.network:443
+      - key: SUBSTREAMS_API_KEY
+        sync: false # set manually in Render dashboard
+      - key: SUBSTREAMS_MODULE
+        value: map_events_calls
+      - key: WILL_FACTORY_ADDRESS
+        sync: false # set manually in Render dashboard
+      - key: BLOCK_DEPLOYED
+        sync: false # set manually in Render dashboard
