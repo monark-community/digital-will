@@ -478,19 +478,66 @@ export default function AssociatedWillsPage() {
 
                   <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <span className="text-xs text-[var(--text-muted)]">
+                      <p className="text-xs text-[var(--text-muted)] mb-1">
                         Created by
-                      </span>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">
-                        {will.owner.firstName} {will.owner.lastName}
                       </p>
-                      <p className="text-xs text-[var(--text-muted)]">
-                        {will.owner.email}
+                      <p className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1">
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span>
+                          {will.owner.firstName} {will.owner.lastName}
+                        </span>
+                      </p>
+                      <p className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1">
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                          />
+                        </svg>
+                        <span>
+                          {will.owner.email}
+                        </span>
                       </p>
                     </div>
                     <div>
-                      <span className="text-xs text-[var(--text-muted)]">
-                        Owner wallet
+                      <span className="text-xs text-[var(--text-muted)] inline-flex items-center gap-1 mb-1">
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M15 12h3"
+                          />
+                        </svg>
+                        <span>Owner wallet</span>
                       </span>
                       <div className="flex items-start gap-1">
                         <p className="font-mono text-sm text-[var(--text-primary)] break-all">
@@ -541,8 +588,23 @@ export default function AssociatedWillsPage() {
                     )}
                     {will.chainId && (
                       <div>
-                        <span className="text-xs text-[var(--text-muted)]">
-                          Network
+                        <span className="text-xs text-[var(--text-muted)] inline-flex items-center gap-1 mb-1">
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                          </svg>
+                          <span className="text-xs text-[var(--text-muted)]">
+                            Network
+                          </span>
                         </span>
                         <p className="text-sm text-[var(--text-primary)]">
                           {CHAIN_NAMES[will.chainId] ?? `Chain ${will.chainId}`}
@@ -550,9 +612,24 @@ export default function AssociatedWillsPage() {
                       </div>
                     )}
                     <div>
-                      <span className="text-xs text-[var(--text-muted)]">
-                        Security period
+                      <span className="text-xs text-[var(--text-muted)] inline-flex items-center gap-1 mb-1">
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span className="text-xs text-[var(--text-muted)]">
+                          Security period
+                        </span>
                       </span>
+                      
                       <p className="text-sm text-[var(--text-primary)]">
                         {displaySecurityPeriodRange(
                           will.minSecurityPeriod,
@@ -623,7 +700,66 @@ export default function AssociatedWillsPage() {
                                     <span>Confirming…</span>
                                   </>
                                 ) : (
-                                  action.label
+                                  <>
+                                    <span>{action.label}</span>
+                                    {action.id === "validate" && (
+                                      <svg
+                                        className="w-3.5 h-3.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth={1.5}
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                      </svg>
+                                    )}
+                                    {action.id === "refuse" && (
+                                      <svg
+                                        className="w-3.5 h-3.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth={1.5}
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="15" y1="9" x2="9" y2="15"></line>
+                                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                                      </svg>
+                                    )}
+                                    {action.id === "declareDeath" && (
+                                      <svg
+                                        className="w-3.5 h-3.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth={1.5}
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                      </svg>
+                                    )}
+                                    {action.id === "swapAssets" && (
+                                      <svg
+                                        className="w-3.5 h-3.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth={1.5}
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                      </svg>
+                                    )}
+                                  </>
                                 )}
                               </button>
                               {isDisabled && reason && (

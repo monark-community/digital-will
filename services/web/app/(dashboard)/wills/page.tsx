@@ -1480,18 +1480,40 @@ export default function WillsPage() {
               }
               className="w-full bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-between hover:border-[var(--accent)] transition-colors"
             >
-              <div className="flex-1 text-left">
-                <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
-                  {selectedFilterWalletId === "all"
-                    ? "All Wallets"
-                    : selectedFilterWallet?.label ||
-                      `Wallet ${selectedFilterWallet?.address.slice(0, 8)}...`}
-                </h3>
-                <p className="text-sm text-[var(--text-muted-alt)] font-mono">
-                  {selectedFilterWalletId === "all"
-                    ? "Showing wills from all wallets"
-                    : `wallet id : ${selectedFilterWallet?.address}`}
-                </p>
+              <div className="flex items-center gap-3 flex-1">
+                <div className="w-10 h-10 rounded-full bg-[var(--bg-section)] border border-[var(--border-section)] flex items-center justify-center flex-shrink-0">
+                  <svg
+                    className="w-5 h-5 text-[var(--accent)]"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15 12h3"
+                    />
+                  </svg>
+                </div>
+                <div className="text-left min-w-0">
+                  <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
+                    {selectedFilterWalletId === "all"
+                      ? "All Wallets"
+                      : selectedFilterWallet?.label ||
+                        `Wallet ${selectedFilterWallet?.address.slice(0, 8)}...`}
+                  </h3>
+                  <p className="text-sm text-[var(--text-muted-alt)] font-mono">
+                    {selectedFilterWalletId === "all"
+                      ? "Showing wills from all wallets"
+                      : `wallet id : ${selectedFilterWallet?.address}`}
+                  </p>
+                </div>
               </div>
               <svg
                 className={`w-6 h-6 text-[var(--text-primary)] transition-transform ${showFilterWalletDropdown ? "rotate-180" : ""}`}
@@ -1522,12 +1544,36 @@ export default function WillsPage() {
                       : ""
                   }`}
                 >
-                  <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
-                    All Wallets
-                  </h3>
-                  <p className="text-sm text-[var(--text-muted-alt)]">
-                    Show wills from all wallets
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[var(--bg-section)] border border-[var(--border-section)] flex items-center justify-center flex-shrink-0">
+                      <svg
+                        className="w-5 h-5 text-[var(--accent)]"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15 12h3"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
+                        All Wallets
+                      </h3>
+                      <p className="text-sm text-[var(--text-muted-alt)]">
+                        Show wills from all wallets
+                      </p>
+                    </div>
+                  </div>
                 </button>
                 {wallets &&
                   wallets.length > 0 &&
@@ -1545,13 +1591,37 @@ export default function WillsPage() {
                           : ""
                       }`}
                     >
-                      <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
-                        {wallet.label ||
-                          `Wallet ${wallet.address.slice(0, 8)}...`}
-                      </h3>
-                      <p className="text-sm text-[var(--text-muted-alt)] font-mono">
-                        wallet id : {wallet.address}
-                      </p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-[var(--bg-section)] border border-[var(--border-section)] flex items-center justify-center flex-shrink-0">
+                          <svg
+                            className="w-5 h-5 text-[var(--accent)]"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M15 12h3"
+                            />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
+                            {wallet.label ||
+                              `Wallet ${wallet.address.slice(0, 8)}...`}
+                          </h3>
+                          <p className="text-sm text-[var(--text-muted-alt)] font-mono">
+                            wallet id : {wallet.address}
+                          </p>
+                        </div>
+                      </div>
                     </button>
                   ))}
               </div>
@@ -1645,8 +1715,26 @@ export default function WillsPage() {
                                   {selectedWallet.label}
                                 </div>
                               )}
-                              <div className="text-[var(--text-muted-alt)] text-sm font-mono">
-                                {selectedWallet.address}
+                              <div className="text-[var(--text-muted-alt)] text-sm font-mono inline-flex items-center gap-1">
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth={2}
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                                  />
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M15 12h3"
+                                  />
+                                </svg>
+                                <span>{selectedWallet.address}</span>
                               </div>
                             </div>
                           ) : (
@@ -1688,8 +1776,26 @@ export default function WillsPage() {
                                     {wallet.label}
                                   </div>
                                 )}
-                                <div className="text-[var(--text-muted-alt)] text-sm font-mono">
-                                  {wallet.address}
+                                <div className="text-[var(--text-muted-alt)] text-sm font-mono inline-flex items-center gap-1">
+                                  <svg
+                                    className="w-3 h-3"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M15 12h3"
+                                    />
+                                  </svg>
+                                  <span>{wallet.address}</span>
                                 </div>
                               </button>
                             ))
@@ -1723,8 +1829,22 @@ export default function WillsPage() {
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      Secondary Members (minimum 2 required)
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2 inline-flex items-center gap-1">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                      </svg>
+                      <span>Secondary Members (minimum 2 required)</span>
                     </label>
                     <div className="space-y-4">
                       {secondaryMembers.map((member, index) => (
@@ -1890,8 +2010,26 @@ export default function WillsPage() {
                                       <div className="text-sm font-medium text-[var(--text-primary)]">
                                         {contact.firstName} {contact.lastName}
                                       </div>
-                                      <div className="text-xs text-[var(--text-muted-alt)] font-mono">
-                                        {contact.walletAddress}
+                                      <div className="text-xs text-[var(--text-muted-alt)] font-mono inline-flex items-center gap-1">
+                                        <svg
+                                          className="w-3 h-3"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth={2}
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                                          />
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M15 12h3"
+                                          />
+                                        </svg>
+                                        <span>{contact.walletAddress}</span>
                                       </div>
                                     </button>
                                   ))}
@@ -2047,8 +2185,22 @@ export default function WillsPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Min Security Period ({config.securityPeriod.unit})
+                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2 inline-flex items-center gap-1">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span>
+                          Min Security Period ({config.securityPeriod.unit})
+                        </span>
                       </label>
                       <input
                         type="number"
@@ -2084,8 +2236,22 @@ export default function WillsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Max Security Period ({config.securityPeriod.unit})
+                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2 inline-flex items-center gap-1">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span>
+                          Max Security Period ({config.securityPeriod.unit})
+                        </span>
                       </label>
                       <input
                         type="number"
@@ -2260,12 +2426,30 @@ export default function WillsPage() {
 
                     <div className="grid grid-cols-1 gap-3 mb-3">
                       <div>
-                        <p className="text-xs text-[var(--text-muted-alt)]">
-                          Wallet Address
+                        <p className="text-xs text-[var(--text-muted-alt)] inline-flex items-center gap-1">
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M15 12h3"
+                            />
+                          </svg>
+                          <span>Wallet Address</span>
                         </p>
                         <div className="flex items-start gap-2">
-                          <p className="text-sm font-medium text-[var(--text-primary)] font-mono break-all">
-                            {will.walletAddress}
+                          <p className="text-sm font-medium text-[var(--text-primary)] font-mono break-all inline-flex items-start gap-1">
+                            <span>{will.walletAddress}</span>
                           </p>
                           <div className="relative flex-shrink-0">
                             <button
@@ -2302,8 +2486,21 @@ export default function WillsPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <p className="text-xs text-[var(--text-muted-alt)]">
-                            Network
+                          <p className="text-xs text-[var(--text-muted-alt)] inline-flex items-center gap-1">
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <line x1="2" y1="12" x2="22" y2="12"></line>
+                              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                            </svg>
+                            <span>Network</span>
                           </p>
                           <p className="text-sm font-medium text-[var(--text-primary)]">
                             {will.chainId
@@ -2312,24 +2509,62 @@ export default function WillsPage() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-[var(--text-muted-alt)]">
-                            Secondary Members
+                          <p className="text-xs text-[var(--text-muted-alt)] inline-flex items-center gap-1">
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                              <circle cx="9" cy="7" r="4"></circle>
+                              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            <span>Secondary Members</span>
                           </p>
                           <p className="text-sm font-medium text-[var(--text-primary)]">
                             {will.secondaryMembers.length} people
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-[var(--text-muted-alt)]">
-                            Min Security Period
+                          <p className="text-xs text-[var(--text-muted-alt)] inline-flex items-center gap-1">
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span>Min Security Period</span>
                           </p>
                           <p className="text-sm font-medium text-[var(--text-primary)]">
                             {displaySecurityPeriod(will.minSecurityPeriod)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-[var(--text-muted-alt)]">
-                            Max Security Period
+                          <p className="text-xs text-[var(--text-muted-alt)] inline-flex items-center gap-1">
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span>Max Security Period</span>
                           </p>
                           <p className="text-sm font-medium text-[var(--text-primary)]">
                             {displaySecurityPeriod(will.maxSecurityPeriod)}
@@ -2391,7 +2626,7 @@ export default function WillsPage() {
                                   }}
                                   className="px-2.5 py-1 text-xs font-medium rounded-md border border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
                                 >
-                                  Fund
+                                  Fund +
                                 </button>
                                 <button
                                   onClick={() => {
@@ -2405,7 +2640,7 @@ export default function WillsPage() {
                                   }}
                                   className="px-2.5 py-1 text-xs font-medium rounded-md border border-orange-500/50 text-orange-400 hover:bg-orange-500/10 transition-colors"
                                 >
-                                  Withdraw
+                                  Withdraw -
                                 </button>
                               </div>
                             </div>
@@ -2442,8 +2677,22 @@ export default function WillsPage() {
                     })()}
 
                     <div className="border-t border-[var(--border-section)] pt-3 mt-3">
-                      <p className="text-xs text-[var(--text-muted-alt)] mb-2">
-                        Secondary Members:
+                      <p className="text-xs text-[var(--text-muted-alt)] mb-2 inline-flex items-center gap-1">
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="9" cy="7" r="4"></circle>
+                          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        <span>Secondary Members:</span>
                       </p>
                       <div className="space-y-2">
                         {will.secondaryMembers.map(
@@ -2453,8 +2702,22 @@ export default function WillsPage() {
                               className="bg-[var(--bg-card)] rounded p-2"
                             >
                               <div className="flex items-center justify-between mb-1">
-                                <span className="text-sm font-medium text-[var(--text-primary)]">
-                                  {member.firstName} {member.lastName}
+                                <span className="text-sm font-medium text-[var(--text-primary)] inline-flex items-center gap-1">
+                                  <svg
+                                    className="w-3.5 h-3.5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth={1.5}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                  </svg>
+                                  <span>
+                                    {member.firstName} {member.lastName}
+                                  </span>
                                 </span>
                                 <div className="flex items-center gap-1.5">
                                   {will.contractAddressInBlockchain && (
@@ -2534,8 +2797,26 @@ export default function WillsPage() {
                                     "";
                                   return (
                                     <div className="flex items-start gap-2">
-                                      <div className="font-mono break-all">
-                                        {addressToCopy || "No address"}
+                                      <div className="font-mono break-all inline-flex items-start gap-1">
+                                        <svg
+                                          className="w-3 h-3 mt-0.5 flex-shrink-0"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth={2}
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                                          />
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M15 12h3"
+                                          />
+                                        </svg>
+                                        <span>{addressToCopy || "No address"}</span>
                                       </div>
                                       {addressToCopy && (
                                         <div className="relative flex-shrink-0">
@@ -2613,17 +2894,41 @@ export default function WillsPage() {
                       {will.state === "DRAFT" ? (
                         <button
                           onClick={() => handleEditDraft(will)}
-                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors inline-flex items-center justify-center gap-1.5"
                         >
-                          Edit Will
+                          <span>Edit Will</span>
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
                         </button>
                       ) : will.state !== "CANCELED" &&
                         will.state !== "EXECUTED" ? (
                         <button
                           onClick={() => handleOpenEditWill(will)}
-                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors inline-flex items-center justify-center gap-1.5"
                         >
-                          Edit Will
+                          <span>Edit Will</span>
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
                         </button>
                       ) : null}
                       {will.state !== "DRAFT" &&
@@ -2639,9 +2944,22 @@ export default function WillsPage() {
                               });
                               setCancelError(null);
                             }}
-                            className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors"
+                            className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors inline-flex items-center justify-center gap-1.5"
                           >
-                            Cancel Will
+                            <span>Cancel Will</span>
+                            <svg
+                              className="w-3.5 h-3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <line x1="15" y1="9" x2="9" y2="15"></line>
+                              <line x1="9" y1="9" x2="15" y2="15"></line>
+                            </svg>
                           </button>
                         )}
                       {(() => {
@@ -2667,9 +2985,21 @@ export default function WillsPage() {
                                 canVeto
                                   ? "border-orange-500/50 text-orange-400 hover:bg-orange-500/10"
                                   : "border-[var(--border-section)] text-[var(--text-muted-alt)] opacity-40 cursor-not-allowed"
-                              }`}
+                              } inline-flex items-center justify-center gap-1.5`}
                             >
-                              Veto Death
+                              <span>Veto Death</span>
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={1.5}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                viewBox="0 0 24 24"
+                              >
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                              </svg>
                             </button>
                             {!canVeto && (
                               <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 whitespace-nowrap rounded-lg bg-[var(--bg-section)] border border-[var(--border-section)] px-3 py-2 text-xs text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
@@ -2739,7 +3069,23 @@ export default function WillsPage() {
                                     Deploying...
                                   </>
                                 ) : (
-                                  "Deploy to Blockchain"
+                                  <>
+                                    <span>Deploy to Blockchain</span>
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth={1.5}
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <polyline points="16 16 12 12 8 16"></polyline>
+                                      <line x1="12" y1="12" x2="12" y2="21"></line>
+                                      <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
+                                      <polyline points="16 16 12 12 8 16"></polyline>
+                                    </svg>
+                                  </>
                                 )}
                               </button>
                             </>
@@ -3510,8 +3856,22 @@ export default function WillsPage() {
               </div>
 
               <div>
-                <p className="text-xs font-semibold text-[var(--text-primary)] mb-2 uppercase tracking-wide">
-                  Secondary Members
+                <p className="text-xs font-semibold text-[var(--text-primary)] mb-2 uppercase tracking-wide inline-flex items-center gap-1">
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
+                  <span>Secondary Members</span>
                 </p>
                 <div className="space-y-2">
                   {editWillMembers
