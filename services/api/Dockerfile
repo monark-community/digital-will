@@ -23,8 +23,11 @@ RUN \
   mkdir -p node_modules/@bufbuild && \
   cp -r node_modules/@connectrpc/connect-node node_modules/@bufbuild/connect-node && \
   # Force dist/cjs/ files in @substreams/manifest to be treated as CommonJS \
-  # (some environments detect them as ESM causing "exports is not defined" crash) \
-  echo '{"type":"commonjs"}' > node_modules/@substreams/manifest/dist/cjs/package.json
+  echo '{"type":"commonjs"}' > node_modules/@substreams/manifest/dist/cjs/package.json && \
+  # Patch locate-buf-binary.js: replace import.meta.url (ESM) with __filename (CJS) \
+  # The file mixes CJS exports with ESM import.meta.url — fundamentally broken upstream \
+  sed -i 's/(0, _nodeModule.createRequire)(import.meta.url)/(0, _nodeModule.createRequire)(__filename)/g' \
+    node_modules/@substreams/manifest/dist/cjs/protobuf/locate-buf-binary.js
 
 # ---- Local Development ----
 FROM base AS local
