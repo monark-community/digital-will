@@ -67,7 +67,12 @@ export async function checkDeleteEligibility(userId: string): Promise<DeleteElig
   const secondaryMemberWills = await prisma.secondaryMember.findMany({
     where: {
       AND: [
-        { walletAddress: { in: walletAddresses } },
+        {
+        OR: [
+          { walletAddress: { in: walletAddresses } },
+          { tempWalletAddress: { in: walletAddresses } }
+        ]
+      },
         { email: user.email },
         { will: 
           { 
