@@ -25,6 +25,7 @@ import {
   SecurityPeriodCountdown,
   CooldownCountdown,
 } from "@/app/components/ui/SecurityPeriodCountdown";
+import { getErrorMessage } from "@/lib/contract-errors";
 
 const WILL_STATE_COLORS: Record<string, string> = {
   DRAFT: "bg-gray-500/20 text-gray-400",
@@ -39,20 +40,6 @@ const SM_STATE_COLORS: Record<string, string> = {
   VALIDATED: "bg-emerald-500/20 text-emerald-400",
   DECLARED_DEATH: "bg-red-500/20 text-red-400",
 };
-
-function getMetaMaskErrorMessage(err: any): string | null {
-  if (
-    err?.code === 4001 ||
-    err?.code === "ACTION_REJECTED" ||
-    err?.reason === "rejected" ||
-    err?.message?.includes("user rejected") ||
-    err?.message?.includes("User denied") ||
-    err?.message?.includes("ethers-user-denied")
-  ) {
-    return "Transaction cancelled. You rejected the request in MetaMask.";
-  }
-  return null;
-}
 
 // Chain ID to name mapping
 const CHAIN_NAMES: Record<number, string> = {
@@ -469,9 +456,7 @@ export default function WillsPage() {
       setFundModal(null);
       setFundAmount("");
     } catch (err: any) {
-      setFundError(
-        getMetaMaskErrorMessage(err) ?? err.message ?? "Transaction failed.",
-      );
+      setFundError(getErrorMessage(err, "Transaction failed."));
     } finally {
       setIsFunding(false);
     }
@@ -502,9 +487,7 @@ export default function WillsPage() {
       setWithdrawModal(null);
       setWithdrawAmount("");
     } catch (err: any) {
-      setWithdrawError(
-        getMetaMaskErrorMessage(err) ?? err.message ?? "Transaction failed.",
-      );
+      setWithdrawError(getErrorMessage(err, "Transaction failed."));
     } finally {
       setIsWithdrawing(false);
     }
@@ -553,9 +536,7 @@ export default function WillsPage() {
       );
       setCancelModal(null);
     } catch (err: any) {
-      setCancelError(
-        getMetaMaskErrorMessage(err) ?? err.message ?? "Transaction failed.",
-      );
+      setCancelError(getErrorMessage(err, "Transaction failed."));
     } finally {
       setIsCanceling(false);
     }
@@ -570,9 +551,7 @@ export default function WillsPage() {
       setVetoModal(null);
       await fetchWills();
     } catch (err: any) {
-      setVetoError(
-        getMetaMaskErrorMessage(err) ?? err.message ?? "Transaction failed.",
-      );
+      setVetoError(getErrorMessage(err, "Transaction failed."));
     } finally {
       setIsVetoing(false);
     }
@@ -1049,12 +1028,8 @@ export default function WillsPage() {
 
       setTimeout(() => window.location.reload(), 2000);
     } catch (error: any) {
-      console.error("Deployment error:", error);
-      setErrorMessage(
-        getMetaMaskErrorMessage(error) ??
-          error.message ??
-          "Failed to deploy will.",
-      );
+      // Error is displayed in UI via setErrorMessage
+      setErrorMessage(getErrorMessage(error, "Failed to deploy will."));
     } finally {
       setDeployingWillId(null);
     }
@@ -1396,9 +1371,7 @@ export default function WillsPage() {
       setSuccessMessage("Will updated successfully.");
       setTimeout(() => window.location.reload(), 2000);
     } catch (err: any) {
-      setEditWillError(
-        getMetaMaskErrorMessage(err) ?? err.message ?? "Update failed.",
-      );
+      setEditWillError(getErrorMessage(err, "Update failed."));
     } finally {
       setIsUpdatingWill(false);
     }

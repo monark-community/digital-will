@@ -13,6 +13,7 @@ import {
   CooldownCountdown,
 } from "@/app/components/ui/SecurityPeriodCountdown";
 import { displaySecurityPeriodRange } from "@/lib/utils/blockchain";
+import { getErrorMessage } from "@/lib/contract-errors";
 
 type ActionId = 'validate' | 'refuse' |  'declareDeath' | 'swapAssets';
 
@@ -266,7 +267,6 @@ export default function AssociatedWillsPage() {
           await willService.removeSecondaryMember(will.willId);
           console.log('🔵 Successfully removed from database');
         } catch (dbError: any) {
-          console.error('🔴 Failed to remove from database:', dbError);
           setActionError((prev) => ({
               ...prev,
               [id]: "Blockchain transaction succeeded, but failed to update database. Please refresh.",
@@ -281,30 +281,10 @@ export default function AssociatedWillsPage() {
         }));
         await fetchAssociatedWills();
       } catch (err: any) {
-        if (
-          err.code === 4001 ||
-          err.code === "ACTION_REJECTED" ||
-          err.reason === "rejected"
-        ) {
-          setActionError((prev) => ({
-            ...prev,
-            [id]: "Transaction rejected by user.",
-          }));
-        } else if (
-          err.data === "0x46032016" ||
-          err.info?.error?.data === "0x46032016" ||
-          (typeof err.message === "string" && err.message.includes("46032016"))
-        ) {
-          setActionError((prev) => ({
-            ...prev,
-            [id]: "The will is on cooldown after the primary member vetoed. New declarations are blocked until the cooldown expires.",
-          }));
-        } else {
-          setActionError((prev) => ({
-            ...prev,
-            [id]: err.reason || err.message || "Transaction failed.",
-          }));
-        }
+        setActionError((prev) => ({
+          ...prev,
+          [id]: getErrorMessage(err, "Transaction failed."),
+        }));
       } finally {
         setActionLoading((prev) => ({ ...prev, [id]: null }));
       }
