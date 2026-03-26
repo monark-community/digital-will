@@ -205,12 +205,27 @@ export default function WillsPage() {
   const [editWillMaxPeriod, setEditWillMaxPeriod] = useState("");
   const [isUpdatingWill, setIsUpdatingWill] = useState(false);
   const [editWillError, setEditWillError] = useState<string | null>(null);
+  const [highlightedWillId, setHighlightedWillId] = useState<string | null>(
+    null,
+  );
 
   const clearOpenCreateParam = useCallback(() => {
     if (!searchParams.has("openCreate")) return;
 
     const params = new URLSearchParams(searchParams.toString());
     params.delete("openCreate");
+    const queryString = params.toString();
+
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+  }, [pathname, router, searchParams]);
+
+  const clearTargetWillParam = useCallback(() => {
+    if (!searchParams.has("targetWillId")) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("targetWillId");
     const queryString = params.toString();
 
     router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
@@ -1437,6 +1452,60 @@ export default function WillsPage() {
             selectedFilterWallet?.address.toLowerCase(),
         );
 
+  useEffect(() => {
+    const targetWillId = searchParams.get("targetWillId");
+    if (!targetWillId || isLoadingWills) return;
+
+    if (selectedFilterWalletId === "all") return;
+
+    const existsInAllWills = realWills.some((will) => will.willId === targetWillId);
+    const existsInDisplayed = displayedWills.some(
+      (will) => will.willId === targetWillId,
+    );
+
+    if (existsInAllWills && !existsInDisplayed) {
+      setSelectedFilterWalletId("all");
+    }
+  }, [
+    displayedWills,
+    isLoadingWills,
+    realWills,
+    searchParams,
+    selectedFilterWalletId,
+  ]);
+
+  useEffect(() => {
+    const targetWillId = searchParams.get("targetWillId");
+    if (!targetWillId || isLoadingWills || displayedWills.length === 0) return;
+
+    const targetWillExists = displayedWills.some(
+      (will) => will.willId === targetWillId,
+    );
+    if (!targetWillExists) return;
+
+    const timeoutId = window.setTimeout(() => {
+      const targetElement = document.getElementById(`will-card-${targetWillId}`);
+      if (!targetElement) return;
+
+      targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedWillId(targetWillId);
+      clearTargetWillParam();
+
+      window.setTimeout(() => {
+        setHighlightedWillId((current) =>
+          current === targetWillId ? null : current,
+        );
+      }, 2200);
+    }, 120);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    clearTargetWillParam,
+    displayedWills,
+    isLoadingWills,
+    searchParams,
+  ]);
+
   return (
     <>
       <Header isAuthenticated={true} user={user} />
@@ -2361,7 +2430,12 @@ export default function WillsPage() {
                 displayedWills.map((will) => (
                   <div
                     key={will.willId}
-                    className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors"
+                    id={`will-card-${will.willId}`}
+                    className={`border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors ${
+                      highlightedWillId === will.willId
+                        ? "ring-2 ring-[var(--accent)]"
+                        : ""
+                    }`}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>

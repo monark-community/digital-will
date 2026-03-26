@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ethers } from "ethers";
 import Header from "@/app/components/ui/Header";
 import { willService, authService, type AssociatedWill } from "@/lib/services";
@@ -136,7 +136,9 @@ const CHAIN_NAMES: Record<number, string> = {
 };
 
 export default function AssociatedWillsPage() {
+  const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: currentUser } = useCurrentUser();
   const { data: wallets } = useWallets();
   const filterWalletDropdownRef = useRef<HTMLDivElement>(null);
@@ -151,6 +153,9 @@ export default function AssociatedWillsPage() {
   const [showFilterWalletDropdown, setShowFilterWalletDropdown] =
     useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [highlightedWillId, setHighlightedWillId] = useState<string | null>(
+    null,
+  );
 
   // Per-will action state
   const [actionLoading, setActionLoading] = useState<
@@ -323,8 +328,6 @@ export default function AssociatedWillsPage() {
     }
   };
 
-  if (!mounted) return null;
-
   const selectedFilterWallet = wallets?.find(
     (w) => w.walletId === selectedFilterWalletId,
   );
@@ -339,6 +342,54 @@ export default function AssociatedWillsPage() {
             will.myMembership.tempWalletAddress?.toLowerCase() === addr
           );
         });
+
+  const clearTargetWillParam = useCallback(() => {
+    if (!searchParams.has("targetWillId")) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("targetWillId");
+    const queryString = params.toString();
+
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+  }, [pathname, router, searchParams]);
+
+  useEffect(() => {
+    const targetWillId = searchParams.get("targetWillId");
+    if (!targetWillId || isLoading || displayedWills.length === 0) return;
+
+    const targetWillExists = displayedWills.some(
+      (will) => will.willId === targetWillId,
+    );
+    if (!targetWillExists) return;
+
+    const timeoutId = window.setTimeout(() => {
+      const targetElement = document.getElementById(
+        `associated-will-card-${targetWillId}`,
+      );
+      if (!targetElement) return;
+
+      targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedWillId(targetWillId);
+      clearTargetWillParam();
+
+      window.setTimeout(() => {
+        setHighlightedWillId((current) =>
+          current === targetWillId ? null : current,
+        );
+      }, 2200);
+    }, 120);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    clearTargetWillParam,
+    displayedWills,
+    isLoading,
+    searchParams,
+  ]);
+
+  if (!mounted) return null;
 
   return (
     <div className="flex flex-col min-h-screen bg-[var(--bg-page)]">
@@ -457,7 +508,12 @@ export default function AssociatedWillsPage() {
               {displayedWills.map((will) => (
                 <div
                   key={will.willId}
-                  className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-section)] shadow-sm overflow-hidden"
+                  id={`associated-will-card-${will.willId}`}
+                  className={`bg-[var(--bg-card)] rounded-xl border border-[var(--border-section)] shadow-sm overflow-hidden ${
+                    highlightedWillId === will.willId
+                      ? "ring-2 ring-[var(--accent)]"
+                      : ""
+                  }`}
                 >
                   {/* Will header */}
                   <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-section)]">
