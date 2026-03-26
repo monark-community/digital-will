@@ -16,6 +16,8 @@ services:
         value: "4000"
       - key: HOSTNAME
         value: "0.0.0.0"
+      - key: API_URL
+        sync: false # set manually in Render dashboard
 
       # ── Database (your existing Render DB — set manually in dashboard) ──
       - key: DATABASE_URL
@@ -36,6 +38,8 @@ services:
         value: 7d
 
       # ── WebSocket ──
+      - key: WEBSOCKET_PORT
+        value: "4001"
       - key: WEBSOCKET_CORS_ORIGIN
         sync: false # set manually in Render dashboard
 
