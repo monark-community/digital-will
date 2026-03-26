@@ -21,7 +21,10 @@ RUN \
   fi && \
   # @substreams/node@0.7.x requires @bufbuild/connect-node (old name, now @connectrpc/connect-node) \
   mkdir -p node_modules/@bufbuild && \
-  cp -r node_modules/@connectrpc/connect-node node_modules/@bufbuild/connect-node
+  cp -r node_modules/@connectrpc/connect-node node_modules/@bufbuild/connect-node && \
+  # Force dist/cjs/ files in @substreams/manifest to be treated as CommonJS \
+  # (some environments detect them as ESM causing "exports is not defined" crash) \
+  echo '{"type":"commonjs"}' > node_modules/@substreams/manifest/dist/cjs/package.json
 
 # ---- Local Development ----
 FROM base AS local
