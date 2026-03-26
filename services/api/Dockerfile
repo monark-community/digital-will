@@ -24,10 +24,11 @@ RUN \
   cp -r node_modules/@connectrpc/connect-node node_modules/@bufbuild/connect-node && \
   # Force dist/cjs/ files in @substreams/manifest to be treated as CommonJS \
   echo '{"type":"commonjs"}' > node_modules/@substreams/manifest/dist/cjs/package.json && \
-  # Patch locate-buf-binary.js: replace import.meta.url (ESM) with __filename (CJS) \
-  # The file mixes CJS exports with ESM import.meta.url — fundamentally broken upstream \
+  # Patch upstream @substreams/manifest CJS files that incorrectly use import.meta.url \
   sed -i 's/(0, _nodeModule.createRequire)(import.meta.url)/(0, _nodeModule.createRequire)(__filename)/g' \
-    node_modules/@substreams/manifest/dist/cjs/protobuf/locate-buf-binary.js
+    node_modules/@substreams/manifest/dist/cjs/protobuf/locate-buf-binary.js && \
+  sed -i 's/new URL("\.\.\/\.\.\/system.pb", import.meta.url)/new URL("\.\.\/\.\.\/system.pb", url.pathToFileURL(__filename))/g' \
+    node_modules/@substreams/manifest/dist/cjs/protobuf/read-system-protos.js
 
 # ---- Local Development ----
 FROM base AS local
