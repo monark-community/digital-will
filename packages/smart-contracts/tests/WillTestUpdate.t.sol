@@ -196,6 +196,33 @@ contract WillTestUpdate is Test {
         assertEq(will.totalVotePowerS(), 3);
     }
 
+    // Deleting SM, state ACTIVE.
+    function test_UpdateWill_DeleteSM_StateBecomesActive() public {
+        address[] memory smDeleted = new address[](1);
+        smDeleted[0] = sm4;
+
+        // Validate all SMs to make state ACTIVE.
+        vm.prank(sm1);
+        will.validateSm();
+        vm.prank(sm2);
+        will.validateSm();
+        vm.prank(sm3);
+        will.validateSm();
+
+        vm.prank(pm);
+        will.updateWill(
+            new SMPartialInfo[](0),
+            new SMPartialInfo[](0),
+            smDeleted,
+            SecurityPeriodConfig({minSecurityPeriod: 0, maxSecurityPeriod: 0})
+        );
+
+        vm.expectRevert(Errors.ERR_SMDoesNotExist.selector);
+        will.getDetailedSm(sm4);
+        assertEq(uint8(will.getState()), uint8(WillState.ACTIVE));
+        assertEq(will.totalVotePowerS(), 3);
+    }
+
     // Update security period + state maintained.
     function test_UpdateWill_UpdateSecurityPeriod_StateMaintained() public {
         SecurityPeriodConfig

@@ -28,7 +28,10 @@ abstract contract WillEvents {
 
     // ========================
     // Assets-related events
-    event EVT_WillChain_AssetsSwapped(address indexed smAddress); // 0x02b3c875
+    event EVT_WillChain_AssetsSwapped(
+        address indexed smAddress,
+        uint256 indexed usdcAmount
+    ); // 0x7b936eb9
 
     // ========================
     // Process / SM / Death-related events

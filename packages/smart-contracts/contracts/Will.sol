@@ -455,7 +455,7 @@ contract Will is WillEvents, ReentrancyGuard {
     {
         willStateS = WillState.EXECUTED;
         uint256 amountOut = _swapExactInputSingle();
-        emit EVT_WillChain_AssetsSwapped(msg.sender);
+        emit EVT_WillChain_AssetsSwapped(msg.sender, amountOut);
         return amountOut;
     }
 
