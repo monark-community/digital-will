@@ -68,7 +68,7 @@ export function validateForDeployment(will: {
 
   // 5. Validate security periods (received in seconds from frontend)
   const isLocalOrDev = process.env.NODE_ENV !== "production";
-  const minLimitSeconds = isLocalOrDev ? 1 * 60 : 28 * 86400; // 1 min or 28 days
+  const minLimitSeconds = isLocalOrDev ? 1 * 60 : 28 * 86400; // 1 min or 28 days 
   const maxLimitSeconds = isLocalOrDev ? 10000 * 60 : 154 * 86400; // 10000 min or 154 days
 
   if (
