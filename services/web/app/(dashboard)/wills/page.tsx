@@ -894,7 +894,7 @@ export default function WillsPage() {
       canAddToContacts[i] = canAddContact;
     }
 
-    // Validation des périodes (si fournies)
+    // Validation des périodes de sécurité
     const minPeriod = parseInt(minSecurityPeriod);
     const maxPeriod = parseInt(maxSecurityPeriod);
 
@@ -922,16 +922,21 @@ export default function WillsPage() {
         errors.push("Minimum security period cannot be greater than maximum");
       }
 
+      const minPeriodSeconds = config.isLocalOrDev ? minPeriod * 60 : minPeriod * 86400;
+      const maxPeriodSeconds = config.isLocalOrDev ? maxPeriod * 60 : maxPeriod * 86400;
+
       // Optionnel : vérifier des plages spécifiques
-      if (minPeriod < config.securityPeriod.min) {
+      if (minPeriodSeconds < config.securityPeriod.min) {
+        const minLimit = config.isLocalOrDev ? config.securityPeriod.min / 60 : config.securityPeriod.min / 86400;
         errors.push(
-          `Minimum security period must be at least ${config.securityPeriod.min} ${config.securityPeriod.unit}`,
+          `Minimum security period must be at least ${minLimit} ${config.securityPeriod.unit}`,
         );
       }
 
-      if (maxPeriod > config.securityPeriod.max) {
+      if (maxPeriodSeconds > config.securityPeriod.max) {
+        const maxLimit = config.isLocalOrDev ? config.securityPeriod.max / 60 : config.securityPeriod.max / 86400;
         errors.push(
-          `Maximum security period cannot exceed ${config.securityPeriod.max} ${config.securityPeriod.unit}`,
+          `Maximum security period cannot exceed ${maxLimit} ${config.securityPeriod.unit}`,
         );
       }
     }
@@ -2028,8 +2033,8 @@ export default function WillsPage() {
                       </label>
                       <input
                         type="number"
-                        min={config.securityPeriod.min}
-                        max={config.securityPeriod.max}
+                        min={config.isLocalOrDev ? 1 : 28}
+                        max={config.isLocalOrDev ? 10000 : 154}
                         value={minSecurityPeriod}
                         onChange={(e) => {
                           const value = e.target.value;
@@ -2045,17 +2050,13 @@ export default function WillsPage() {
                           // Quand l'utilisateur quitte le champ, forcer les limites
                           const value = parseInt(e.target.value);
                           if (!isNaN(value)) {
-                            if (value < config.securityPeriod.min)
-                              setMinSecurityPeriod(
-                                config.securityPeriod.min.toString(),
-                              );
-                            else if (value > config.securityPeriod.max)
-                              setMinSecurityPeriod(
-                                config.securityPeriod.max.toString(),
-                              );
+                            const minLimit = config.isLocalOrDev ? 1 : 28;
+                            const maxLimit = config.isLocalOrDev ? 10000 : 154;
+                            if (value < minLimit) setMinSecurityPeriod(minLimit.toString());
+                            else if (value > maxLimit) setMaxSecurityPeriod(maxLimit.toString());
                           }
                         }}
-                        placeholder={`e.g., ${config.securityPeriod.min}`}
+                        placeholder={`e.g., ${config.isLocalOrDev ? 1 : 28}`}
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                       />
                     </div>
@@ -2065,8 +2066,8 @@ export default function WillsPage() {
                       </label>
                       <input
                         type="number"
-                        min={config.securityPeriod.min}
-                        max={config.securityPeriod.max}
+                        min={config.isLocalOrDev ? 1 : 28}
+                        max={config.isLocalOrDev ? 10000 : 154}
                         value={maxSecurityPeriod}
                         onChange={(e) => {
                           const value = e.target.value;
@@ -2079,17 +2080,13 @@ export default function WillsPage() {
                         onBlur={(e) => {
                           const value = parseInt(e.target.value);
                           if (!isNaN(value)) {
-                            if (value < config.securityPeriod.min)
-                              setMaxSecurityPeriod(
-                                config.securityPeriod.min.toString(),
-                              );
-                            else if (value > config.securityPeriod.max)
-                              setMaxSecurityPeriod(
-                                config.securityPeriod.max.toString(),
-                              );
+                            const minLimit = config.isLocalOrDev ? 1 : 28;
+                            const maxLimit = config.isLocalOrDev ? 10000 : 154;
+                            if (value < minLimit) setMaxSecurityPeriod(minLimit.toString());
+                            else if (value > maxLimit) setMaxSecurityPeriod(maxLimit.toString());
                           }
                         }}
-                        placeholder={`e.g., ${config.securityPeriod.max}`}
+                        placeholder={`e.g., ${config.isLocalOrDev ? 10000 : 154}`}
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                       />
                     </div>
