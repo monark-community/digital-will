@@ -81,10 +81,7 @@ export const config = {
     process.env.WEB_URL || process.env.CORS_ORIGIN || "http://localhost:3000",
 
   blockchain: {
-    rpcUrl:
-      process.env.NEXT_PUBLIC_RPC_URL ||
-      process.env.RPC_URL ||
-      "http://localhost:8545",
+    rpcUrl: process.env.RPC_URL || "http://localhost:8545",
     chainId: process.env.CHAIN_ID
       ? parseInt(process.env.CHAIN_ID, 10)
       : undefined,
