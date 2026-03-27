@@ -20,8 +20,8 @@ export const config = {
   isLocalOrDev: _isNonProd,
   securityPeriod: {
     unit: _isNonProd ? ("minutes" as const) : ("days" as const),
-    min: _isNonProd ? 1 : 28,
-    max: _isNonProd ? 10000 : 154,
+    min: _isNonProd ? 1 * 60 : 28 * 86400,
+    max: _isNonProd ? 10000 * 60 : 154 * 86400,
   },
 } as const;
 
