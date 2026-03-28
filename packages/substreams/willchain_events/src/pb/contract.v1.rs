@@ -116,6 +116,8 @@ pub struct WillEvtWillChainAssetsSwapped {
     pub evt_address: ::prost::alloc::string::String,
     #[prost(bytes="vec", tag="6")]
     pub sm_address: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag="7")]
+    pub usdc_amount: ::prost::alloc::string::String,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

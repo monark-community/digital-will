@@ -149,6 +149,7 @@ export function mapAssetsSwapped(
   return {
     willAddress: addHexPrefix(raw.evtAddress),
     smAddress: base64ToHex(raw.smAddress),
+    usdcAmount: Number(raw.usdcAmount)/(10 ** 6), // to have the same unit as displayed in the block explorer
   };
 }
 

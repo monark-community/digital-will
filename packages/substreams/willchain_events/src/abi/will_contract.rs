@@ -2571,44 +2571,45 @@ pub mod events {
     #[derive(Debug, Clone, PartialEq)]
     pub struct EvtWillChainAssetsSwapped {
         pub sm_address: Vec<u8>,
+        pub usdc_amount: substreams::scalar::BigInt,
     }
     impl EvtWillChainAssetsSwapped {
         const TOPIC_ID: [u8; 32] = [
-            197u8,
-            179u8,
-            246u8,
-            32u8,
-            199u8,
-            255u8,
-            124u8,
-            104u8,
-            57u8,
-            87u8,
-            126u8,
-            44u8,
-            189u8,
-            107u8,
-            102u8,
-            34u8,
-            102u8,
-            254u8,
-            249u8,
-            124u8,
-            154u8,
+            123u8,
+            147u8,
+            110u8,
+            185u8,
+            91u8,
+            41u8,
+            176u8,
+            245u8,
+            231u8,
+            160u8,
+            67u8,
+            103u8,
+            58u8,
+            38u8,
             146u8,
-            40u8,
-            18u8,
-            143u8,
-            65u8,
-            210u8,
-            107u8,
-            2u8,
-            37u8,
-            197u8,
-            191u8,
+            57u8,
+            248u8,
+            202u8,
+            24u8,
+            114u8,
+            15u8,
+            17u8,
+            77u8,
+            39u8,
+            13u8,
+            207u8,
+            137u8,
+            121u8,
+            156u8,
+            167u8,
+            230u8,
+            217u8,
         ];
         pub fn match_log(log: &substreams_ethereum::pb::eth::v2::Log) -> bool {
-            if log.topics.len() != 2usize {
+            if log.topics.len() != 3usize {
                 return false;
             }
             if log.data.len() != 0usize {
@@ -2637,6 +2638,25 @@ pub mod events {
                     .expect(INTERNAL_ERR)
                     .as_bytes()
                     .to_vec(),
+                usdc_amount: {
+                    let mut v = [0 as u8; 32];
+                    ethabi::decode(
+                            &[ethabi::ParamType::Uint(256usize)],
+                            log.topics[2usize].as_ref(),
+                        )
+                        .map_err(|e| {
+                            format!(
+                                "unable to decode param 'usdc_amount' from topic of type 'uint256': {:?}",
+                                e
+                            )
+                        })?
+                        .pop()
+                        .expect(INTERNAL_ERR)
+                        .into_uint()
+                        .expect(INTERNAL_ERR)
+                        .to_big_endian(v.as_mut_slice());
+                    substreams::scalar::BigInt::from_unsigned_bytes_be(&v)
+                },
             })
         }
     }

@@ -85,6 +85,7 @@ export interface Event_WillActivated {
 export interface Event_WillAssetsSwapped {
   willAddress: string; // hex 0x
   smAddress: string; // hex 0x
+  usdcAmount: number;
 }
 
 /** Fired when a death declaration is confirmed by a secondary member. */

@@ -62,6 +62,7 @@ message Will_EvtWillChainAssetsSwapped {
     uint64 evt_block_number = 4;
     string evt_address = 5;
     bytes sm_address = 6;
+    string usdc_amount = 7;
 }
     
 message Will_EvtWillChainDeathConfirmed {

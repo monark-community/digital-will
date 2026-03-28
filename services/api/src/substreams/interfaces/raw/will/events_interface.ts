@@ -23,8 +23,6 @@ export interface Will_EvtWillChainWillActivated {
   evtAddress: string; // will address hex (without 0x prefix)
 }
 
-// not tested
-
 export interface Will_EvtWillChainAssetsSwapped {
   evtTxHash: string;
   evtIndex: number;
@@ -32,6 +30,7 @@ export interface Will_EvtWillChainAssetsSwapped {
   evtBlockNumber: string;
   evtAddress: string;
   smAddress: string;
+  usdcAmount: string;
 }
 
 export interface Will_EvtWillChainDeathConfirmed {
