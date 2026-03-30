@@ -121,8 +121,12 @@ export default function WillsPage() {
     index: number;
     isLoading: boolean;
   } | null>(null);
-  const [minSecurityPeriod, setMinSecurityPeriod] = useState("");
-  const [maxSecurityPeriod, setMaxSecurityPeriod] = useState("");
+  const [minSecurityPeriod, setMinSecurityPeriod] = useState(
+    (config.isLocalOrDev ? 1 : 28).toString(),
+  );
+  const [maxSecurityPeriod, setMaxSecurityPeriod] = useState(
+    (config.isLocalOrDev ? 10000 : 154).toString(),
+  );
   const [showWalletDropdown, setShowWalletDropdown] = useState(false);
   const [showContactDropdown, setShowContactDropdown] = useState<number | null>(
     null,
@@ -130,7 +134,26 @@ export default function WillsPage() {
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [contactSuccessByIndex, setContactSuccessByIndex] = useState<
+    Record<number, string>
+  >({});
+  const [addedContactFingerprintByIndex, setAddedContactFingerprintByIndex] =
+    useState<Record<number, string>>({});
+  const [powerDraftByIndex, setPowerDraftByIndex] = useState<
+    Record<number, string>
+  >({});
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [addContactTooltip, setAddContactTooltip] = useState<{
+    index: number;
+    top: number;
+    left: number;
+    message: string;
+  } | null>(null);
+  const [powerInfoTooltip, setPowerInfoTooltip] = useState<{
+    index: number;
+    top: number;
+    left: number;
+  } | null>(null);
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [canAddToContacts, setCanAddToContacts] = useState<boolean[]>([]);
   const [contractBalances, setContractBalances] = useState<
@@ -391,9 +414,66 @@ export default function WillsPage() {
     ]);
   };
 
+  const getContactFingerprint = (member: SecondaryMember) => {
+    return [
+      member.firstName.trim(),
+      member.lastName.trim(),
+      member.email.trim().toLowerCase(),
+      member.address.trim().toLowerCase(),
+    ].join("|");
+  };
+
+  const normalizeContactField = (value?: string | null) =>
+    (value || "").trim().toLowerCase();
+
+  const memberMatchesExistingContact = (member: SecondaryMember) => {
+    if (!contacts || contacts.length === 0) return false;
+
+    const normalizedMemberFirstName = normalizeContactField(member.firstName);
+    const normalizedMemberLastName = normalizeContactField(member.lastName);
+    const normalizedMemberEmail = normalizeContactField(member.email);
+    const normalizedMemberAddress = normalizeContactField(member.address);
+
+    return contacts.some((contact) => {
+      return (
+        normalizeContactField(contact.firstName) === normalizedMemberFirstName &&
+        normalizeContactField(contact.lastName) === normalizedMemberLastName &&
+        normalizeContactField(contact.email) === normalizedMemberEmail &&
+        normalizeContactField(contact.walletAddress) === normalizedMemberAddress
+      );
+    });
+  };
+
   const removeSecondaryMember = (index: number) => {
     if (secondaryMembers.length > 2) {
       setSecondaryMembers(secondaryMembers.filter((_, i) => i !== index));
+      setContactSuccessByIndex((prev) => {
+        const next: Record<number, string> = {};
+        for (const [key, value] of Object.entries(prev)) {
+          const numericKey = Number(key);
+          if (numericKey < index) next[numericKey] = value;
+          if (numericKey > index) next[numericKey - 1] = value;
+        }
+        return next;
+      });
+      setAddedContactFingerprintByIndex((prev) => {
+        const next: Record<number, string> = {};
+        for (const [key, value] of Object.entries(prev)) {
+          const numericKey = Number(key);
+          if (numericKey < index) next[numericKey] = value;
+          if (numericKey > index) next[numericKey - 1] = value;
+        }
+        return next;
+      });
+      setPowerDraftByIndex((prev) => {
+        const next: Record<number, string> = {};
+        for (const [key, value] of Object.entries(prev)) {
+          const numericKey = Number(key);
+          if (numericKey < index) next[numericKey] = value;
+          if (numericKey > index) next[numericKey - 1] = value;
+        }
+        return next;
+      });
     }
   };
 
@@ -631,8 +711,22 @@ export default function WillsPage() {
         relationship: member.relationship,
       });
 
-      setSuccessMessage("Contact added successfully!");
-      setTimeout(() => setSuccessMessage(null), 3000);
+      setContactSuccessByIndex((prev) => ({
+        ...prev,
+        [memberIndex]: "Contact added successfully!",
+      }));
+      setAddedContactFingerprintByIndex((prev) => ({
+        ...prev,
+        [memberIndex]: getContactFingerprint(member),
+      }));
+      setTimeout(() => {
+        setContactSuccessByIndex((prev) => {
+          if (!(memberIndex in prev)) return prev;
+          const next = { ...prev };
+          delete next[memberIndex];
+          return next;
+        });
+      }, 3000);
     } catch (error: any) {
       setErrorMessage(error.message);
     } finally {
@@ -1404,11 +1498,14 @@ export default function WillsPage() {
         power: 1,
       },
     ]);
-    setMinSecurityPeriod("");
-    setMaxSecurityPeriod("");
+    setMinSecurityPeriod((config.isLocalOrDev ? 1 : 28).toString());
+    setMaxSecurityPeriod((config.isLocalOrDev ? 10000 : 154).toString());
     setShowCreateForm(false);
     setShowWalletDropdown(false);
     setShowContactDropdown(null);
+    setContactSuccessByIndex({});
+    setAddedContactFingerprintByIndex({});
+    setPowerDraftByIndex({});
     setErrorMessage(null);
     setSuccessMessage(null);
     setEditingWillId(null);
@@ -1503,6 +1600,7 @@ export default function WillsPage() {
               onClick={() => setShowCreateForm(true)}
               className="flex items-center space-x-2 bg-[var(--accent)] hover:opacity-90 text-white px-6 py-3 rounded-lg font-semibold transition-opacity"
             >
+              <span>Create Will</span>
               <svg
                 className="w-5 h-5"
                 fill="none"
@@ -1516,7 +1614,6 @@ export default function WillsPage() {
                   d="M12 4v16m8-8H4"
                 />
               </svg>
-              <span>Create Will</span>
             </button>
           </div>
 
@@ -1894,7 +1991,21 @@ export default function WillsPage() {
                       <span>Secondary Members (minimum 2 required)</span>
                     </label>
                     <div className="space-y-4">
-                      {secondaryMembers.map((member, index) => (
+                      {secondaryMembers.map((member, index) => {
+                        const isAlreadyAddedUnchanged =
+                          addedContactFingerprintByIndex[index] !== undefined &&
+                          addedContactFingerprintByIndex[index] ===
+                            getContactFingerprint(member);
+                        const isMatchingContactList =
+                          memberMatchesExistingContact(member);
+                        const addToContactsDisabledReason =
+                          isMatchingContactList
+                            ? "Contact already exists in contacts' list"
+                            : isAlreadyAddedUnchanged
+                              ? "Contact already added in contacts' list"
+                              : null;
+
+                        return (
                         <div
                           key={index}
                           className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30"
@@ -1904,7 +2015,7 @@ export default function WillsPage() {
                               Member {index + 1}
                             </span>
                             <div className="flex items-center gap-2">
-                              <div className="relative group">
+                              <div className="relative group hover:z-20">
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -1923,7 +2034,8 @@ export default function WillsPage() {
                                       : "text-[var(--accent)] border border-[var(--accent)] hover:bg-[var(--accent)]/10"
                                   }`}
                                 >
-                                  <svg
+                                  Contact's List
+                                <svg
                                     className="w-3 h-3"
                                     fill="none"
                                     stroke="currentColor"
@@ -1936,75 +2048,92 @@ export default function WillsPage() {
                                       d="M12 4v16m8-8H4"
                                     />
                                   </svg>
-                                  Add Contact
                                 </button>
                                 {(!contacts || contacts.length === 0) && (
-                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
                                     You have no contacts
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
                                   </div>
                                 )}
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => handleAddToContacts(index)}
-                                disabled={
-                                  addingToContacts?.index === index ||
-                                  !canAddToContacts[index]
-                                }
-                                className={`px-3 py-1 text-xs font-medium rounded transition-colors flex items-center gap-1 ${
-                                  canAddToContacts[index]
-                                    ? "text-blue-500 border border-blue-500 hover:bg-blue-500/10"
-                                    : "text-gray-400 border border-gray-400 cursor-not-allowed opacity-50"
-                                }`}
-                                title={
-                                  canAddToContacts[index]
-                                    ? "Add this person to your contacts"
-                                    : "Complete all required fields (first name, last name, email, wallet address) to add to contacts"
-                                }
+                              <div
+                                className="relative"
+                                onMouseEnter={(e) => {
+                                  if (!addToContactsDisabledReason) return;
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setAddContactTooltip({
+                                    index,
+                                    top: rect.top - 8,
+                                    left: rect.left + rect.width / 2,
+                                    message: addToContactsDisabledReason,
+                                  });
+                                }}
+                                onMouseLeave={() => {
+                                  setAddContactTooltip((prev) =>
+                                    prev?.index === index ? null : prev,
+                                  );
+                                }}
                               >
-                                {addingToContacts?.index === index ? (
-                                  <>
-                                    <svg
-                                      className="animate-spin w-3 h-3"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddToContacts(index)}
+                                  disabled={
+                                    addingToContacts?.index === index ||
+                                    !canAddToContacts[index] ||
+                                    isMatchingContactList ||
+                                    isAlreadyAddedUnchanged
+                                  }
+                                  className={`px-3 py-1 text-xs font-medium rounded transition-colors flex items-center gap-1 ${
+                                    canAddToContacts[index] &&
+                                    !isMatchingContactList &&
+                                    !isAlreadyAddedUnchanged
+                                      ? "text-blue-500 border border-blue-500 hover:bg-blue-500/10"
+                                      : "text-gray-400 border border-gray-400 cursor-not-allowed opacity-50"
+                                  }`}
+                                >
+                                  {addingToContacts?.index === index ? (
+                                    <>
+                                      Adding...
+                                      <svg
+                                        className="animate-spin w-3 h-3"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <circle
+                                          className="opacity-25"
+                                          cx="12"
+                                          cy="12"
+                                          r="10"
+                                          stroke="currentColor"
+                                          strokeWidth="4"
+                                          fill="none"
+                                        />
+                                        <path
+                                          className="opacity-75"
+                                          fill="currentColor"
+                                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                        />
+                                      </svg>
+                                    </>
+                                  ) : (
+                                    <>
+                                      Add to Contacts
+                                      <svg
+                                        className="w-3 h-3"
                                         fill="none"
-                                      />
-                                      <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                      />
-                                    </svg>
-                                    Adding...
-                                  </>
-                                ) : (
-                                  <>
-                                    <svg
-                                      className="w-3 h-3"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                                      />
-                                    </svg>
-                                    Add to Contacts
-                                  </>
-                                )}
-                              </button>
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                                        />
+                                      </svg>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
                               {secondaryMembers.length > 2 && (
                                 <button
                                   onClick={() => removeSecondaryMember(index)}
@@ -2027,6 +2156,12 @@ export default function WillsPage() {
                               )}
                             </div>
                           </div>
+
+                          {contactSuccessByIndex[index] && (
+                            <div className="mb-3 px-3 py-2 bg-green-500/10 border border-green-500/50 rounded-md text-green-500 text-xs">
+                              {contactSuccessByIndex[index]}
+                            </div>
+                          )}
 
                           {showContactDropdown === index &&
                             contacts &&
@@ -2156,37 +2291,75 @@ export default function WillsPage() {
                               placeholder="0x... Wallet Address *"
                               className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm font-mono placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             />
-                            <input
-                              type="number"
-                              min="1"
-                              max="255"
-                              value={member.power}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === "") {
-                                  // Si l'utilisateur efface, on met la valeur par défaut 1
-                                  updateSecondaryMember(index, "power", 1);
-                                  return;
-                                }
-                                updateSecondaryMember(
-                                  index,
-                                  "power",
-                                  parseInt(value) || 1,
-                                );
-                              }}
-                              onBlur={(e) => {
-                                const value = parseInt(e.target.value);
-                                if (!isNaN(value)) {
-                                  if (value < 1) {
+                            <div className="relative">
+                              <span
+                                className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[var(--text-muted-alt)] border border-[var(--border-section)] rounded-full w-4 h-4 inline-flex items-center justify-center cursor-help"
+                                onMouseEnter={(e) => {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setPowerInfoTooltip({
+                                    index,
+                                    top: rect.top - 8,
+                                    left: rect.left + rect.width / 2,
+                                  });
+                                }}
+                                onMouseLeave={() => {
+                                  setPowerInfoTooltip((prev) =>
+                                    prev?.index === index ? null : prev,
+                                  );
+                                }}
+                              >
+                                ?
+                              </span>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                maxLength={3}
+                                value={powerDraftByIndex[index] ?? String(member.power)}
+                                onChange={(e) => {
+                                  const onlyDigits = e.target.value
+                                    .replace(/\D/g, "")
+                                    .slice(0, 3);
+                                  setPowerDraftByIndex((prev) => ({
+                                    ...prev,
+                                    [index]: onlyDigits,
+                                  }));
+
+                                  if (onlyDigits === "") return;
+
+                                  updateSecondaryMember(
+                                    index,
+                                    "power",
+                                    parseInt(onlyDigits, 10) || 1,
+                                  );
+                                }}
+                                onBlur={(e) => {
+                                  const onlyDigits = e.target.value.replace(/\D/g, "");
+                                  const value = parseInt(onlyDigits, 10);
+
+                                  if (isNaN(value) || value <= 0) {
                                     updateSecondaryMember(index, "power", 1);
+                                    setPowerDraftByIndex((prev) => ({
+                                      ...prev,
+                                      [index]: "1",
+                                    }));
                                   } else if (value > 255) {
                                     updateSecondaryMember(index, "power", 255);
+                                    setPowerDraftByIndex((prev) => ({
+                                      ...prev,
+                                      [index]: "255",
+                                    }));
+                                  } else {
+                                    setPowerDraftByIndex((prev) => ({
+                                      ...prev,
+                                      [index]: String(value),
+                                    }));
                                   }
-                                }
-                              }}
-                              placeholder="Power"
-                              className="w-24 px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm text-center placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                            />
+                                }}
+                                placeholder="Power"
+                                className="w-28 pl-7 pr-2 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm text-center placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                              />
+                            </div>
                           </div>
                           <div className="mt-3">
                             <input
@@ -2207,7 +2380,8 @@ export default function WillsPage() {
                             />
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                       <button
                         onClick={addSecondaryMember}
                         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--accent)] border border-[var(--accent)] rounded-lg hover:bg-[var(--accent)]/10 transition-colors w-full justify-center"
@@ -2250,28 +2424,36 @@ export default function WillsPage() {
                         </span>
                       </label>
                       <input
-                        type="number"
-                        min={config.isLocalOrDev ? 1 : 28}
-                        max={config.isLocalOrDev ? 10000 : 154}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={minSecurityPeriod}
                         onChange={(e) => {
-                          const value = e.target.value;
-                          // Permettre à l'utilisateur d'effacer (chaîne vide)
-                          if (value === "") {
-                            setMinSecurityPeriod("");
-                            return;
-                          }
-                          // Sinon, garder la valeur numérique
-                          setMinSecurityPeriod(value);
+                          const onlyDigits = e.target.value.replace(/\D/g, "");
+                          setMinSecurityPeriod(onlyDigits);
                         }}
                         onBlur={(e) => {
-                          // Quand l'utilisateur quitte le champ, forcer les limites
-                          const value = parseInt(e.target.value);
-                          if (!isNaN(value)) {
-                            const minLimit = config.isLocalOrDev ? 1 : 28;
-                            const maxLimit = config.isLocalOrDev ? 10000 : 154;
-                            if (value < minLimit) setMinSecurityPeriod(minLimit.toString());
-                            else if (value > maxLimit) setMaxSecurityPeriod(maxLimit.toString());
+                          const onlyDigits = e.target.value.replace(/\D/g, "");
+                          const value = parseInt(onlyDigits, 10);
+                          const minLimit = config.isLocalOrDev ? 1 : 28;
+                          const maxLimit = config.isLocalOrDev ? 10000 : 154;
+                          let finalMin = value;
+
+                          if (isNaN(value) || value <= 0) {
+                            finalMin = minLimit;
+                          } else if (value < minLimit) {
+                            finalMin = minLimit;
+                          } else if (value > maxLimit) {
+                            finalMin = maxLimit;
+                          }
+
+                          setMinSecurityPeriod(String(finalMin));
+
+                          // If min >= max, set max to min + 1 (capped at maxLimit)
+                          const currentMax = parseInt(maxSecurityPeriod, 10);
+                          if (finalMin >= currentMax) {
+                            const newMax = Math.min(finalMin + 1, maxLimit);
+                            setMaxSecurityPeriod(String(newMax));
                           }
                         }}
                         placeholder={`e.g., ${config.isLocalOrDev ? 1 : 28}`}
@@ -2297,26 +2479,36 @@ export default function WillsPage() {
                         </span>
                       </label>
                       <input
-                        type="number"
-                        min={config.isLocalOrDev ? 1 : 28}
-                        max={config.isLocalOrDev ? 10000 : 154}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={maxSecurityPeriod}
                         onChange={(e) => {
-                          const value = e.target.value;
-                          if (value === "") {
-                            setMaxSecurityPeriod("");
-                            return;
-                          }
-                          setMaxSecurityPeriod(value);
+                          const onlyDigits = e.target.value.replace(/\D/g, "");
+                          setMaxSecurityPeriod(onlyDigits);
                         }}
                         onBlur={(e) => {
-                          const value = parseInt(e.target.value);
-                          if (!isNaN(value)) {
-                            const minLimit = config.isLocalOrDev ? 1 : 28;
-                            const maxLimit = config.isLocalOrDev ? 10000 : 154;
-                            if (value < minLimit) setMaxSecurityPeriod(minLimit.toString());
-                            else if (value > maxLimit) setMaxSecurityPeriod(maxLimit.toString());
+                          const onlyDigits = e.target.value.replace(/\D/g, "");
+                          const value = parseInt(onlyDigits, 10);
+                          const minLimit = config.isLocalOrDev ? 1 : 28;
+                          const maxLimit = config.isLocalOrDev ? 10000 : 154;
+                          let finalMax = value;
+
+                          if (isNaN(value) || value <= 0) {
+                            finalMax = minLimit;
+                          } else if (value < minLimit) {
+                            finalMax = minLimit;
+                          } else if (value > maxLimit) {
+                            finalMax = maxLimit;
                           }
+
+                          const currentMin = parseInt(minSecurityPeriod, 10);
+                          // If max <= min, set max to min + 1 (capped at maxLimit)
+                          if (finalMax <= currentMin) {
+                            finalMax = Math.min(currentMin + 1, maxLimit);
+                          }
+
+                          setMaxSecurityPeriod(String(finalMax));
                         }}
                         placeholder={`e.g., ${config.isLocalOrDev ? 10000 : 154}`}
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
@@ -2495,7 +2687,7 @@ export default function WillsPage() {
                           <p className="text-sm font-medium text-[var(--text-primary)] font-mono break-all inline-flex items-start gap-1">
                             <span>{will.walletAddress}</span>
                           </p>
-                          <div className="relative flex-shrink-0">
+                          <div className="relative flex-shrink-0 group">
                             <button
                               onClick={() =>
                                 copyToClipboard(
@@ -2504,7 +2696,6 @@ export default function WillsPage() {
                                 )
                               }
                               className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-                              title="Copy address"
                             >
                               <svg
                                 className="w-4 h-4"
@@ -2520,9 +2711,14 @@ export default function WillsPage() {
                                 />
                               </svg>
                             </button>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                              Copy address
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+                            </div>
                             {copiedAddress === `will-wallet-${will.willId}` && (
-                              <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap z-50 shadow-lg">
                                 Address copied!
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
                               </div>
                             )}
                           </div>
@@ -2863,7 +3059,7 @@ export default function WillsPage() {
                                         <span>{addressToCopy || "No address"}</span>
                                       </div>
                                       {addressToCopy && (
-                                        <div className="relative flex-shrink-0">
+                                        <div className="relative flex-shrink-0 group">
                                           <button
                                             onClick={() =>
                                               copyToClipboard(
@@ -2872,7 +3068,6 @@ export default function WillsPage() {
                                               )
                                             }
                                             className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-                                            title="Copy address"
                                           >
                                             <svg
                                               className="w-3 h-3"
@@ -2888,10 +3083,15 @@ export default function WillsPage() {
                                               />
                                             </svg>
                                           </button>
+                                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                            Copy address
+                                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+                                          </div>
                                           {copiedAddress ===
                                             `beneficiary-${member.secondaryMemberId}` && (
-                                            <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap z-50 shadow-lg">
                                               Address copied!
+                                              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
                                             </div>
                                           )}
                                         </div>
@@ -3046,10 +3246,11 @@ export default function WillsPage() {
                               </svg>
                             </button>
                             {!canVeto && (
-                              <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 whitespace-nowrap rounded-lg bg-[var(--bg-section)] border border-[var(--border-section)] px-3 py-2 text-xs text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                              <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 whitespace-nowrap rounded-lg bg-[var(--bg-card)] border border-[var(--border-section)] px-3 py-1.5 text-xs text-[var(--text-primary)] opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
                                 {will.state !== "ACTIVE"
                                   ? `Will must be ACTIVE (currently ${will.state})`
                                   : "No death has been declared yet"}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
                               </div>
                             )}
                           </div>
@@ -3144,6 +3345,34 @@ export default function WillsPage() {
           </div>
         </div>
       </div>
+      {addContactTooltip && (
+        <div
+          className="fixed px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap pointer-events-none shadow-lg z-[2147483647]"
+          style={{
+            top: addContactTooltip.top,
+            left: addContactTooltip.left,
+            transform: "translate(-50%, -100%)",
+          }}
+        >
+          {addContactTooltip.message}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+        </div>
+      )}
+      {powerInfoTooltip && (
+        <div
+          className="fixed px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap pointer-events-none shadow-lg z-[2147483647]"
+          style={{
+            top: powerInfoTooltip.top,
+            left: powerInfoTooltip.left,
+            transform: "translate(-50%, -100%)",
+          }}
+        >
+          Enter voting power from 1 to 255,
+          <br />
+          set by default at 1.
+          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+        </div>
+      )}
       {fundModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
@@ -4032,12 +4261,13 @@ export default function WillsPage() {
                                 className={`w-full px-2 py-1.5 text-xs bg-[var(--bg-section)] border rounded font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] ${addrChanged ? "border-amber-500/70" : "border-[var(--border-section)]"}`}
                               />
                               {addrChanged && (
-                                <span
-                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-amber-400 text-xs"
-                                  title="Address changed — will require blockchain signature"
-                                >
-                                  ⚠
-                                </span>
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 group">
+                                  <span className="text-amber-400 text-xs">⚠</span>
+                                  <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                    Address changed - will require blockchain signature
+                                    <div className="absolute top-full right-2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+                                  </div>
+                                </div>
                               )}
                             </div>
                             <label className="text-xs text-[var(--text-muted-alt)] flex-shrink-0">
