@@ -2,7 +2,10 @@
  * Application configuration from environment variables
  */
 
-const _isNonProd = process.env.NODE_ENV !== "production";
+// Use NEXT_PUBLIC_APP_ENV for environment detection (independent of NODE_ENV which can be overridden by platforms)
+// Defaults to "production" if not specified
+const _appEnv = (process.env.NEXT_PUBLIC_APP_ENV || "production") as "production" | "development" | "local";
+const _isNonProd = _appEnv !== "production";
 
 export const config = {
   api: {
@@ -14,14 +17,14 @@ export const config = {
       process.env.NEXT_PUBLIC_WILL_FACTORY_ADDRESS ||
       "0x5FbDB2315678afecb367f032d93F642f64180aa3",
   },
-  isProduction: process.env.NODE_ENV === "production",
-  isDevelopment: process.env.NODE_ENV === "development",
-  isLocal: (process.env.NODE_ENV as string) === "local",
+  isProduction: _appEnv === "production",
+  isDevelopment: _appEnv === "development",
+  isLocal: _appEnv === "local",
   isLocalOrDev: _isNonProd,
   securityPeriod: {
     unit: _isNonProd ? ("minutes" as const) : ("days" as const),
-    min: _isNonProd ? 1 : 28,
-    max: _isNonProd ? 10000 : 154,
+    min: _isNonProd ? 1 * 60 : 28 * 86400,
+    max: _isNonProd ? 10000 * 60 : 154 * 86400,
   },
 } as const;
 
