@@ -4012,16 +4012,24 @@ export default function WillsPage() {
                   setDeployFundError(null);
                 }}
                 disabled={deployingWillId === deployModal.willId}
-                className="px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
               >
                 Cancel
-              </button>
-              <button
-                onClick={() => handleConfirmDeploy(undefined)}
-                disabled={deployingWillId === deployModal.willId}
-                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {deployingWillId === deployModal.willId ? 'Deploying...' : 'Fund Later'}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#FFFFFF"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="15" y1="9" x2="9" y2="15"></line>
+                  <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
               </button>
               <button
                 onClick={() => {
@@ -4041,9 +4049,27 @@ export default function WillsPage() {
                     Deploying...
                   </>
                 ) : (
-                  deployFundAmount && parseFloat(deployFundAmount) > 0
-                    ? "Deploy & Fund"
-                    : "Deploy Now"
+                  <>
+                    <span>
+                      {deployFundAmount && parseFloat(deployFundAmount) > 0
+                        ? "Deploy & Fund"
+                        : "Deploy Now"}
+                    </span>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      viewBox="0 0 24 24"
+                    >
+                      <polyline points="16 16 12 12 8 16"></polyline>
+                      <line x1="12" y1="12" x2="12" y2="21"></line>
+                      <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
+                      <polyline points="16 16 12 12 8 16"></polyline>
+                    </svg>
+                  </>
                 )}
               </button>
             </div>
