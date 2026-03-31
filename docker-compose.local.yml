@@ -68,6 +68,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: development
+      NEXT_PUBLIC_APP_ENV: local
       # API URL for server-side calls (internal Docker network)
       API_URL: http://backend:4000
       # API URL for client-side calls (browser access)
