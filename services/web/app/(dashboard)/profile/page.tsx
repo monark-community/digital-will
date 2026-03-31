@@ -127,7 +127,21 @@ const handleToggleEmailNotifications = async () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-[var(--text-muted)] mb-1">
-                      First Name
+                      <div className="flex items-center gap-2">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span>First Name</span>
+                      </div>
                     </label>
                     <div className="px-4 py-3 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)]">
                       {user.firstName}
@@ -135,7 +149,21 @@ const handleToggleEmailNotifications = async () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[var(--text-muted)] mb-1">
-                      Last Name
+                      <div className="flex items-center gap-2">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span>Last Name</span>
+                      </div>
                     </label>
                     <div className="px-4 py-3 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)]">
                       {user.lastName}
@@ -145,7 +173,21 @@ const handleToggleEmailNotifications = async () => {
 
                 <div>
                   <label className="block text-sm font-medium text-[var(--text-muted)] mb-1">
-                    Email Address
+                    <div className="flex items-center gap-2">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        viewBox="0 0 24 24"
+                      >
+                        <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                        <path d="M22 6l-10 7-10-7"></path>
+                      </svg>
+                      <span>Email Address</span>
+                    </div>
                   </label>
                   <div className="px-4 py-3 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)]">
                     {user.email}
@@ -155,7 +197,21 @@ const handleToggleEmailNotifications = async () => {
                 {user.phoneNo && (
                   <div>
                     <label className="block text-sm font-medium text-[var(--text-muted)] mb-1">
-                      Phone Number
+                      <div className="flex items-center gap-2">
+                          <svg 
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            viewBox="0 0 24 24"
+                            >
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                          </svg>
+                        <span>Phone Number</span>
+                      </div>
                     </label>
                     <div className="px-4 py-3 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)]">
                       {user.phoneNo}
@@ -209,15 +265,22 @@ const handleToggleEmailNotifications = async () => {
                 <button
                   onClick={handleCheckDeleteEligibility}
                   disabled={isLoading}
-                  className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-opacity disabled:opacity-50"
+                  className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-opacity disabled:opacity-50 flex items-center gap-2"
                 >
                   {isLoading ? "Checking..." : "Delete Account"}
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
                 </button>
                 <button
                   onClick={() => router.push("/dashboard")}
-                  className="px-6 py-3 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg font-semibold transition-opacity"
+                  className="px-6 py-3 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg font-semibold transition-opacity flex items-center gap-2"
                 >
                   Back to Dashboard
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                  </svg>
                 </button>
               </div>
             </div>
