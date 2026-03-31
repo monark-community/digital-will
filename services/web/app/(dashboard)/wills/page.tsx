@@ -205,9 +205,15 @@ export default function WillsPage() {
   const [deployWalletBalance, setDeployWalletBalance] = useState<string | null>(
     null,
   );
-  const [deleteDraftModal, setDeleteDraftModal] = useState<string | null>(null);
+  const [deleteDraftModal, setDeleteDraftModal] = useState<{
+    willId: string;
+    willName: string;
+  } | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDraftToastName, setDeleteDraftToastName] = useState<
+    string | null
+  >(null);
 
   const [editWillModal, setEditWillModal] = useState<WillFromDB | null>(null);
   const [editWillMembers, setEditWillMembers] = useState<EditWillMember[]>([]);
@@ -1187,19 +1193,22 @@ export default function WillsPage() {
     // Ouvrir le formulaire
     setShowCreateForm(true);
   };
-  const handleDeleteDraft = (willId: string) => {
-    setDeleteDraftModal(willId);
+  const handleDeleteDraft = (willId: string, willName: string) => {
+    setDeleteDraftModal({ willId, willName });
     setDeleteError(null);
   };
 
   const handleConfirmDeleteDraft = async () => {
     if (!deleteDraftModal) return;
+    const willIdToDelete = deleteDraftModal.willId;
+    const willNameToDelete = deleteDraftModal.willName;
     setDeleteError(null);
     setIsDeleting(true);
     try {
-      await willService.deleteDraftWill(deleteDraftModal);
-      setRealWills((prev) => prev.filter((w) => w.willId !== deleteDraftModal));
+      await willService.deleteDraftWill(willIdToDelete);
+      setRealWills((prev) => prev.filter((w) => w.willId !== willIdToDelete));
       setDeleteDraftModal(null);
+      setDeleteDraftToastName(willNameToDelete);
     } catch (error: any) {
       setDeleteError(error.message ?? "Failed to delete draft.");
     } finally {
@@ -1580,6 +1589,16 @@ export default function WillsPage() {
     isLoadingWills,
     searchParams,
   ]);
+
+  useEffect(() => {
+    if (!deleteDraftToastName) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setDeleteDraftToastName(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [deleteDraftToastName]);
 
   return (
     <>
@@ -2638,7 +2657,9 @@ export default function WillsPage() {
                         </span>
                         {will.state === "DRAFT" && (
                           <button
-                            onClick={() => handleDeleteDraft(will.willId)}
+                            onClick={() =>
+                              handleDeleteDraft(will.willId, will.willName)
+                            }
                             className="px-2.5 py-1 text-xs font-medium rounded-md border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-1.5"
                           >
                             <svg
@@ -4040,6 +4061,14 @@ export default function WillsPage() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {deleteDraftToastName && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center pointer-events-none px-4">
+          <div className="min-w-[320px] max-w-[90vw] px-7 py-5 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 shadow-xl backdrop-blur-sm text-lg font-semibold text-center">
+            Draft "{deleteDraftToastName}" has been successfully deleted.
           </div>
         </div>
       )}
