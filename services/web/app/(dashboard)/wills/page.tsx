@@ -813,7 +813,6 @@ export default function WillsPage() {
       }, 2000);
     } catch (error: any) {
       setErrorMessage(error.message);
-    } finally {
       setIsSavingDraft(false);
     }
   };
@@ -1804,8 +1803,13 @@ export default function WillsPage() {
                     {editingWillId ? "Edit Draft Will" : "Create New Will"}
                   </h2>
                   <button
-                    onClick={resetForm}
-                    className="text-[var(--text-muted-alt)] hover:text-[var(--text-primary)] transition-colors"
+                    onClick={() => {
+                      if (!isSavingDraft) {
+                        resetForm();
+                      }
+                    }}
+                    disabled={isSavingDraft}
+                    className="text-[var(--text-muted-alt)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <svg
                       className="w-6 h-6"
@@ -3938,8 +3942,8 @@ export default function WillsPage() {
                   Security period
                 </span>
                 <span className="text-[var(--text-primary)] font-medium">
-                  {deployModal.minSecurityPeriod}â€“
-                  {deployModal.maxSecurityPeriod} days
+                  min {displaySecurityPeriod(deployModal.minSecurityPeriod)} -{" "}
+                  max {displaySecurityPeriod(deployModal.maxSecurityPeriod)}
                 </span>
               </div>
               <div className="flex justify-between text-xs">
@@ -3953,7 +3957,7 @@ export default function WillsPage() {
               <div className="flex justify-between text-xs">
                 <span className="text-[var(--text-muted-alt)]">Wallet</span>
                 <span className="text-[var(--text-primary)] font-mono">
-                  {deployModal.walletAddress.slice(0, 6)}â€¦
+                  {deployModal.walletAddress.slice(0, 6)}... 
                   {deployModal.walletAddress.slice(-4)}
                 </span>
               </div>
