@@ -846,10 +846,10 @@ export default function WillsPage() {
         }
       }
 
-      // 3. VÃ©rifier le voting power (1-255)
-      if (member.votingPower < 1 || member.votingPower > 255) {
+      // 3. VÃ©rifier le voting power (1-100)
+      if (member.votingPower < 1 || member.votingPower > 100) {
         errors.push(
-          `Member ${i + 1} (${member.firstName} ${member.lastName}) has invalid voting power (must be 1-255)`,
+          `Member ${i + 1} (${member.firstName} ${member.lastName}) has invalid voting power (must be 1-100)`,
         );
       }
     }
@@ -973,8 +973,8 @@ export default function WillsPage() {
         }
 
         // Validation power
-        if (member.power < 1 || member.power > 255) {
-          errors.push(`Member ${i + 1}: Power must be between 1 and 255`);
+        if (member.power < 1 || member.power > 100) {
+          errors.push(`Member ${i + 1}: Power must be between 1 and 100`);
         }
 
         let contactValid = true;
@@ -1412,8 +1412,8 @@ export default function WillsPage() {
       } catch {
         return `Invalid address for ${label}: ${m.address}`;
       }
-      if (!m.power || m.power < 1 || m.power > 255)
-        return `Power for ${label} must be between 1 and 255.`;
+      if (!m.power || m.power < 1 || m.power > 100)
+        return `Power for ${label} must be between 1 and 100.`;
     }
 
     const allAddresses = [...existingMembers, ...newMembers].map((m) =>
@@ -1987,11 +1987,11 @@ export default function WillsPage() {
                       type="text"
                       value={willName}
                       onChange={(e) => {
-                        const value = e.target.value.slice(0, 100);
+                        const value = e.target.value.slice(0, 50);
                         setWillName(value);
                       }}
                       placeholder="e.g., My Primary Will, Emergency Will, etc."
-                      maxLength={100}
+                      maxLength={50}
                       className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                     />
                     <p className="mt-1 text-xs text-[var(--text-muted-alt)]">
@@ -2250,7 +2250,7 @@ export default function WillsPage() {
                               type="text"
                               value={member.firstName}
                               onChange={(e) => {
-                                const value = e.target.value.slice(0, 50);
+                                const value = e.target.value.slice(0, 30);
                                 updateSecondaryMember(
                                   index,
                                   "firstName",
@@ -2264,7 +2264,7 @@ export default function WillsPage() {
                               type="text"
                               value={member.lastName}
                               onChange={(e) => {
-                                const value = e.target.value.slice(0, 50);
+                                const value = e.target.value.slice(0, 30);
                                 updateSecondaryMember(index, "lastName", value);
                               }}
                               placeholder="Last Name *"
@@ -2277,7 +2277,7 @@ export default function WillsPage() {
                               type="email"
                               value={member.email}
                               onChange={(e) => {
-                                const value = e.target.value.slice(0, 100);
+                                const value = e.target.value.slice(0, 50);
                                 updateSecondaryMember(index, "email", value);
                               }}
                               placeholder="Email *"
@@ -2370,11 +2370,11 @@ export default function WillsPage() {
                                       ...prev,
                                       [index]: "1",
                                     }));
-                                  } else if (value > 255) {
-                                    updateSecondaryMember(index, "power", 255);
+                                  } else if (value > 100) {
+                                    updateSecondaryMember(index, "power", 100);
                                     setPowerDraftByIndex((prev) => ({
                                       ...prev,
-                                      [index]: "255",
+                                      [index]: "100",
                                     }));
                                   } else {
                                     setPowerDraftByIndex((prev) => ({
@@ -3424,7 +3424,7 @@ export default function WillsPage() {
             transform: "translate(-50%, -100%)",
           }}
         >
-          Enter voting power from 1 to 255,
+          Enter voting power from 1 to 100,
           <br />
           set by default at 1.
           <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
@@ -4386,7 +4386,7 @@ export default function WillsPage() {
                             <input
                               type="number"
                               min="1"
-                              max="255"
+                              max="100"
                               value={m.power}
                               onChange={(e) => {
                                 const v = parseInt(e.target.value) || 1;
@@ -4552,7 +4552,7 @@ export default function WillsPage() {
                               <input
                                 type="number"
                                 min="1"
-                                max="255"
+                                max="100"
                                 value={m.power}
                                 onChange={(e) => {
                                   const v = parseInt(e.target.value) || 1;
