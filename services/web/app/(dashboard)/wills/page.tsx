@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -94,7 +94,7 @@ export default function WillsPage() {
     useState(false);
   const [willName, setWillName] = useState("");
   const [editingWillId, setEditingWillId] = useState<string | null>(null); // Pour la modification
-  const [deployingWillId, setDeployingWillId] = useState<string | null>(null); // Pour le déploiement
+  const [deployingWillId, setDeployingWillId] = useState<string | null>(null); // Pour le dÃ©ploiement
   const [factoryAddress, setFactoryAddress] = useState(
     config.blockchain.willFactoryAddress,
   );
@@ -151,6 +151,10 @@ export default function WillsPage() {
   } | null>(null);
   const [powerInfoTooltip, setPowerInfoTooltip] = useState<{
     index: number;
+    top: number;
+    left: number;
+  } | null>(null);
+  const [securityPeriodTooltip, setSecurityPeriodTooltip] = useState<{
     top: number;
     left: number;
   } | null>(null);
@@ -383,7 +387,7 @@ export default function WillsPage() {
     willName,
     editingWillId,
   ]);
-  // Quand le min change, ajuster le max si nécessaire
+  // Quand le min change, ajuster le max si nÃ©cessaire
   useEffect(() => {
     const min = parseInt(minSecurityPeriod);
     const max = parseInt(maxSecurityPeriod);
@@ -393,7 +397,7 @@ export default function WillsPage() {
     }
   }, [minSecurityPeriod]);
 
-  // Quand le max change, juste vérifier qu'il reste valide
+  // Quand le max change, juste vÃ©rifier qu'il reste valide
   useEffect(() => {
     const min = parseInt(minSecurityPeriod);
     const max = parseInt(maxSecurityPeriod);
@@ -401,8 +405,8 @@ export default function WillsPage() {
     if (!isNaN(min) && !isNaN(max) && max < min) {
       // Option 1: Ajuster automatiquement
       // setMinSecurityPeriod(max.toString());
-      // Option 2: Laisser l'erreur être gérée par la validation
-      // (c'est ce qu'on fait déjà)
+      // Option 2: Laisser l'erreur Ãªtre gÃ©rÃ©e par la validation
+      // (c'est ce qu'on fait dÃ©jÃ )
     }
   }, [maxSecurityPeriod]);
 
@@ -819,12 +823,12 @@ export default function WillsPage() {
   ): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
-    // 1. Vérifier qu'il y a au moins 2 membres
+    // 1. VÃ©rifier qu'il y a au moins 2 membres
     if (will.secondaryMembers.length < 2) {
       errors.push("At least 2 secondary members are required for deployment");
     }
 
-    // 2. Vérifier que chaque membre a une adresse wallet valide
+    // 2. VÃ©rifier que chaque membre a une adresse wallet valide
     for (let i = 0; i < will.secondaryMembers.length; i++) {
       const member = will.secondaryMembers[i];
       const address = member.walletAddress || member.tempWalletAddress;
@@ -843,7 +847,7 @@ export default function WillsPage() {
         }
       }
 
-      // 3. Vérifier le voting power (1-255)
+      // 3. VÃ©rifier le voting power (1-255)
       if (member.votingPower < 1 || member.votingPower > 255) {
         errors.push(
           `Member ${i + 1} (${member.firstName} ${member.lastName}) has invalid voting power (must be 1-255)`,
@@ -851,7 +855,7 @@ export default function WillsPage() {
       }
     }
 
-    // 4. Vérifier les adresses uniques
+    // 4. VÃ©rifier les adresses uniques
     const addresses = will.secondaryMembers
       .map((m) => (m.walletAddress || m.tempWalletAddress)?.toLowerCase())
       .filter(Boolean);
@@ -860,7 +864,7 @@ export default function WillsPage() {
       errors.push("Duplicate member addresses are not allowed");
     }
 
-    // 5. Vérifier les périodes de sécurité
+    // 5. VÃ©rifier les pÃ©riodes de sÃ©curitÃ©
     if (
       will.minSecurityPeriod < config.securityPeriod.min ||
       will.maxSecurityPeriod < config.securityPeriod.min
@@ -895,7 +899,7 @@ export default function WillsPage() {
     const errors: string[] = [];
     const canAddToContacts: boolean[] = [];
 
-    // Vérifier qu'un wallet est sélectionné
+    // VÃ©rifier qu'un wallet est sÃ©lectionnÃ©
     if (!selectedWalletId) {
       errors.push("Please select a wallet");
     }
@@ -918,10 +922,10 @@ export default function WillsPage() {
     for (let i = 0; i < secondaryMembers.length; i++) {
       const member = secondaryMembers[i];
 
-      // Valeurs par défaut pour ce membre
+      // Valeurs par dÃ©faut pour ce membre
       let canAddContact = false;
 
-      // Vérifier si AU MOINS UN champ est rempli (sauf power qui a une valeur par défaut)
+      // VÃ©rifier si AU MOINS UN champ est rempli (sauf power qui a une valeur par dÃ©faut)
       const hasAnyField =
         member.firstName.trim() ||
         member.lastName.trim() ||
@@ -930,7 +934,7 @@ export default function WillsPage() {
         member.phoneNumber?.trim();
 
       if (hasAnyField) {
-        // Validation prénom
+        // Validation prÃ©nom
         if (!member.firstName.trim()) {
           errors.push(`Member ${i + 1}: First name is required`);
         }
@@ -1011,11 +1015,11 @@ export default function WillsPage() {
       canAddToContacts[i] = canAddContact;
     }
 
-    // Validation des périodes de sécurité
+    // Validation des pÃ©riodes de sÃ©curitÃ©
     const minPeriod = parseInt(minSecurityPeriod);
     const maxPeriod = parseInt(maxSecurityPeriod);
 
-    // Vérifier que les deux sont remplis
+    // VÃ©rifier que les deux sont remplis
     if (!minSecurityPeriod.trim()) {
       errors.push("Minimum security period is required");
     } else if (isNaN(minPeriod) || minPeriod < 0) {
@@ -1042,7 +1046,7 @@ export default function WillsPage() {
       const minPeriodSeconds = config.isLocalOrDev ? minPeriod * 60 : minPeriod * 86400;
       const maxPeriodSeconds = config.isLocalOrDev ? maxPeriod * 60 : maxPeriod * 86400;
 
-      // Optionnel : vérifier des plages spécifiques
+      // Optionnel : vÃ©rifier des plages spÃ©cifiques
       if (minPeriodSeconds < config.securityPeriod.min) {
         const minLimit = config.isLocalOrDev ? config.securityPeriod.min / 60 : config.securityPeriod.min / 86400;
         errors.push(
@@ -1058,7 +1062,7 @@ export default function WillsPage() {
       }
     }
 
-    // Vérifier les adresses en double (seulement pour celles qui sont remplies)
+    // VÃ©rifier les adresses en double (seulement pour celles qui sont remplies)
     const addresses = membersWithData
       .map((m) => m.address.trim().toLowerCase())
       .filter((addr) => addr !== "");
@@ -1141,7 +1145,7 @@ export default function WillsPage() {
   };
 
   const handleEditDraft = (will: WillFromDB) => {
-    // Pré-remplir le formulaire avec les données du will
+    // PrÃ©-remplir le formulaire avec les donnÃ©es du will
     setSelectedWalletId(
       wallets?.find((w) => w.address === will.walletAddress)?.walletId || "",
     );
@@ -1187,7 +1191,7 @@ export default function WillsPage() {
       ).toString(),
     );
 
-    // Stocker l'ID du will en cours d'édition
+    // Stocker l'ID du will en cours d'Ã©dition
     setEditingWillId(will.willId);
 
     // Ouvrir le formulaire
@@ -1446,7 +1450,7 @@ export default function WillsPage() {
     setEditWillError(null);
     setIsUpdatingWill(true);
     try {
-      // 1. Blockchain — only if address/power/membership/period changed
+      // 1. Blockchain â€” only if address/power/membership/period changed
       if (
         (diffs.needsBlockchain || diffs.periodChanged) &&
         editWillModal.contractAddressInBlockchain
@@ -1459,7 +1463,7 @@ export default function WillsPage() {
           diffs.periodConfig,
         );
       }
-      // 2. DB — update names, addresses, power, add/remove members
+      // 2. DB â€” update names, addresses, power, add/remove members
       const hasDbChanges =
         diffs.dbUpdatedMembers.length > 0 ||
         diffs.dbDeletedMemberIds.length > 0 ||
@@ -2069,7 +2073,7 @@ export default function WillsPage() {
                                   </svg>
                                 </button>
                                 {(!contacts || contacts.length === 0) && (
-                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
                                     You have no contacts
                                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
                                   </div>
@@ -2385,7 +2389,7 @@ export default function WillsPage() {
                               type="text"
                               value={member.relationship || ""}
                               onChange={(e) => {
-                                // Limiter à 30 caractères
+                                // Limiter Ã  30 caractÃ¨res
                                 const value = e.target.value.slice(0, 30);
                                 updateSecondaryMember(
                                   index,
@@ -2441,6 +2445,20 @@ export default function WillsPage() {
                         <span>
                           Min Security Period ({config.securityPeriod.unit})
                         </span>
+                        <span
+                          aria-label="What is the security period?"
+                          className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[var(--border-section)] text-[10px] text-[var(--text-muted-alt)] cursor-help"
+                          onMouseEnter={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setSecurityPeriodTooltip({
+                              top: rect.top - 8,
+                              left: rect.left + rect.width / 2,
+                            });
+                          }}
+                          onMouseLeave={() => setSecurityPeriodTooltip(null)}
+                        >
+                          ?
+                        </span>
                       </label>
                       <input
                         type="text"
@@ -2495,6 +2513,20 @@ export default function WillsPage() {
                         </svg>
                         <span>
                           Max Security Period ({config.securityPeriod.unit})
+                        </span>
+                        <span
+                          aria-label="What is the security period?"
+                          className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[var(--border-section)] text-[10px] text-[var(--text-muted-alt)] cursor-help"
+                          onMouseEnter={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setSecurityPeriodTooltip({
+                              top: rect.top - 8,
+                              left: rect.left + rect.width / 2,
+                            });
+                          }}
+                          onMouseLeave={() => setSecurityPeriodTooltip(null)}
+                        >
+                          ?
                         </span>
                       </label>
                       <input
@@ -2732,12 +2764,12 @@ export default function WillsPage() {
                                 />
                               </svg>
                             </button>
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
                               Copy address
                               <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
                             </div>
                             {copiedAddress === `will-wallet-${will.willId}` && (
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap z-50 shadow-lg">
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap z-50 shadow-lg">
                                 Address copied!
                                 <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
                               </div>
@@ -3104,13 +3136,13 @@ export default function WillsPage() {
                                               />
                                             </svg>
                                           </button>
-                                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
                                             Copy address
                                             <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
                                           </div>
                                           {copiedAddress ===
                                             `beneficiary-${member.secondaryMemberId}` && (
-                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap z-50 shadow-lg">
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap z-50 shadow-lg">
                                               Address copied!
                                               <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
                                             </div>
@@ -3368,7 +3400,7 @@ export default function WillsPage() {
       </div>
       {addContactTooltip && (
         <div
-          className="fixed px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap pointer-events-none shadow-lg z-[2147483647]"
+          className="fixed px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap pointer-events-none shadow-lg z-[2147483647]"
           style={{
             top: addContactTooltip.top,
             left: addContactTooltip.left,
@@ -3381,7 +3413,7 @@ export default function WillsPage() {
       )}
       {powerInfoTooltip && (
         <div
-          className="fixed px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap pointer-events-none shadow-lg z-[2147483647]"
+          className="fixed px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap pointer-events-none shadow-lg z-[2147483647]"
           style={{
             top: powerInfoTooltip.top,
             left: powerInfoTooltip.left,
@@ -3391,6 +3423,25 @@ export default function WillsPage() {
           Enter voting power from 1 to 255,
           <br />
           set by default at 1.
+          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+        </div>
+      )}
+      {securityPeriodTooltip && (
+        <div
+          className="fixed px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap pointer-events-none shadow-lg z-[2147483647]"
+          style={{
+            top: securityPeriodTooltip.top,
+            left: securityPeriodTooltip.left,
+            transform: "translate(-50%, -100%)",
+          }}
+        >
+          The security period is the waiting window
+          <br />
+          after a death declaration.
+          <br />
+          Secondary members can confirm or challenge
+          <br />
+          before the will can be executed.
           <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
         </div>
       )}
@@ -3418,7 +3469,7 @@ export default function WillsPage() {
                   Fund Contract
                 </h2>
                 <p className="text-xs text-[var(--text-muted-alt)] font-mono break-all">
-                  {fundModal.contractAddress.slice(0, 10)}…
+                  {fundModal.contractAddress.slice(0, 10)}â€¦
                   {fundModal.contractAddress.slice(-8)}
                 </p>
               </div>
@@ -3515,7 +3566,7 @@ export default function WillsPage() {
                   Withdraw Funds
                 </h2>
                 <p className="text-xs text-[var(--text-muted-alt)] font-mono break-all">
-                  {withdrawModal.contractAddress.slice(0, 10)}…
+                  {withdrawModal.contractAddress.slice(0, 10)}â€¦
                   {withdrawModal.contractAddress.slice(-8)}
                 </p>
               </div>
@@ -3528,7 +3579,7 @@ export default function WillsPage() {
               <span className="text-sm font-semibold text-[var(--text-primary)] font-mono">
                 {contractBalances[withdrawModal.willId] !== undefined
                   ? `${parseFloat(contractBalances[withdrawModal.willId]) === 0 ? "0" : parseFloat(parseFloat(contractBalances[withdrawModal.willId]).toFixed(6)).toString()} ETH`
-                  : "—"}
+                  : "â€”"}
               </span>
             </div>
 
@@ -3708,7 +3759,7 @@ export default function WillsPage() {
             </p>
 
             <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 py-3 mb-5 text-xs text-orange-300">
-              ⚠ The security period countdown will be reset. SMs will need to
+              âš  The security period countdown will be reset. SMs will need to
               re-declare death to restart it.
             </div>
 
@@ -3887,7 +3938,7 @@ export default function WillsPage() {
                   Security period
                 </span>
                 <span className="text-[var(--text-primary)] font-medium">
-                  {deployModal.minSecurityPeriod}–
+                  {deployModal.minSecurityPeriod}â€“
                   {deployModal.maxSecurityPeriod} days
                 </span>
               </div>
@@ -3902,7 +3953,7 @@ export default function WillsPage() {
               <div className="flex justify-between text-xs">
                 <span className="text-[var(--text-muted-alt)]">Wallet</span>
                 <span className="text-[var(--text-primary)] font-mono">
-                  {deployModal.walletAddress.slice(0, 6)}…
+                  {deployModal.walletAddress.slice(0, 6)}â€¦
                   {deployModal.walletAddress.slice(-4)}
                 </span>
               </div>
@@ -4291,8 +4342,8 @@ export default function WillsPage() {
                               />
                               {addrChanged && (
                                 <div className="absolute right-2 top-1/2 -translate-y-1/2 group">
-                                  <span className="text-amber-400 text-xs">⚠</span>
-                                  <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                  <span className="text-amber-400 text-xs">âš </span>
+                                  <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
                                     Address changed - will require blockchain signature
                                     <div className="absolute top-full right-2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
                                   </div>
@@ -4585,7 +4636,7 @@ export default function WillsPage() {
                         key={m.secondaryMemberId}
                         className="text-[var(--text-muted-alt)]"
                       >
-                        ✏️ Info updated: {m.firstName} {m.lastName}
+                        âœï¸ Info updated: {m.firstName} {m.lastName}
                       </p>
                     ))}
                     {diffs.updatedSmList.map((m) => (
@@ -4593,24 +4644,24 @@ export default function WillsPage() {
                         key={m.smAddress}
                         className="text-[var(--text-muted-alt)]"
                       >
-                        🔑 Power updated: {m.smAddress.slice(0, 8)}… →{" "}
+                        ðŸ”‘ Power updated: {m.smAddress.slice(0, 8)}â€¦ â†’{" "}
                         {m.votePower}
                       </p>
                     ))}
                     {diffs.addedSmList.map((m) => (
                       <p key={m.smAddress} className="text-emerald-400">
-                        ✚ Added: {m.smAddress.slice(0, 8)}… (power {m.votePower}
+                        âœš Added: {m.smAddress.slice(0, 8)}â€¦ (power {m.votePower}
                         )
                       </p>
                     ))}
                     {diffs.deletedSmList.map((addr) => (
                       <p key={addr} className="text-red-400">
-                        ✕ Removed: {addr.slice(0, 8)}…
+                        âœ• Removed: {addr.slice(0, 8)}â€¦
                       </p>
                     ))}
                     {diffs.periodChanged && (
                       <p className="text-[var(--text-muted-alt)]">
-                        📅 Security period: {editWillMinPeriod}–
+                        ðŸ“… Security period: {editWillMinPeriod}â€“
                         {editWillMaxPeriod} {config.securityPeriod.unit}
                       </p>
                     )}
@@ -4635,7 +4686,7 @@ export default function WillsPage() {
                 {isUpdatingWill ? (
                   <>
                     <span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />{" "}
-                    Updating…
+                    Updatingâ€¦
                   </>
                 ) : (
                   "Update Will"
@@ -4648,3 +4699,4 @@ export default function WillsPage() {
     </>
   );
 }
+
