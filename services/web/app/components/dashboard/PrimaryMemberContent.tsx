@@ -35,6 +35,7 @@ export default function PrimaryMemberContent() {
   const [loadingBalances, setLoadingBalances] = useState(false);
   const [realWills, setRealWills] = useState<WillFromDB[]>([]);
   const [loadingWills, setLoadingWills] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -304,7 +305,22 @@ export default function PrimaryMemberContent() {
 
                   <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
                     <div>
-                      <p className="text-[var(--text-muted-alt)]">Network</p>
+                      <p className="text-[var(--text-muted-alt)] inline-flex items-center gap-1">
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="2" y1="12" x2="22" y2="12"></line>
+                          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                        </svg>
+                        <span>Network</span>
+                      </p>
                       <p className="font-medium text-[var(--text-primary)]">
                         {will.chainId === 11155111
                           ? "Sepolia"
@@ -314,19 +330,63 @@ export default function PrimaryMemberContent() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-[var(--text-muted-alt)]">Members</p>
+                      <p className="text-[var(--text-muted-alt)] inline-flex items-center gap-1">
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="9" cy="7" r="4"></circle>
+                          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        <span>Secondary Members</span>
+                      </p>
                       <p className="font-medium text-[var(--text-primary)]">
                         {will.secondaryMembers.length}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[var(--text-muted-alt)]">Min Period</p>
+                      <p className="text-[var(--text-muted-alt)] inline-flex items-center gap-1">
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span>Min Security Period</span>
+                      </p>
                       <p className="font-medium text-[var(--text-primary)]">
                         {displaySecurityPeriod(will.minSecurityPeriod)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[var(--text-muted-alt)]">Max Period</p>
+                      <p className="text-[var(--text-muted-alt)] inline-flex items-center gap-1">
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span>Max Security Period</span>
+                      </p>
                       <p className="font-medium text-[var(--text-primary)]">
                         {displaySecurityPeriod(will.maxSecurityPeriod)}
                       </p>
@@ -344,19 +404,91 @@ export default function PrimaryMemberContent() {
                             key={member.secondaryMemberId}
                             className="flex items-center justify-between text-xs"
                           >
-                            <span className="text-[var(--text-primary)] font-medium">
-                              {member.firstName} {member.lastName}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="#FFFFFF"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                              </svg>
+                              <span className="text-[var(--text-primary)] font-medium">
+                                {member.firstName} {member.lastName}
+                              </span>
+                            </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-[var(--text-muted-alt)] font-mono">
+                              <span className="text-[var(--text-muted-alt)] font-mono inline-flex items-center gap-1">
                                 {addr ? (
-                                  `${addr.slice(0, 6)}…${addr.slice(-4)}`
+                                  <>
+                                    <svg
+                                      className="w-3 h-3"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth={2}
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                                      />
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M15 12h3"
+                                      />
+                                    </svg>
+                                    <span>{`${addr.slice(0, 6)}…${addr.slice(-4)}`}</span>
+                                  </>
                                 ) : (
                                   <span className="italic text-[var(--text-muted-alt)]">
                                     no address
                                   </span>
                                 )}
                               </span>
+                              {addr && (
+                                <div className="relative group">
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(addr);
+                                      setCopiedAddress(addr);
+                                      setTimeout(() => setCopiedAddress(null), 2000);
+                                    }}
+                                    className="p-1 hover:bg-[var(--bg-card)] rounded transition-colors"
+                                  >
+                                    <svg
+                                      className="w-3 h-3 text-[var(--text-muted-alt)] hover:text-[var(--text-primary)]"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth={2}
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                      />
+                                    </svg>
+                                  </button>
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                    Copy address
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+                                  </div>
+                                  {copiedAddress === addr && (
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap z-50 shadow-lg">
+                                      Address copied!
+                                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                               <span className="px-1.5 py-0.5 rounded bg-violet-500/15 text-[10px]">
                                 <span className="text-violet-400/70">pwr </span>
                                 <span className="text-violet-300 font-semibold">
@@ -393,7 +525,8 @@ export default function PrimaryMemberContent() {
                 href="/wills?openCreate=true"
                 className="group relative inline-flex justify-center items-center space-x-2 py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-[var(--accent)] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)] transition-opacity"
               >
-                <svg
+                <span>Create Will</span>
+                             <svg
                   className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
@@ -406,7 +539,6 @@ export default function PrimaryMemberContent() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                <span>Create Will</span>
               </Link>
             </div>
           )}
