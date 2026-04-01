@@ -134,6 +134,7 @@ contract WillTestUpdate is Test {
         vm.prank(sm4);
         will.validateSm();
 
+        assertEq(uint8(will.getState()), uint8(WillState.ACTIVE));
         vm.prank(pm);
         will.updateWill(
             new SMPartialInfo[](0),
@@ -208,7 +209,7 @@ contract WillTestUpdate is Test {
         will.validateSm();
         vm.prank(sm3);
         will.validateSm();
-
+        assertEq(uint8(will.getState()), uint8(WillState.INACTIVE));
         vm.prank(pm);
         will.updateWill(
             new SMPartialInfo[](0),
