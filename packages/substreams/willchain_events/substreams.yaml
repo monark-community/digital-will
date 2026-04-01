@@ -26,18 +26,18 @@ modules:
 
   - name: store_will_created
     kind: store
-    initialBlock: 10528040
+    initialBlock: 10566300
     updatePolicy: set
     valueType: proto:dynamic_datasource
     blockFilter:
       module: ethcommon:index_events
       query:
-        string: evt_addr:0x0c368e4d9905afd0d8026d855b65d637c8bbafe8 && evt_sig:0x29d4e80ae450e75960cecdd4590bedb67875629d9428844280e728aecbee3cfe
+        string: evt_addr:0x91239b6f65e7a0a286392a5e6a0a40448259733b && evt_sig:0x29d4e80ae450e75960cecdd4590bedb67875629d9428844280e728aecbee3cfe
     inputs:
       - source: sf.ethereum.type.v2.Block
   - name: map_events
     kind: map
-    initialBlock: 10528040
+    initialBlock: 10566300
     inputs:
       - source: sf.ethereum.type.v2.Block
       - store: store_will_created
@@ -45,14 +45,14 @@ modules:
       type: proto:contract.v1.Events
   - name: map_calls
     kind: map
-    initialBlock: 10528040
+    initialBlock: 10566300
     inputs:
       - source: sf.ethereum.type.v2.Block
     output:
       type: proto:contract.v1.Calls
   - name: map_events_calls
     kind: map
-    initialBlock: 10528040
+    initialBlock: 10566300
     inputs:
       - map: map_events
       - map: map_calls

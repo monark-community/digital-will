@@ -150,6 +150,8 @@ pub struct WillEvtWillChainDeathDeclared {
     pub evt_address: ::prost::alloc::string::String,
     #[prost(bytes="vec", tag="6")]
     pub sm_address: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag="7")]
+    pub assets: ::prost::alloc::string::String,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -184,6 +186,8 @@ pub struct WillEvtWillChainSmDesisted {
     pub evt_address: ::prost::alloc::string::String,
     #[prost(bytes="vec", tag="6")]
     pub sm_address: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bool, tag="7")]
+    pub validated_pre_desist: bool,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

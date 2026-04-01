@@ -2753,44 +2753,45 @@ pub mod events {
     #[derive(Debug, Clone, PartialEq)]
     pub struct EvtWillChainDeathDeclared {
         pub sm_address: Vec<u8>,
+        pub assets: substreams::scalar::BigInt,
     }
     impl EvtWillChainDeathDeclared {
         const TOPIC_ID: [u8; 32] = [
+            34u8,
             22u8,
-            68u8,
-            225u8,
-            180u8,
-            77u8,
-            155u8,
-            117u8,
-            203u8,
-            63u8,
+            31u8,
+            138u8,
+            168u8,
+            52u8,
+            238u8,
+            190u8,
+            70u8,
+            55u8,
+            23u8,
+            10u8,
+            125u8,
+            72u8,
+            178u8,
+            27u8,
+            53u8,
+            80u8,
+            103u8,
             109u8,
-            63u8,
-            124u8,
-            167u8,
-            156u8,
-            156u8,
-            121u8,
-            56u8,
-            96u8,
-            248u8,
-            206u8,
-            184u8,
-            16u8,
-            14u8,
-            39u8,
-            185u8,
-            111u8,
-            64u8,
-            128u8,
-            237u8,
-            232u8,
-            149u8,
-            197u8,
+            53u8,
+            228u8,
+            140u8,
+            178u8,
+            97u8,
+            83u8,
+            172u8,
+            115u8,
+            202u8,
+            154u8,
+            69u8,
+            188u8,
         ];
         pub fn match_log(log: &substreams_ethereum::pb::eth::v2::Log) -> bool {
-            if log.topics.len() != 2usize {
+            if log.topics.len() != 3usize {
                 return false;
             }
             if log.data.len() != 0usize {
@@ -2819,6 +2820,25 @@ pub mod events {
                     .expect(INTERNAL_ERR)
                     .as_bytes()
                     .to_vec(),
+                assets: {
+                    let mut v = [0 as u8; 32];
+                    ethabi::decode(
+                            &[ethabi::ParamType::Uint(256usize)],
+                            log.topics[2usize].as_ref(),
+                        )
+                        .map_err(|e| {
+                            format!(
+                                "unable to decode param 'assets' from topic of type 'uint256': {:?}",
+                                e
+                            )
+                        })?
+                        .pop()
+                        .expect(INTERNAL_ERR)
+                        .into_uint()
+                        .expect(INTERNAL_ERR)
+                        .to_big_endian(v.as_mut_slice());
+                    substreams::scalar::BigInt::from_unsigned_bytes_be(&v)
+                },
             })
         }
     }
@@ -2935,44 +2955,45 @@ pub mod events {
     #[derive(Debug, Clone, PartialEq)]
     pub struct EvtWillChainSmDesisted {
         pub sm_address: Vec<u8>,
+        pub validated_pre_desist: bool,
     }
     impl EvtWillChainSmDesisted {
         const TOPIC_ID: [u8; 32] = [
-            203u8,
-            230u8,
             184u8,
-            196u8,
-            9u8,
-            142u8,
-            171u8,
-            62u8,
-            75u8,
-            112u8,
-            185u8,
-            223u8,
-            36u8,
-            248u8,
-            177u8,
-            56u8,
-            89u8,
-            96u8,
-            187u8,
-            179u8,
+            243u8,
+            229u8,
+            242u8,
             209u8,
-            226u8,
-            45u8,
-            161u8,
-            38u8,
-            207u8,
-            11u8,
-            65u8,
-            202u8,
-            219u8,
-            47u8,
-            150u8,
+            255u8,
+            76u8,
+            116u8,
+            223u8,
+            19u8,
+            184u8,
+            224u8,
+            121u8,
+            238u8,
+            176u8,
+            164u8,
+            83u8,
+            168u8,
+            177u8,
+            54u8,
+            63u8,
+            218u8,
+            93u8,
+            138u8,
+            66u8,
+            149u8,
+            179u8,
+            243u8,
+            126u8,
+            85u8,
+            4u8,
+            13u8,
         ];
         pub fn match_log(log: &substreams_ethereum::pb::eth::v2::Log) -> bool {
-            if log.topics.len() != 2usize {
+            if log.topics.len() != 3usize {
                 return false;
             }
             if log.data.len() != 0usize {
@@ -3001,6 +3022,20 @@ pub mod events {
                     .expect(INTERNAL_ERR)
                     .as_bytes()
                     .to_vec(),
+                validated_pre_desist: ethabi::decode(
+                        &[ethabi::ParamType::Bool],
+                        log.topics[2usize].as_ref(),
+                    )
+                    .map_err(|e| {
+                        format!(
+                            "unable to decode param 'validated_pre_desist' from topic of type 'bool': {:?}",
+                            e
+                        )
+                    })?
+                    .pop()
+                    .expect(INTERNAL_ERR)
+                    .into_bool()
+                    .expect(INTERNAL_ERR),
             })
         }
     }
