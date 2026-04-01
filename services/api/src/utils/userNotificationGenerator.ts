@@ -12,6 +12,7 @@ type TemplateArgs = {
   willName: string;
   role: NotificationRecipientRole;
   smName?: string;
+  amount?: number;
 };
 
 const templates: Record<
@@ -99,16 +100,18 @@ const templates: Record<
     message: `The security period for the will "${willName}" has been updated.`,
   }),
 
-  [NotificationType.DEATH_DECLARED]: ({ willName, role, smName }) => {
+  [NotificationType.DEATH_DECLARED]: ({ willName, role, smName, amount }) => {
     const name = smName ?? "A secondary member";
+    const amountStr =
+      amount != null ? ` (assets value: ${amount.toLocaleString()} ETH)` : "";
     return role === NotificationRecipientRole.PM
       ? {
           title: "URGENT — Death declaration",
-          message: `${name} submitted a death declaration for your will "${willName}". Log in immediately to exercise your veto right.`,
+          message: `${name} submitted a death declaration for your will "${willName}"${amountStr}. Exercise your veto right now.`,
         }
       : {
           title: "Death declaration submitted",
-          message: `${name} submitted a death declaration for the will "${willName}". The security period has begun.`,
+          message: `${name} submitted a death declaration for the will "${willName}"${amountStr}. The security period has begun.`,
         };
   },
 
@@ -130,16 +133,18 @@ const templates: Record<
     message: `The primary member of "${willName}" exercised their veto. The will remains active.`,
   }),
 
-  [NotificationType.ASSETS_SWAPPED]: ({ willName, role, smName }) => {
+  [NotificationType.ASSETS_SWAPPED]: ({ willName, role, smName, amount }) => {
     const name = smName ?? "A secondary member";
+    const amountStr =
+      amount != null ? ` (${amount.toLocaleString()} USDC)` : "";
     return role === NotificationRecipientRole.PM
       ? {
           title: "Assets swapped",
-          message: `${name} executed an asset swap in your will "${willName}".`,
+          message: `${name} executed an asset swap${amountStr} in your will "${willName}".`,
         }
       : {
           title: "Assets swapped",
-          message: `${name} executed an asset swap in the will "${willName}" you are part of.`,
+          message: `${name} executed an asset swap${amountStr} in the will "${willName}" you are part of.`,
         };
   },
 
@@ -147,6 +152,19 @@ const templates: Record<
     title: "Protection period ended — Execute the will",
     message: `The protection period for the will "${willName}" has expired. You may now proceed with execution.`,
   }),
+
+  [NotificationType.SM_SIGNATURE_REFUSED]: ({ willName, role, smName }) => {
+    const name = smName ?? "A secondary member";
+    return role === NotificationRecipientRole.PM
+      ? {
+          title: "Signature request refused",
+          message: `${name} has refused to participate in your will "${willName}". You may want to designate a replacement.`,
+        }
+      : {
+          title: "Signature request refused",
+          message: `${name} has refused to participate in the will "${willName}".`,
+        };
+  },
 };
 
 export function generateUserNotification(
@@ -154,6 +172,7 @@ export function generateUserNotification(
   willName: string,
   role: NotificationRecipientRole = NotificationRecipientRole.SM,
   smName?: string,
+  amount?: number,
 ): UserNotificationContent {
-  return templates[type]({ willName, role, smName });
+  return templates[type]({ willName, role, smName, amount });
 }

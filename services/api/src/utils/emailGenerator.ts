@@ -17,6 +17,7 @@ type TemplateArgs = {
   recipientName: string;
   role: NotificationRecipientRole;
   smName?: string;
+  amount?: number;
 };
 
 const LOGIN_URL = `${config.webUrl}/login`;
@@ -360,8 +361,15 @@ const templates: Record<
     recipientName,
     role,
     smName,
+    amount,
   }) => {
     const name = smName ?? "A secondary member";
+    const amountText =
+      amount != null
+        ? `<p style="background-color:#1e3a5f;padding:12px 20px;border-radius:6px;color:#d1d5db;font-size:14px;">
+          <strong style="color:#ffffff;">Assets value at declaration:</strong> ${amount.toLocaleString()} ETH
+        </p>`
+        : "";
     return role === NotificationRecipientRole.PM
       ? {
           subject: `⚠️ WillChain — URGENT: A death declaration was submitted for your will "${willName}"`,
@@ -372,6 +380,7 @@ const templates: Record<
             </p>
             <p><strong>${name}</strong> has submitted a <strong>death declaration</strong> against your digital will
             <strong>"${willName}"</strong> on WillChain. The security period is now active.</p>
+            ${amountText}
             <p><strong>If you are still alive</strong>, you must log in to your WillChain account
             <strong>immediately</strong> and exercise your veto right before the security period expires.
             Failure to do so will result in the death declaration being confirmed, triggering the
@@ -388,6 +397,7 @@ const templates: Record<
             recipientName,
             `<p><strong>${name}</strong> has submitted a <strong>death declaration</strong> for the digital will
             <strong>"${willName}"</strong>, in which you are a designated participant.</p>
+            ${amountText}
             <p>The security period has now begun. During this period, the primary member of the will has
             the opportunity to exercise their veto right if they believe the declaration is erroneous.</p>
             <p>If no veto is exercised before the security period expires, the death declaration will be
@@ -443,8 +453,15 @@ const templates: Record<
     recipientName,
     role,
     smName,
+    amount,
   }) => {
     const name = smName ?? "A secondary member";
+    const amountText =
+      amount != null
+        ? `<p style="background-color:#1e3a5f;padding:12px 20px;border-radius:6px;color:#d1d5db;font-size:14px;">
+          <strong style="color:#ffffff;">Swapped amount:</strong> ${amount.toLocaleString()} USDC
+        </p>`
+        : "";
     return role === NotificationRecipientRole.PM
       ? {
           subject: `WillChain — Asset swap executed in your will "${willName}"`,
@@ -452,6 +469,7 @@ const templates: Record<
             recipientName,
             `<p><strong>${name}</strong> has executed an <strong>asset swap</strong>
             within your digital will <strong>"${willName}"</strong>.</p>
+            ${amountText}
             <p>The asset allocations defined in your will have been adjusted as part of this operation.
             The updated allocation is now recorded on the blockchain.</p>
             <p>Please log in to your WillChain account to review the new asset distribution and ensure
@@ -465,6 +483,7 @@ const templates: Record<
             recipientName,
             `<p><strong>${name}</strong> has executed an <strong>asset swap</strong>
             in the digital will <strong>"${willName}"</strong>, in which you are a designated participant.</p>
+            ${amountText}
             <p>The asset allocations within the will have been updated accordingly. The new distribution
             is now recorded on the blockchain.</p>
             <p>You can log in to your WillChain account to review the updated allocation that pertains
@@ -502,6 +521,42 @@ const templates: Record<
       "Execute Will",
     ),
   }),
+
+  [NotificationType.SM_SIGNATURE_REFUSED]: ({
+    willName,
+    recipientName,
+    role,
+    smName,
+  }) => {
+    const name = smName ?? "A secondary member";
+    return role === NotificationRecipientRole.PM
+      ? {
+          subject: `WillChain — A member refused to participate in "${willName}"`,
+          body: buildEmail(
+            recipientName,
+            `<p><strong>${name}</strong> has <strong>refused the signature request</strong>
+            for your digital will <strong>"${willName}"</strong>.</p>
+            <p>This means they have declined to participate as a secondary member. The will cannot be
+            activated until all designated positions are filled. We recommend logging in to your WillChain
+            account to designate a replacement participant.</p>
+            <p>Your will remains saved and accessible. No data has been lost — only this member's
+            participation request has been declined.</p>`,
+            "Manage My Will",
+          ),
+        }
+      : {
+          subject: `WillChain — A member refused to participate in "${willName}"`,
+          body: buildEmail(
+            recipientName,
+            `<p><strong>${name}</strong> has refused the signature request for the digital will
+            <strong>"${willName}"</strong>.</p>
+            <p>The will owner has been notified and may designate a replacement. The activation of the
+            will may be temporarily delayed as a result.</p>
+            <p>You can log in to your WillChain account to review the updated status of the will.</p>`,
+            "View Will Status",
+          ),
+        };
+  },
 };
 
 export function generateEmail(
@@ -510,8 +565,9 @@ export function generateEmail(
   recipientName: string,
   role: NotificationRecipientRole = NotificationRecipientRole.SM,
   smName?: string,
+  amount?: number,
 ): EmailContent {
-  return templates[type]({ willName, recipientName, role, smName });
+  return templates[type]({ willName, recipientName, role, smName, amount });
 }
 
 /**

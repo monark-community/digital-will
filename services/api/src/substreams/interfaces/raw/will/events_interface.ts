@@ -66,7 +66,7 @@ export interface Will_EvtWillChainSmDesisted {
   evtBlockNumber: string;
   evtAddress: string;
   smAddress: string;
-  validatedPreDesist: string; // '1' si jamais il avait validé auparavant, '0' si jamais il a pas validé auparavant.
+  validatedPreDesist: string; // '1' if they had validated before desisting, '0' if they never validated (refused the signature request).
 }
 export interface Will_EvtWillChainSmRemoved {
   evtTxHash: string;

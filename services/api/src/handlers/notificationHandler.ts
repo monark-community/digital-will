@@ -75,12 +75,14 @@ function buildUserNotif(
   willId: string,
   role: NotificationRecipientRole,
   smName?: string,
+  amount?: number,
 ): UserNotification {
   const { title, message } = generateUserNotification(
     type,
     willName,
     role,
     smName,
+    amount,
   );
   return {
     type,
@@ -102,6 +104,7 @@ async function broadcastSplit(
   smUserIds: string[],
   type: NotificationType,
   smName?: string,
+  amount?: number,
 ): Promise<void> {
   if (pmUserId) {
     const pmNotifId = await createAppNotification(
@@ -109,6 +112,7 @@ async function broadcastSplit(
       willId,
       pmUserId,
       smName,
+      amount,
     );
     emitUserNotification(pmUserId, {
       ...buildUserNotif(
@@ -117,6 +121,7 @@ async function broadcastSplit(
         willId,
         NotificationRecipientRole.PM,
         smName,
+        amount,
       ),
       id: pmNotifId,
     });
@@ -126,10 +131,17 @@ async function broadcastSplit(
       pmUserId,
       NotificationRecipientRole.PM,
       smName,
+      amount,
     );
   }
   for (const userId of smUserIds) {
-    const smNotifId = await createAppNotification(type, willId, userId, smName);
+    const smNotifId = await createAppNotification(
+      type,
+      willId,
+      userId,
+      smName,
+      amount,
+    );
     emitUserNotification(userId, {
       ...buildUserNotif(
         type,
@@ -137,6 +149,7 @@ async function broadcastSplit(
         willId,
         NotificationRecipientRole.SM,
         smName,
+        amount,
       ),
       id: smNotifId,
     });
@@ -147,6 +160,7 @@ async function broadcastSplit(
     smUserIds,
     NotificationRecipientRole.SM,
     smName,
+    amount,
   );
 }
 
@@ -196,6 +210,7 @@ async function notifyPmAndSmsExcluding(
   smartContractAddress: string,
   excludeAddress: string,
   type: NotificationType,
+  amount?: number,
 ): Promise<void> {
   const will = await getWillWithRetry(smartContractAddress);
   if (!will) {
@@ -216,6 +231,7 @@ async function notifyPmAndSmsExcluding(
     registeredUserIds(sms),
     type,
     smName,
+    amount,
   );
 }
 
@@ -490,11 +506,26 @@ export const notifySmDesisted = (smartContractAddress: string, sm: string) =>
     NotificationType.SM_DESISTED,
   );
 
-export const notifyDeathDeclared = (smartContractAddress: string, sm: string) =>
+export const notifySmSignatureRefused = (
+  smartContractAddress: string,
+  sm: string,
+) =>
+  notifyPmAndSmsExcluding(
+    smartContractAddress,
+    sm,
+    NotificationType.SM_SIGNATURE_REFUSED,
+  );
+
+export const notifyDeathDeclared = (
+  smartContractAddress: string,
+  sm: string,
+  amount?: number,
+) =>
   notifyPmAndSmsExcluding(
     smartContractAddress,
     sm,
     NotificationType.DEATH_DECLARED,
+    amount,
   );
 
 export const notifyDeathConfirmed = (
@@ -507,11 +538,16 @@ export const notifyDeathConfirmed = (
     NotificationType.DEATH_CONFIRMED,
   );
 
-export const notifyAssetsSwapped = (smartContractAddress: string, sm: string) =>
+export const notifyAssetsSwapped = (
+  smartContractAddress: string,
+  sm: string,
+  amount?: number,
+) =>
   notifyPmAndSmsExcluding(
     smartContractAddress,
     sm,
     NotificationType.ASSETS_SWAPPED,
+    amount,
   );
 
 export const notifySmUpdated = (

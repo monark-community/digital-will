@@ -33,6 +33,7 @@ export enum NotificationType {
   VETO_EXERCISED = "VETO_EXERCISED",
   ASSETS_SWAPPED = "ASSETS_SWAPPED",
   EXECUTE_WILL = "EXECUTE_WILL",
+  SM_SIGNATURE_REFUSED = "SM_SIGNATURE_REFUSED",
 }
 
 export enum NotificationRecipientRole {
