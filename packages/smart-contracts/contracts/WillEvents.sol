@@ -36,8 +36,14 @@ abstract contract WillEvents {
     // ========================
     // Process / SM / Death-related events
     event EVT_WillChain_SMValidated(address indexed smAddress); // 0x52ddaebb
-    event EVT_WillChain_SMDesisted(address indexed smAddress); // 0xf6952527
-    event EVT_WillChain_DeathDeclared(address indexed smAddress); // 0xa211875d
+    event EVT_WillChain_SMDesisted(
+        address indexed smAddress,
+        bool indexed validatedPreDesist
+    ); // 0xb8f3e5f2
+    event EVT_WillChain_DeathDeclared(
+        address indexed smAddress,
+        uint256 indexed assets
+    ); // 0x22161f8a
     event EVT_WillChain_DeathConfirmed(address indexed smAddress); // 0xcff84342
     event EVT_WillChain_VetoExercised(); // 0xd0ff9f07
 }

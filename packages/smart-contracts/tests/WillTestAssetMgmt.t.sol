@@ -546,7 +546,7 @@ contract WillTestInvalidAssetMgmt is Test {
         vm.warp(block.timestamp + 1 days);
         // Try to swap assets owith 0 balance
         vm.prank(sm1);
-        vm.expectRevert(Errors.ERR_InsufficientBalance.selector);
-        will.swapAssets();
+        uint256 res = will.swapAssets();
+        assertEq(res, 0);
     }
 }

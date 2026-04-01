@@ -401,7 +401,6 @@ contract Will is WillEvents, ReentrancyGuard {
 
     function _swapExactInputSingle() private returns (uint256) {
         uint256 ethBalance = address(this).balance;
-        if (ethBalance == 0) revert Errors.ERR_InsufficientBalance();
 
         // Wrap contract ether
         IWETH(swapConfigS.wNative).deposit{value: ethBalance}();
@@ -454,9 +453,14 @@ contract Will is WillEvents, ReentrancyGuard {
         returns (uint256)
     {
         willStateS = WillState.EXECUTED;
-        uint256 amountOut = _swapExactInputSingle();
-        emit EVT_WillChain_AssetsSwapped(msg.sender, amountOut);
-        return amountOut;
+        if (address(this).balance == 0) {
+            emit EVT_WillChain_AssetsSwapped(msg.sender, 0);
+            return 0;
+        } else {
+            uint256 amountOut = _swapExactInputSingle();
+            emit EVT_WillChain_AssetsSwapped(msg.sender, amountOut);
+            return amountOut;
+        }
     }
 
     function getWethBalance() external view returns (uint256) {
@@ -499,6 +503,7 @@ contract Will is WillEvents, ReentrancyGuard {
         SMInfo storage sm = smMappingS[msg.sender];
 
         uint8 idx = sm.index;
+        bool validatedPreDesist = sm.state != SMState.PENDING;
 
         uint8 lastIdx = uint8(smListS.length);
         address lastSm = smListS[lastIdx - 1];
@@ -514,15 +519,15 @@ contract Will is WillEvents, ReentrancyGuard {
         if (smListS.length == 0) {
             willStateS = WillState.CANCELED;
             _withdrawAllPm();
-            emit EVT_WillChain_SMDesisted(msg.sender);
+            emit EVT_WillChain_SMDesisted(msg.sender, validatedPreDesist);
             emit EVT_WillChain_WillCanceled();
             return;
         } else {
             // This updates the vote power too. It is assumed that substracting desisted points from total preserves the same proportions allst whilst adding points to everyone.
-            // In case they ask to distribute points explicitly, change here. TODO
+            // In case they ask to distribute points explicitly, change here.
             _checkAndUpdateWillState();
         }
-        emit EVT_WillChain_SMDesisted(msg.sender);
+        emit EVT_WillChain_SMDesisted(msg.sender, validatedPreDesist);
     }
 
     /////////////////////////////////////////////////////////
@@ -541,7 +546,7 @@ contract Will is WillEvents, ReentrancyGuard {
 
         if (deathDeclarationTimestampS == 0) {
             deathDeclarationTimestampS = block.timestamp;
-            emit EVT_WillChain_DeathDeclared(msg.sender);
+            emit EVT_WillChain_DeathDeclared(msg.sender, address(this).balance);
         } else {
             emit EVT_WillChain_DeathConfirmed(msg.sender);
         }
