@@ -175,6 +175,10 @@ contract WillTestAssetMgmt is Test {
         vm.prank(sm1);
         uint256 res = will.swapAssets();
         assertEq(res, 0);
+
+        vm.prank(pm);
+        vm.expectRevert(Errors.ERR_WillExecuted.selector);
+        will.cancelWill();
     }
 }
 

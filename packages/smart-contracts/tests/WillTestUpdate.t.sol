@@ -356,7 +356,6 @@ contract WillTestInvalidUpdate is Test {
     address sm4 = makeAddr("sm4");
     address sm5 = makeAddr("sm5");
 
-    // Not PM.
     function setUp() public {
         SMPartialInfo[] memory sms = new SMPartialInfo[](4);
         sms[0] = SMPartialInfo({smAddress: sm1, votePower: 1});
@@ -390,9 +389,25 @@ contract WillTestInvalidUpdate is Test {
         );
     }
 
+    // Not PM
+    function test_UpdateWill_NotPM() public {
+        vm.prank(sm1);
+        vm.expectRevert(Errors.ERR_NotPM.selector);
+        will.updateWill(
+            new SMPartialInfo[](0),
+            new SMPartialInfo[](0),
+            new address[](0),
+            SecurityPeriodConfig({minSecurityPeriod: 0, maxSecurityPeriod: 0})
+        );
+    }
+
     // Will Canceled.
     function test_UpdateWill_WillCanceled() public {
         vm.prank(pm);
+        will.cancelWill();
+
+        vm.prank(pm);
+        vm.expectRevert(Errors.ERR_WillCanceled.selector);
         will.cancelWill();
 
         vm.prank(pm);

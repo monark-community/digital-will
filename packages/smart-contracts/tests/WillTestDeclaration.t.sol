@@ -238,6 +238,13 @@ contract WillTestInvalidDeclaration is Test {
         will.validateSm();
     }
 
+    // Attacker tries cancelling
+    function test_Cancel_NonPM() public {
+        vm.prank(attacker);
+        vm.expectRevert(Errors.ERR_NotPM.selector);
+        will.cancelWill();
+    }
+
     // Non-SM declares.
     function test_Declare_NonSm() public {
         vm.prank(attacker);
@@ -433,6 +440,13 @@ contract WillTestInvalidDeclaration is Test {
 
         vm.prank(pm);
         vm.expectRevert(Errors.ERR_WillOnCooldown.selector);
+        will.vetoDeath();
+    }
+
+    // Veto_NoDeclare
+    function test_Veto_NoDeclare() public {
+        vm.prank(pm);
+        vm.expectRevert(Errors.ERR_WillNoDeclaration.selector);
         will.vetoDeath();
     }
 }
