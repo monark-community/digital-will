@@ -14,6 +14,7 @@ import {
   validateMessageTimestamp,
   validateWalletAddress,
 } from "../utils/crypto";
+import { linkSecondaryMembersByTempAddress } from "./secondaryMemberService";
 
 const prisma = new PrismaClient();
 
@@ -292,6 +293,10 @@ export async function createAccountWithWallet(data: {
   });
 
   const primaryWallet = user.wallets[0];
+
+  // Link any SecondaryMember records that were created with this address
+  // before the user had an account (tempWalletAddress → walletAddress)
+  await linkSecondaryMembersByTempAddress(walletAddress);
 
   const token = jwt.sign(
     { userId: user.userId, email: user.email },
