@@ -526,9 +526,9 @@ contract Will is WillEvents, ReentrancyGuard {
         } else {
             // This updates the vote power too. It is assumed that substracting desisted points from total preserves the same proportions allst whilst adding points to everyone.
             // In case they ask to distribute points explicitly, change here.
+            emit EVT_WillChain_SMDesisted(msg.sender, validatedPreDesist);
             _checkAndUpdateWillState();
         }
-        emit EVT_WillChain_SMDesisted(msg.sender, validatedPreDesist);
     }
 
     /////////////////////////////////////////////////////////
