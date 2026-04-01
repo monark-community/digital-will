@@ -4,7 +4,10 @@
 
 // Use NEXT_PUBLIC_APP_ENV for environment detection (independent of NODE_ENV which can be overridden by platforms)
 // Defaults to "production" if not specified
-const _appEnv = (process.env.NEXT_PUBLIC_APP_ENV || "production") as "production" | "development" | "local";
+const _appEnv = (process.env.NEXT_PUBLIC_APP_ENV || "production") as
+  | "production"
+  | "development"
+  | "local";
 const _isNonProd = _appEnv !== "production";
 
 export const config = {
@@ -23,8 +26,8 @@ export const config = {
   isLocalOrDev: _isNonProd,
   securityPeriod: {
     unit: _isNonProd ? ("minutes" as const) : ("days" as const),
-    min: _isNonProd ? 1 * 60 : 28 * 86400,
-    max: _isNonProd ? 10000 * 60 : 154 * 86400,
+    min: _isNonProd ? 1 : 28,
+    max: _isNonProd ? 10000 : 154,
   },
 } as const;
 
@@ -39,7 +42,7 @@ export const API_ROUTES = {
     WALLET_SIGNIN: "/api/auth/wallet/signin",
     WALLET_CREATE: "/api/auth/wallet/create",
   },
-  USERS:{
+  USERS: {
     BASE: "/api/users",
     RECEIVE_EMAILS: "/api/users/receive-emails",
     DELETE_ELIGIBILITY: "/api/users/delete-eligibility",
