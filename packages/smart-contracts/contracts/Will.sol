@@ -504,7 +504,7 @@ contract Will is WillEvents, ReentrancyGuard {
         SMInfo storage sm = smMappingS[msg.sender];
 
         uint8 idx = sm.index;
-        bool validatedPreDesist = sm.state != SMState.PENDING;
+        uint8 validatedPreDesist = sm.state != SMState.PENDING ? 1 : 0;
 
         uint8 lastIdx = uint8(smListS.length);
         address lastSm = smListS[lastIdx - 1];

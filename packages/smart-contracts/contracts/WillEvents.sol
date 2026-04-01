@@ -38,7 +38,7 @@ abstract contract WillEvents {
     event EVT_WillChain_SMValidated(address indexed smAddress); // 0x52ddaebb
     event EVT_WillChain_SMDesisted(
         address indexed smAddress,
-        bool indexed validatedPreDesist
+        uint8 indexed validatedPreDesist
     ); // 0xb8f3e5f2
     event EVT_WillChain_DeathDeclared(
         address indexed smAddress,
