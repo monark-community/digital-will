@@ -34,6 +34,20 @@ export async function findSecondaryMemberByAddressAndWill(
 }
 
 /**
+ * Links all SecondaryMember records that have the given tempWalletAddress to the
+ * newly created wallet, by setting their walletAddress to the same value.
+ * Called after a new account is created so existing SM records get the FK link.
+ */
+export async function linkSecondaryMembersByTempAddress(
+  address: string,
+): Promise<void> {
+  await prisma.secondaryMember.updateMany({
+    where: { tempWalletAddress: address.toLowerCase() },
+    data: { walletAddress: address.toLowerCase() },
+  });
+}
+
+/**
  * Returns all secondary members of a will excluding any member whose
  * walletAddress or tempWalletAddress matches excludeAddress.
  */
