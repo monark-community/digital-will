@@ -2955,42 +2955,42 @@ pub mod events {
     #[derive(Debug, Clone, PartialEq)]
     pub struct EvtWillChainSmDesisted {
         pub sm_address: Vec<u8>,
-        pub validated_pre_desist: bool,
+        pub validated_pre_desist: substreams::scalar::BigInt,
     }
     impl EvtWillChainSmDesisted {
         const TOPIC_ID: [u8; 32] = [
-            184u8,
-            243u8,
-            229u8,
-            242u8,
-            209u8,
-            255u8,
-            76u8,
-            116u8,
-            223u8,
-            19u8,
-            184u8,
-            224u8,
-            121u8,
-            238u8,
-            176u8,
+            136u8,
+            139u8,
+            90u8,
+            247u8,
+            147u8,
+            210u8,
+            217u8,
+            28u8,
+            118u8,
+            178u8,
+            9u8,
+            74u8,
+            21u8,
+            108u8,
+            28u8,
+            192u8,
+            120u8,
+            185u8,
+            129u8,
+            127u8,
+            24u8,
+            15u8,
             164u8,
-            83u8,
-            168u8,
-            177u8,
-            54u8,
-            63u8,
-            218u8,
-            93u8,
-            138u8,
-            66u8,
-            149u8,
-            179u8,
-            243u8,
             126u8,
-            85u8,
-            4u8,
-            13u8,
+            223u8,
+            72u8,
+            115u8,
+            171u8,
+            2u8,
+            162u8,
+            178u8,
+            44u8,
         ];
         pub fn match_log(log: &substreams_ethereum::pb::eth::v2::Log) -> bool {
             if log.topics.len() != 3usize {
@@ -3022,20 +3022,25 @@ pub mod events {
                     .expect(INTERNAL_ERR)
                     .as_bytes()
                     .to_vec(),
-                validated_pre_desist: ethabi::decode(
-                        &[ethabi::ParamType::Bool],
-                        log.topics[2usize].as_ref(),
-                    )
-                    .map_err(|e| {
-                        format!(
-                            "unable to decode param 'validated_pre_desist' from topic of type 'bool': {:?}",
-                            e
+                validated_pre_desist: {
+                    let mut v = [0 as u8; 32];
+                    ethabi::decode(
+                            &[ethabi::ParamType::Uint(8usize)],
+                            log.topics[2usize].as_ref(),
                         )
-                    })?
-                    .pop()
-                    .expect(INTERNAL_ERR)
-                    .into_bool()
-                    .expect(INTERNAL_ERR),
+                        .map_err(|e| {
+                            format!(
+                                "unable to decode param 'validated_pre_desist' from topic of type 'uint8': {:?}",
+                                e
+                            )
+                        })?
+                        .pop()
+                        .expect(INTERNAL_ERR)
+                        .into_uint()
+                        .expect(INTERNAL_ERR)
+                        .to_big_endian(v.as_mut_slice());
+                    substreams::scalar::BigInt::from_unsigned_bytes_be(&v)
+                },
             })
         }
     }

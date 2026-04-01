@@ -48,6 +48,7 @@ export interface Will_EvtWillChainDeathDeclared {
   evtBlockNumber: string;
   evtAddress: string;
   smAddress: string;
+  assets: string;
 }
 export interface Will_EvtWillChainSmAdded {
   evtTxHash: string;
@@ -65,6 +66,7 @@ export interface Will_EvtWillChainSmDesisted {
   evtBlockNumber: string;
   evtAddress: string;
   smAddress: string;
+  validatedPreDesist: string; // '1' si jamais il avait validé auparavant, '0' si jamais il a pas validé auparavant.
 }
 export interface Will_EvtWillChainSmRemoved {
   evtTxHash: string;

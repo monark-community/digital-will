@@ -98,6 +98,7 @@ export interface Event_WillDeathConfirmed {
 export interface Event_WillDeathDeclared {
   willAddress: string; // hex 0x
   smAddress: string; // hex 0x
+  assets: number;
 }
 
 /** Fired when a secondary member is added to the will. */
@@ -111,6 +112,7 @@ export interface Event_WillSmAdded {
 export interface Event_WillSmDesisted {
   willAddress: string; // hex 0x
   smAddress: string; // hex 0x
+  validatedPreDesist: boolean;
 }
 
 /** Fired when a secondary member is removed from the will by the PM. */

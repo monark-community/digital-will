@@ -62,11 +62,11 @@ export async function stream(
     lastCursor = cursor;
   });
 
-  // Progress — fired each 120 seconds with module processing stats (useful for monitoring sync progress)
+  // Progress — fired each 5 mins with module processing stats (useful for monitoring sync progress)
   let lastProgressLog = 0;
   emitter.on("progress", (progress: any) => {
     const now = Date.now();
-    if (now - lastProgressLog >= 120_000) {
+    if (now - lastProgressLog >= 300_000) {
       lastProgressLog = now;
       console.dir(`[Substreams] Progress:`);
       console.dir(progress, { depth: null, colors: true });

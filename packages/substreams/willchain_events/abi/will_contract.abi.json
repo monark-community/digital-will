@@ -626,9 +626,9 @@
       },
       {
         "name": "validatedPreDesist",
-        "type": "bool",
+        "type": "uint8",
         "indexed": true,
-        "internalType": "bool"
+        "internalType": "uint8"
       }
     ],
     "anonymous": false
