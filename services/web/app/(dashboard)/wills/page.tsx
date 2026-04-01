@@ -922,19 +922,27 @@ export default function WillsPage() {
         errors.push("Minimum security period cannot be greater than maximum");
       }
 
-      const minPeriodSeconds = config.isLocalOrDev ? minPeriod * 60 : minPeriod * 86400;
-      const maxPeriodSeconds = config.isLocalOrDev ? maxPeriod * 60 : maxPeriod * 86400;
+      const minPeriodSeconds = config.isLocalOrDev
+        ? minPeriod * 60
+        : minPeriod * 86400;
+      const maxPeriodSeconds = config.isLocalOrDev
+        ? maxPeriod * 60
+        : maxPeriod * 86400;
 
       // Optionnel : vérifier des plages spécifiques
       if (minPeriodSeconds < config.securityPeriod.min) {
-        const minLimit = config.isLocalOrDev ? config.securityPeriod.min / 60 : config.securityPeriod.min / 86400;
+        const minLimit = config.isLocalOrDev
+          ? config.securityPeriod.min / 60
+          : config.securityPeriod.min / 86400;
         errors.push(
           `Minimum security period must be at least ${minLimit} ${config.securityPeriod.unit}`,
         );
       }
 
       if (maxPeriodSeconds > config.securityPeriod.max) {
-        const maxLimit = config.isLocalOrDev ? config.securityPeriod.max / 60 : config.securityPeriod.max / 86400;
+        const maxLimit = config.isLocalOrDev
+          ? config.securityPeriod.max / 60
+          : config.securityPeriod.max / 86400;
         errors.push(
           `Maximum security period cannot exceed ${maxLimit} ${config.securityPeriod.unit}`,
         );
@@ -1255,12 +1263,8 @@ export default function WillsPage() {
       dbUpdatedMembers,
       dbDeletedMemberIds,
       dbAddedMembers,
-      dbMinPeriod: minChanged
-        ? Number(periodToSeconds(parseInt(editWillMinPeriod)))
-        : undefined,
-      dbMaxPeriod: maxChanged
-        ? Number(periodToSeconds(parseInt(editWillMaxPeriod)))
-        : undefined,
+      dbMinPeriod: minChanged ? Number(periodToSeconds(parsedMin)) : undefined,
+      dbMaxPeriod: maxChanged ? Number(periodToSeconds(parsedMax)) : undefined,
     };
   };
 
@@ -2052,8 +2056,10 @@ export default function WillsPage() {
                           if (!isNaN(value)) {
                             const minLimit = config.isLocalOrDev ? 1 : 28;
                             const maxLimit = config.isLocalOrDev ? 10000 : 154;
-                            if (value < minLimit) setMinSecurityPeriod(minLimit.toString());
-                            else if (value > maxLimit) setMaxSecurityPeriod(maxLimit.toString());
+                            if (value < minLimit)
+                              setMinSecurityPeriod(minLimit.toString());
+                            else if (value > maxLimit)
+                              setMaxSecurityPeriod(maxLimit.toString());
                           }
                         }}
                         placeholder={`e.g., ${config.isLocalOrDev ? 1 : 28}`}
@@ -2082,8 +2088,10 @@ export default function WillsPage() {
                           if (!isNaN(value)) {
                             const minLimit = config.isLocalOrDev ? 1 : 28;
                             const maxLimit = config.isLocalOrDev ? 10000 : 154;
-                            if (value < minLimit) setMaxSecurityPeriod(minLimit.toString());
-                            else if (value > maxLimit) setMaxSecurityPeriod(maxLimit.toString());
+                            if (value < minLimit)
+                              setMaxSecurityPeriod(minLimit.toString());
+                            else if (value > maxLimit)
+                              setMaxSecurityPeriod(maxLimit.toString());
                           }
                         }}
                         placeholder={`e.g., ${config.isLocalOrDev ? 10000 : 154}`}
