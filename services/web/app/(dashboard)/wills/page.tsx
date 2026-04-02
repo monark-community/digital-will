@@ -723,7 +723,14 @@ export default function WillsPage() {
     setFundError(null);
     setIsFunding(true);
     try {
-      await fundWillContract(fundModal.contractAddress, amount);
+      const will = realWills.find((w) => w.willId === fundModal.willId);
+      if (!will) {
+        setFundError("Will not found");
+        setIsFunding(false);
+        return;
+      }
+      
+      await fundWillContract(fundModal.contractAddress, amount, will.walletAddress);
       await refreshBalance(fundModal.willId, fundModal.contractAddress);
       setFundModal(null);
       setFundAmount("");
@@ -754,7 +761,15 @@ export default function WillsPage() {
     setWithdrawError(null);
     setIsWithdrawing(true);
     try {
-      await withdrawWillContract(withdrawModal.contractAddress, amount);
+      // Get the will to obtain the owner's wallet address
+      const will = realWills.find((w) => w.willId === withdrawModal.willId);
+      if (!will) {
+        setWithdrawError("Will not found");
+        setIsWithdrawing(false);
+        return;
+      }
+      
+      await withdrawWillContract(withdrawModal.contractAddress, amount, will.walletAddress);
       await refreshBalance(withdrawModal.willId, withdrawModal.contractAddress);
       setWithdrawModal(null);
       setWithdrawAmount("");
@@ -779,7 +794,7 @@ export default function WillsPage() {
       }
 
       // Call blockchain cancel
-      await cancelWillContract(cancelModal.contractAddress);
+      await cancelWillContract(cancelModal.contractAddress, will.walletAddress);
 
       // Prepare voting powers map from secondary members
       const secondaryMembersVotingPowers = will.secondaryMembers.reduce(
@@ -819,7 +834,15 @@ export default function WillsPage() {
     setVetoError(null);
     setIsVetoing(true);
     try {
-      await vetoDeathContract(vetoModal.contractAddress);
+      // Get the will to obtain the owner's wallet address
+      const will = realWills.find((w) => w.willId === vetoModal.willId);
+      if (!will) {
+        setVetoError("Will not found");
+        setIsVetoing(false);
+        return;
+      }
+      
+      await vetoDeathContract(vetoModal.contractAddress, will.walletAddress);
       setVetoModal(null);
       await fetchWills();
     } catch (err: any) {
@@ -1689,6 +1712,7 @@ export default function WillsPage() {
           diffs.addedSmList,
           diffs.deletedSmList,
           diffs.periodConfig,
+          editWillModal.walletAddress,
         );
       }
       // 2. DB â€” update names, addresses, power, add/remove members
