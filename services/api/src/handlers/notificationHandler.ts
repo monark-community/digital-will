@@ -469,8 +469,10 @@ export async function notifyWillCanceled(
   }
 }
 
-export const notifyWillActivated = (smartContractAddress: string) =>
-  notifyPmAndSms(smartContractAddress, NotificationType.WILL_ACTIVATED);
+export const notifyWillActivated = async (smartContractAddress: string) => {
+  await sleep(AWAIT_DELAYS_MS[4]);
+  return notifyPmAndSms(smartContractAddress, NotificationType.WILL_ACTIVATED);
+};
 
 export const notifySecurityPeriodUpdated = (smartContractAddress: string) =>
   notifySmsOnly(smartContractAddress, NotificationType.SECURITY_PERIOD_UPDATED);
