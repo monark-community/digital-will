@@ -298,10 +298,15 @@ export default function WillsPage() {
     }
     const fetch = async () => {
       try {
+        const will = realWills.find((w) => w.willId === fundModal.willId);
+        if (!will) {
+          setFundWalletBalance(null);
+          return;
+        }
+        
         if (typeof window !== "undefined" && (window as any).ethereum) {
           const provider = new ethers.BrowserProvider((window as any).ethereum);
-          const signer = await provider.getSigner();
-          const balance = await provider.getBalance(await signer.getAddress());
+          const balance = await provider.getBalance(will.walletAddress);
           setFundWalletBalance(ethers.formatEther(balance));
         }
       } catch {
@@ -309,7 +314,7 @@ export default function WillsPage() {
       }
     };
     fetch();
-  }, [fundModal]);
+  }, [fundModal, realWills]);
 
   useEffect(() => {
     if (!withdrawModal) {
@@ -318,10 +323,15 @@ export default function WillsPage() {
     }
     const fetch = async () => {
       try {
+        const will = realWills.find((w) => w.willId === withdrawModal.willId);
+        if (!will) {
+          setWithdrawWalletBalance(null);
+          return;
+        }
+        
         if (typeof window !== "undefined" && (window as any).ethereum) {
           const provider = new ethers.BrowserProvider((window as any).ethereum);
-          const signer = await provider.getSigner();
-          const balance = await provider.getBalance(await signer.getAddress());
+          const balance = await provider.getBalance(will.walletAddress);
           setWithdrawWalletBalance(ethers.formatEther(balance));
         }
       } catch {
@@ -329,7 +339,7 @@ export default function WillsPage() {
       }
     };
     fetch();
-  }, [withdrawModal]);
+  }, [withdrawModal, realWills]);
 
   useEffect(() => {
     if (!deployModal) {
@@ -340,9 +350,8 @@ export default function WillsPage() {
       try {
         if (typeof window !== "undefined" && (window as any).ethereum) {
           const provider = new ethers.BrowserProvider((window as any).ethereum);
-          const signer = await provider.getSigner();
-          const address = await signer.getAddress();
-          const balance = await provider.getBalance(address);
+          // Fetch balance for the will's owner wallet, not the currently connected wallet
+          const balance = await provider.getBalance(deployModal.walletAddress);
           setDeployWalletBalance(ethers.formatEther(balance));
         }
       } catch {
