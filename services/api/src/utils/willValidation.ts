@@ -17,6 +17,7 @@ export interface WillMember {
   walletAddress?: string | null;
   tempWalletAddress?: string | null;
   votingPower: number;
+  relationship?: string | null;
 }
 
 /**
@@ -179,6 +180,10 @@ export function validateDraftForm(data: {
         (member.votingPower < 1 || member.votingPower > 255)
       ) {
         errors.push(`Member ${i + 1}: Power must be between 1 and 255`);
+      }
+
+      if (member.relationship && member.relationship.length > 30) {
+        errors.push(`Member ${i + 1}: Relationship must not exceed 30 characters`);
       }
     }
   }

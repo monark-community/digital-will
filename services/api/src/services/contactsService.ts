@@ -96,6 +96,10 @@ export async function createContact(data: {
         throw new BadRequestError("Invalid phone number format");
     }
 
+    if (data.relationship && data.relationship.length > 30) {
+        throw new BadRequestError("Relationship must not exceed 30 characters");
+    }
+
     validateWalletAddress(data.walletAddress);
 
     await checkWalletConflict(data.userId, data.walletAddress);
@@ -170,6 +174,9 @@ export async function updateContact(data: {
         updateData.phoneNumber = updateFields.phoneNumber || null;
     }
     if (updateFields.relationship !== undefined) {
+        if (updateFields.relationship && updateFields.relationship.length > 30) {
+            throw new BadRequestError("Relationship must not exceed 30 characters");
+        }
         updateData.relationship = updateFields.relationship || null;
     }
 
