@@ -9,6 +9,7 @@ interface NotificationPanelProps {
   onToggleRead: (id: string) => void;
   onDelete: (id: string) => void;
   onDeleteAll: () => void;
+  onNotificationClick?: (notification: AppNotification) => void;
   onClose: () => void;
 }
 
@@ -28,6 +29,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   onToggleRead,
   onDelete,
   onDeleteAll,
+  onNotificationClick,
   onClose,
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -149,6 +151,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                 key={notif.id}
                 onClick={() => {
                   if (!notif.read) onToggleRead(notif.id);
+                  onNotificationClick?.(notif);
                 }}
                 className={`w-full text-left px-6 py-4 border-b border-[var(--border-section)] transition-colors hover:bg-[var(--bg-section)] cursor-pointer ${
                   !notif.read ? "bg-[var(--bg-section)]/50" : ""

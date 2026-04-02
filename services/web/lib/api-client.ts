@@ -31,10 +31,17 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear token and redirect to login
+      // Clear token and redirect to login with current path
       if (typeof window !== "undefined") {
         localStorage.removeItem("token");
-        window.location.href = "/login";
+        const currentPath = window.location.pathname;
+        const redirectTo =
+          currentPath !== "/" &&
+          currentPath !== "/login" &&
+          currentPath !== "/signup"
+            ? `?redirectTo=${encodeURIComponent(currentPath)}`
+            : "";
+        window.location.href = `/login${redirectTo}`;
       }
     }
     return Promise.reject(error);

@@ -59,6 +59,7 @@ export interface CreateAccountWithWalletRequest {
   lastName: string;
   email: string;
   phoneNo?: string;
+  wantToReceiveMails?: boolean;
   walletAddress: string;
   signature: string;
   message: string;

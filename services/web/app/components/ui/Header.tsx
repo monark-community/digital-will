@@ -2,11 +2,11 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
 import { useLogout, useNotifications } from "@/lib/hooks";
 import NotificationPanel from "./NotificationPanel";
-import type { User } from "@/lib/types";
+import type { AppNotification, User } from "@/lib/types";
 
 interface HeaderProps {
   isAuthenticated?: boolean;
@@ -18,6 +18,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
   const { mutate: logout, isPending: isLoggingOut } = useLogout();
   const {
     notifications,
@@ -51,6 +52,40 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
   const handleProfile = () => {
     setIsDropdownOpen(false);
     router.push("/profile");
+  };
+
+  const handleNotificationClick = (notification: AppNotification) => {
+    setIsNotifOpen(false);
+
+    const normalizedRole = (notification.role || "").toLowerCase();
+    const isSmRole = normalizedRole === "sm" || normalizedRole === "sm_target";
+    const isPmRole = normalizedRole === "pm";
+
+    let basePath = "/wills";
+    if (isSmRole) {
+      basePath = "/wills/associated";
+    } else if (!isPmRole && notification.type === "SIGNATURE_REQUEST") {
+      basePath = "/wills/associated";
+    }
+
+    if (!notification.willId) {
+      if (pathname === basePath) {
+        window.location.reload();
+        return;
+      }
+
+      router.push(basePath);
+      return;
+    }
+
+    const targetUrl = `${basePath}?targetWillId=${encodeURIComponent(notification.willId)}`;
+
+    if (pathname === basePath) {
+      window.location.assign(targetUrl);
+      return;
+    }
+
+    router.push(targetUrl);
   };
 
   return (
@@ -188,6 +223,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
                     onToggleRead={toggleRead}
                     onDelete={deleteNotification}
                     onDeleteAll={deleteAllNotifications}
+                    onNotificationClick={handleNotificationClick}
                     onClose={() => setIsNotifOpen(false)}
                   />
                 )}

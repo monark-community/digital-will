@@ -18,6 +18,7 @@ function WalletSignupContent() {
     email: "",
     phoneNo: "",
   });
+  const [wantToReceiveMails, setWantToReceiveMails] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {
@@ -63,6 +64,7 @@ function WalletSignupContent() {
 
     createAccount({
       ...formData,
+      wantToReceiveMails,
       walletAddress,
       signature,
       message,
@@ -99,7 +101,9 @@ function WalletSignupContent() {
             Complete your profile to link your wallet
           </p>
           <div className="mt-4 p-3 bg-[var(--bg-section)] rounded-lg border border-[var(--border-section)]">
-            <p className="text-xs text-[var(--text-muted)] mb-1">Wallet Address</p>
+            <p className="text-xs text-[var(--text-muted)] mb-1">
+              Wallet Address
+            </p>
             <p className="text-sm font-mono text-[var(--text-primary)] truncate">
               {walletAddress}
             </p>
@@ -190,6 +194,37 @@ function WalletSignupContent() {
                 onChange={handleChange}
               />
             </div>
+
+            {/* Email notifications preference */}
+            <div className="p-4 bg-[var(--bg-section)] rounded-lg border border-[var(--border-section)]">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 pr-4">
+                  <p className="font-medium text-sm text-[var(--text-primary)]">
+                    Email Notifications
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
+                    Receive email updates about events related to your wills and
+                    associated wills.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWantToReceiveMails(!wantToReceiveMails)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 ${
+                    wantToReceiveMails ? "bg-[var(--accent)]" : "bg-gray-600"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      wantToReceiveMails ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+              <p className="text-xs text-[var(--text-muted)] mt-2 italic">
+                You can change this anytime in your account settings.
+              </p>
+            </div>
           </div>
 
           <div>
@@ -198,7 +233,9 @@ function WalletSignupContent() {
               disabled={isPending}
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-[var(--accent)] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
             >
-              {isPending ? "Creating account..." : "Create Account & Link Wallet"}
+              {isPending
+                ? "Creating account..."
+                : "Create Account & Link Wallet"}
             </button>
           </div>
 
@@ -218,11 +255,13 @@ function WalletSignupContent() {
 
 export default function WalletSignupPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
-        <div className="text-[var(--text-primary)]">Loading...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
+          <div className="text-[var(--text-primary)]">Loading...</div>
+        </div>
+      }
+    >
       <WalletSignupContent />
     </Suspense>
   );

@@ -104,9 +104,7 @@ class WillService {
     try {
       const signer = await getSigner();
 
-      const checksummedFactoryAddress = ethers.getAddress(
-        params.factoryAddress,
-      );
+      const checksummedFactoryAddress = ethers.getAddress(params.factoryAddress);
 
       const factoryContract = new ethers.Contract(
         checksummedFactoryAddress,
@@ -114,7 +112,6 @@ class WillService {
         signer,
       );
 
-      // Checksum each SM address
       const smList: [string, number][] = params.secondaryMembers.map((sm) => [
         ethers.getAddress(sm.smAddress),
         sm.votePower,
@@ -177,28 +174,7 @@ class WillService {
         transactionHash: receipt.hash,
       };
     } catch (error: any) {
-      console.error("Error creating will:", error);
-
-      if (
-        error.code === 4001 ||
-        error.code === "ACTION_REJECTED" ||
-        error.reason === "rejected"
-      ) {
-        const rejectionError: any = new Error("User rejected the transaction");
-        rejectionError.code = error.code || "ACTION_REJECTED";
-        rejectionError.reason = "rejected";
-        throw rejectionError;
-      }
-
-      if (error.code === "CALL_EXCEPTION") {
-        throw new Error(
-          "Contract call failed: " + (error.reason || error.message),
-        );
-      }
-
-      throw new Error(
-        "Failed to create will: " + (error.message || "Unknown error"),
-      );
+      throw error;
     }
   }
 
@@ -247,7 +223,6 @@ class WillService {
 
       return response.data.data;
     } catch (error: any) {
-      console.error("Error deploying will:", error);
       throw error;
     }
   }
@@ -290,11 +265,7 @@ class WillService {
       }>(API_ROUTES.WILLS.ASSOCIATED);
       return response.data.data;
     } catch (error: any) {
-      console.error("Error fetching associated wills:", error);
-      throw new Error(
-        "Failed to fetch associated wills: " +
-          (error.response?.data?.message || error.message),
-      );
+      throw error;
     }
   }
 
@@ -306,11 +277,7 @@ class WillService {
       }>(API_ROUTES.WILLS.BY_WALLET(walletAddress));
       return response.data.data;
     } catch (error: any) {
-      console.error("Error fetching wills:", error);
-      throw new Error(
-        "Failed to fetch wills: " +
-          (error.response?.data?.message || error.message),
-      );
+      throw error;
     }
   }
 
@@ -325,11 +292,7 @@ class WillService {
       }>(API_ROUTES.WILLS.ENRICHED(walletAddress));
       return response.data.data;
     } catch (error: any) {
-      console.error("Error fetching enriched wills:", error);
-      throw new Error(
-        "Failed to fetch enriched wills: " +
-          (error.response?.data?.message || error.message),
-      );
+      throw error;
     }
   }
 
@@ -346,11 +309,7 @@ class WillService {
       }>(API_ROUTES.WILLS.VALIDATE(willId));
       return response.data.data;
     } catch (error: any) {
-      console.error("Error validating will:", error);
-      throw new Error(
-        "Failed to validate will: " +
-          (error.response?.data?.message || error.message),
-      );
+      throw error;
     }
   }
 
@@ -365,7 +324,6 @@ class WillService {
       }>(API_ROUTES.WILLS.BALANCE(contractAddress));
       return response.data.data.balance;
     } catch (error: any) {
-      console.error("Error fetching contract balance:", error);
       return "—";
     }
   }
@@ -374,7 +332,6 @@ class WillService {
    * Create a new draft will (off-chain only)
    */
   async createDraftWill(params: CreateDraftWillParams): Promise<WillFromDB> {
-    console.log(params.willName);
     try {
       const response = await apiClient.post<{
         success: boolean;
@@ -382,11 +339,7 @@ class WillService {
       }>(API_ROUTES.WILLS.DRAFT, params);
       return response.data.data;
     } catch (error: any) {
-      console.error("Error creating draft will:", error);
-      throw new Error(
-        "Failed to create draft will: " +
-          (error.response?.data?.message || error.message),
-      );
+      throw error;
     }
   }
   /**
@@ -403,11 +356,7 @@ class WillService {
       }>(`${API_ROUTES.WILLS.DRAFT}/${willId}`, params);
       return response.data.data;
     } catch (error: any) {
-      console.error("Error updating draft will:", error);
-      throw new Error(
-        "Failed to update draft will: " +
-          (error.response?.data?.message || error.message),
-      );
+      throw error;
     }
   }
 
@@ -429,11 +378,7 @@ class WillService {
       }>(API_ROUTES.WILLS.CANCEL(willId), params);
       return response.data.data;
     } catch (error: any) {
-      console.error("Error canceling will:", error);
-      throw new Error(
-        "Failed to cancel will: " +
-          (error.response?.data?.message || error.message),
-      );
+      throw error;
     }
   }
 
@@ -444,11 +389,7 @@ class WillService {
     try {
       await apiClient.delete(`${API_ROUTES.WILLS.DRAFT}/${willId}`);
     } catch (error: any) {
-      console.error("Error deleting draft will:", error);
-      throw new Error(
-        "Failed to delete draft will: " +
-          (error.response?.data?.message || error.message),
-      );
+      throw error;
     }
   }
 
@@ -488,11 +429,7 @@ class WillService {
       }>(API_ROUTES.WILLS.UPDATE_MEMBERS(willId), params);
       return response.data.data;
     } catch (error: any) {
-      console.error("Error updating deployed will members:", error);
-      throw new Error(
-        "Failed to update will: " +
-          (error.response?.data?.message || error.message),
-      );
+      throw error;
     }
   }
 
@@ -501,19 +438,11 @@ class WillService {
    */
   async removeSecondaryMember(willId: string): Promise<void> {
     try {
-      const response = await apiClient.delete(
+      await apiClient.delete(
         API_ROUTES.WILLS.REMOVE_SECONDARY_MEMBER(willId),
       );
-      console.log(
-        "Successfully removed secondary member from database:",
-        response.data,
-      );
     } catch (error: any) {
-      console.error("Error removing secondary member:", error);
-      throw new Error(
-        error.response?.data?.message ||
-          "Failed to remove secondary member from database",
-      );
+      throw error;
     }
   }
 
@@ -528,8 +457,7 @@ class WillService {
     try {
       await apiClient.post("/api/contacts", contactData);
     } catch (error: any) {
-      console.error("Error adding contact:", error);
-      throw new Error(error.response?.data?.message || "Failed to add contact");
+      throw error;
     }
   }
 }

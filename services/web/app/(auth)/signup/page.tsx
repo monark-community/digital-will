@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSignUp } from "@/lib/hooks";
+import { authService } from "@/lib/services";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -20,7 +21,11 @@ export default function SignUpPage() {
   const { mutate: signUp, isPending, error, reset } = useSignUp();
 
   useEffect(() => {
-    router.push("/login");
+    if (authService.isAuthenticated()) {
+      router.replace("/dashboard");
+    } else {
+      router.push("/login");
+    }
   }, [router]);
 
   // Update local error state when mutation error changes

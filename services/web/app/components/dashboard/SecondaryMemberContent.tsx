@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { willService, type AssociatedWill } from "@/lib/services";
 import { WILL_ABI } from "@/lib/contracts/WillABI";
 import { displaySecurityPeriodRange } from "@/lib/utils/blockchain";
+import { getErrorMessage } from "@/lib/contract-errors";
 
 function stateBadge(state: string) {
   const map: Record<string, string> = {
@@ -166,7 +167,6 @@ function WillCard({ will, onRefresh }: WillCardProps) {
           await willService.removeSecondaryMember(will.willId);
           console.log('Successfully removed from database');
         } catch (dbError: any) {
-          console.error('Failed to remove from database:', dbError);
           setError('Blockchain transaction succeeded, but failed to update database. Please refresh.');
           setLoadingAction(null);
           return;
@@ -176,15 +176,7 @@ function WillCard({ will, onRefresh }: WillCardProps) {
         setSuccess(`"${action.label}" transaction confirmed!`);
         onRefresh();
       } catch (err: any) {
-        if (
-          err.code === 4001 ||
-          err.code === "ACTION_REJECTED" ||
-          err.reason === "rejected"
-        ) {
-          setError("Transaction rejected by user.");
-        } else {
-          setError(err.reason || err.message || "Transaction failed.");
-        }
+        setError(getErrorMessage(err, "Transaction failed."));
       } finally {
         setLoadingAction(null);
       }

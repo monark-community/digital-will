@@ -312,10 +312,10 @@ export default function ContactsPage() {
           }}
           className="flex items-center space-x-2 bg-[var(--accent)] hover:opacity-90 text-white px-6 py-3 rounded-lg font-semibold transition-opacity"
         >
+          <span>Add Contact</span>
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          <span>Add Contact</span>
         </button>
         </div>
 
@@ -578,27 +578,115 @@ export default function ContactsPage() {
               All Contacts ({contacts?.length || 0})
             </h2>
 
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="relative">
+                <table className="w-full text-sm">
                   <thead className="border-b border-[var(--border-section)]">
                     <tr>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-[var(--text-primary)]">
-                        Name
+                      <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)] inline-flex items-center gap-2">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span>Name</span>
                       </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-[var(--text-primary)]">
-                        Email
+                      <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)] hidden md:table-cell">
+                        <div className="flex items-center gap-2">
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            viewBox="0 0 24 24"
+                          >
+                            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                            <path d="M22 6l-10 7-10-7"></path>
+                          </svg>
+                          <span>Email</span>
+                        </div>
                       </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-[var(--text-primary)]">
-                        Phone
+                      <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)] hidden lg:table-cell">
+                        <div className="flex items-center gap-2">
+                          <svg 
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            viewBox="0 0 24 24"
+                            >
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                          </svg>
+                          <span>Phone</span>
+                        </div>
                       </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-[var(--text-primary)]">
-                        Relationship
+                      <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)] hidden lg:table-cell">
+                        <div className="flex items-center gap-2">
+                          <svg 
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            viewBox="0 0 24 24">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                          </svg>
+                          <span>Relationship</span>
+                        </div>
                       </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-[var(--text-primary)]">
-                        Wallet Address
+                      <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)]">
+                        <div className="flex items-center gap-2">
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M15 12h3"
+                            />
+                          </svg>
+                          <span>Wallet</span>
+                        </div>
                       </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-[var(--text-primary)]">
-                        Actions
+                      <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)]">
+                        <div className="flex items-center gap-2">
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path>
+                          </svg>
+                          <span>Actions</span>
+                        </div>
                       </th>
                     </tr>
                   </thead>
@@ -608,61 +696,75 @@ export default function ContactsPage() {
                         key={contact.contactId}
                         className="border-b border-[var(--border-section)] hover:bg-[var(--bg-section)] transition-colors"
                       >
-                        <td className="py-4 px-4 text-[var(--text-primary)]">
+                        <td className="py-3 px-3 text-[var(--text-primary)] font-medium">
                           {contact.firstName} {contact.lastName}
                         </td>
-                        <td className="py-4 px-4 text-[var(--text-secondary)]">
+                        <td className="py-3 px-3 text-[var(--text-secondary)] text-xs hidden md:table-cell truncate">
                           {contact.email}
                         </td>
-                        <td className="py-4 px-4 text-[var(--text-secondary)]">
+                        <td className="py-3 px-3 text-[var(--text-secondary)] text-xs hidden lg:table-cell">
                           {contact.phoneNumber || "-"}
                         </td>
-                        <td className="py-4 px-4 text-[var(--text-secondary)]">
+                        <td className="py-3 px-3 text-[var(--text-secondary)] text-xs hidden lg:table-cell">
                           {contact.relationship || "-"}
                         </td>
-                        <td className="py-4 px-4 text-[var(--text-secondary)] font-mono text-xs">
-                          <div className="flex items-center gap-2">
-                            <span>
+                        <td className="py-3 px-3 text-[var(--text-secondary)] font-mono text-xs">
+                          <div className="flex items-center gap-1">
+                            <span className="truncate">
                               {contact.walletAddress.substring(0, 6)}...{contact.walletAddress.substring(contact.walletAddress.length - 4)}
                             </span>
-                            <div className="relative">
+                            <div className="relative flex-shrink-0 group">
                               <button
                                 onClick={() => copyToClipboard(contact.walletAddress, contact.contactId)}
                                 className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-                                title="Copy address"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                 </svg>
                               </button>
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                Copy address
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+                              </div>
                               {copiedAddress === contact.contactId && (
-                                <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap">
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap z-50 shadow-lg">
                                   Address copied!
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
                                 </div>
                               )}
                             </div>
                           </div>
                         </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleEditContact(contact)}
-                              className="p-2 text-[var(--text-muted)] hover:bg-[var(--bg-section)] rounded transition-colors cursor-pointer"
-                              title="Edit contact"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleRemoveContact(contact)}
-                              className="p-2 text-red-400 hover:bg-[var(--bg-section)] rounded transition-colors cursor-pointer"
-                              title="Remove contact"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-1">
+                            <div className="relative flex-shrink-0 group">
+                              <button
+                                onClick={() => handleEditContact(contact)}
+                                className="p-2 text-[var(--text-muted)] hover:bg-[var(--bg-section)] rounded transition-colors cursor-pointer"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                Edit contact
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+                              </div>
+                            </div>
+                            <div className="relative flex-shrink-0 group">
+                              <button
+                                onClick={() => handleRemoveContact(contact)}
+                                className="p-2 text-red-400 hover:bg-[var(--bg-section)] rounded transition-colors cursor-pointer"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                Remove contact
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+                              </div>
+                            </div>
                           </div>
                         </td>
                       </tr>

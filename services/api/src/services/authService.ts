@@ -70,7 +70,7 @@ export async function signUp(data: SignUpData): Promise<AuthResponse> {
   // Generate JWT token
   const token = jwt.sign(
     { userId: user.userId, email: user.email },
-    String(config.jwt.secret)
+    String(config.jwt.secret),
   );
 
   return {
@@ -111,7 +111,7 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
   // Generate JWT token
   const token = jwt.sign(
     { userId: user.userId, email: user.email },
-    String(config.jwt.secret)
+    String(config.jwt.secret),
   );
 
   return {
@@ -175,7 +175,7 @@ export async function walletSignIn(
   // Generate JWT token
   const token = jwt.sign(
     { userId: user.userId, email: user.email },
-    String(config.jwt.secret)
+    String(config.jwt.secret),
   );
 
   return {
@@ -208,12 +208,12 @@ export async function linkWallet(
     throw new ConflictError("This wallet is already linked to another account");
   }
 
-   const user = await prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { userId },
   });
 
   if (!user) {
-    throw new NotFoundError('User not found');
+    throw new NotFoundError("User not found");
   }
 
   return {
@@ -235,6 +235,7 @@ export async function createAccountWithWallet(data: {
   lastName: string;
   email: string;
   phoneNo?: string;
+  wantToReceiveMails?: boolean;
   walletAddress: string;
   signature: string;
   message: string;
@@ -244,6 +245,7 @@ export async function createAccountWithWallet(data: {
     lastName,
     email,
     phoneNo,
+    wantToReceiveMails,
     walletAddress,
     signature,
     message,
@@ -281,6 +283,7 @@ export async function createAccountWithWallet(data: {
       email,
       phoneNo,
       passwordHash,
+      wantToReceiveMails: wantToReceiveMails ?? false,
       wallets: {
         create: {
           address: walletAddress.toLowerCase(),
@@ -300,7 +303,7 @@ export async function createAccountWithWallet(data: {
 
   const token = jwt.sign(
     { userId: user.userId, email: user.email },
-    String(config.jwt.secret)
+    String(config.jwt.secret),
   );
 
   return {

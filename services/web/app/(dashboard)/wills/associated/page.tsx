@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ethers } from "ethers";
 import Header from "@/app/components/ui/Header";
 import { willService, authService, type AssociatedWill } from "@/lib/services";
@@ -13,8 +13,9 @@ import {
   CooldownCountdown,
 } from "@/app/components/ui/SecurityPeriodCountdown";
 import { displaySecurityPeriodRange } from "@/lib/utils/blockchain";
+import { getErrorMessage } from "@/lib/contract-errors";
 
-type ActionId = 'validate' | 'refuse' |  'declareDeath' | 'swapAssets';
+type ActionId = "validate" | "refuse" | "declareDeath" | "swapAssets";
 
 interface ActionDef {
   id: ActionId;
@@ -39,16 +40,16 @@ const SM_ACTIONS: ActionDef[] = [
     colorActive: "bg-emerald-600 hover:bg-emerald-500 text-white",
   },
   {
-    id: 'refuse',
-    label: 'Refuse',
-    description: 'Refuse to participate.',
+    id: "refuse",
+    label: "Refuse",
+    description: "Refuse to participate.",
     disabledReason: (w) => {
-      if (w.state === 'CANCELED') return 'Will is canceled';
-      if (w.state === 'EXECUTED') return 'Will is already executed';
-      if (w.state === 'DRAFT')    return 'Will is not yet deployed';
+      if (w.state === "CANCELED") return "Will is canceled";
+      if (w.state === "EXECUTED") return "Will is already executed";
+      if (w.state === "DRAFT") return "Will is not yet deployed";
       return null;
     },
-    colorActive: 'bg-red-600 hover:bg-red-500 text-white',
+    colorActive: "bg-red-600 hover:bg-red-500 text-white",
   },
   {
     id: "declareDeath",
@@ -117,6 +118,7 @@ const STATE_COLORS: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-700",
   INACTIVE: "bg-yellow-100 text-yellow-700",
   ACTIVE: "bg-green-100 text-green-700",
+  EXECUTABLE: "bg-purple-100 text-purple-700",
   CANCELED: "bg-red-100 text-red-700",
   EXECUTED: "bg-blue-100 text-blue-700",
 };
@@ -136,10 +138,14 @@ const CHAIN_NAMES: Record<number, string> = {
 };
 
 export default function AssociatedWillsPage() {
+  const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: currentUser } = useCurrentUser();
   const { data: wallets } = useWallets();
   const filterWalletDropdownRef = useRef<HTMLDivElement>(null);
+
+  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
 
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -151,6 +157,9 @@ export default function AssociatedWillsPage() {
   const [showFilterWalletDropdown, setShowFilterWalletDropdown] =
     useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [highlightedWillId, setHighlightedWillId] = useState<string | null>(
+    null,
+  );
 
   // Per-will action state
   const [actionLoading, setActionLoading] = useState<
@@ -162,14 +171,21 @@ export default function AssociatedWillsPage() {
   const [actionSuccess, setActionSuccess] = useState<
     Record<string, string | null>
   >({});
-  const [usdcBalances, setUsdcBalances] = useState<Record<string, string>>(
-    {},
-  );
+  const [usdcBalances, setUsdcBalances] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setNowSec(Math.floor(Date.now() / 1000));
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
     if (!authService.isAuthenticated()) {
-      router.push("/login");
+      router.push(
+        `/login?redirectTo=${encodeURIComponent("/wills/associated")}`,
+      );
       return;
     }
     setUser(authService.getUser());
@@ -219,10 +235,7 @@ export default function AssociatedWillsPage() {
           const balanceMap: Record<string, string> = {};
 
           for (const will of willsWithUpdatedMembership) {
-            if (
-              will.state === "EXECUTED" &&
-              will.contractAddressInBlockchain
-            ) {
+            if (will.state === "EXECUTED" && will.contractAddressInBlockchain) {
               try {
                 const contract = new ethers.Contract(
                   ethers.getAddress(will.contractAddressInBlockchain),
@@ -251,87 +264,68 @@ export default function AssociatedWillsPage() {
     }
   }, []);
 
-  const handleSmAction = useCallback(async (will: AssociatedWill, action: ActionDef) => {
-    if (!will.contractAddressInBlockchain) return;
-    const id = will.willId;
-    setActionError(prev  => ({ ...prev, [id]: null }));
-    setActionSuccess(prev => ({ ...prev, [id]: null }));
-    setActionLoading(prev => ({ ...prev, [id]: action.id }));
-    try {
-      if (typeof window === 'undefined' || !(window as any).ethereum) {
-        throw new Error('No Web3 provider found. Please install MetaMask.');
-      }
-      const provider = new ethers.BrowserProvider((window as any).ethereum);
-      const signer   = await provider.getSigner();
-      const contract = new ethers.Contract(
-        ethers.getAddress(will.contractAddressInBlockchain),
-        WILL_ABI,
-        signer
-      );
-      let tx: ethers.TransactionResponse;
-      switch (action.id) {
-        case 'validate':
-          tx = await contract.validateSm();
-          break;
-        case 'refuse':
-          tx = await contract.desistSm();
-          break;
-        case 'declareDeath':
-          tx = await contract.declareDeath();
-        break;
-        case 'swapAssets':
-          tx = await contract.swapAssets();
-          break;
-      }
-      const receipt = await tx.wait();
-      
-      /*
+  const handleSmAction = useCallback(
+    async (will: AssociatedWill, action: ActionDef) => {
+      if (!will.contractAddressInBlockchain) return;
+      const id = will.willId;
+      setActionError((prev) => ({ ...prev, [id]: null }));
+      setActionSuccess((prev) => ({ ...prev, [id]: null }));
+      setActionLoading((prev) => ({ ...prev, [id]: action.id }));
+      try {
+        if (typeof window === "undefined" || !(window as any).ethereum) {
+          throw new Error("No Web3 provider found. Please install MetaMask.");
+        }
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const signer = await provider.getSigner();
+        const contract = new ethers.Contract(
+          ethers.getAddress(will.contractAddressInBlockchain),
+          WILL_ABI,
+          signer,
+        );
+        let tx: ethers.TransactionResponse;
+        switch (action.id) {
+          case "validate":
+            tx = await contract.validateSm();
+            break;
+          case "refuse":
+            tx = await contract.desistSm();
+            break;
+          case "declareDeath":
+            tx = await contract.declareDeath();
+            break;
+          case "swapAssets":
+            tx = await contract.swapAssets();
+            break;
+        }
+        const receipt = await tx.wait();
+
+        /*
       2 seconds delay added instead of waiting 2 block confirmation
       */
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      if (action.id === 'refuse') {
-        try {
-          await willService.removeSecondaryMember(will.willId);
-        } catch (dbError: any) {
-          setActionError((prev) => ({
+        if (action.id === "refuse") {
+          try {
+            await willService.removeSecondaryMember(will.willId);
+          } catch (dbError: any) {
+            setActionError((prev) => ({
               ...prev,
               [id]: "Blockchain transaction succeeded, but failed to update database. Please refresh.",
             }));
             setActionLoading((prev) => ({ ...prev, [id]: null }));
-          return;
+            return;
+          }
         }
-      }
         setActionSuccess((prev) => ({
           ...prev,
           [id]: `"${action.label}" confirmed!`,
         }));
         await fetchAssociatedWills();
       } catch (err: any) {
-        if (
-          err.code === 4001 ||
-          err.code === "ACTION_REJECTED" ||
-          err.reason === "rejected"
-        ) {
-          setActionError((prev) => ({
-            ...prev,
-            [id]: "Transaction rejected by user.",
-          }));
-        } else if (
-          err.data === "0x46032016" ||
-          err.info?.error?.data === "0x46032016" ||
-          (typeof err.message === "string" && err.message.includes("46032016"))
-        ) {
-          setActionError((prev) => ({
-            ...prev,
-            [id]: "The will is on cooldown after the primary member vetoed. New declarations are blocked until the cooldown expires.",
-          }));
-        } else {
-          setActionError((prev) => ({
-            ...prev,
-            [id]: err.reason || err.message || "Transaction failed.",
-          }));
-        }
+        setActionError((prev) => ({
+          ...prev,
+          [id]: getErrorMessage(err, "Transaction failed."),
+        }));
       } finally {
         setActionLoading((prev) => ({ ...prev, [id]: null }));
       }
@@ -350,11 +344,8 @@ export default function AssociatedWillsPage() {
       await navigator.clipboard.writeText(address);
       setCopiedAddress(identifier);
       setTimeout(() => setCopiedAddress(null), 2000);
-    } catch {
-    }
+    } catch {}
   };
-
-  if (!mounted) return null;
 
   const selectedFilterWallet = wallets?.find(
     (w) => w.walletId === selectedFilterWalletId,
@@ -370,6 +361,49 @@ export default function AssociatedWillsPage() {
             will.myMembership.tempWalletAddress?.toLowerCase() === addr
           );
         });
+
+  const clearTargetWillParam = useCallback(() => {
+    if (!searchParams.has("targetWillId")) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("targetWillId");
+    const queryString = params.toString();
+
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+  }, [pathname, router, searchParams]);
+
+  useEffect(() => {
+    const targetWillId = searchParams.get("targetWillId");
+    if (!targetWillId || isLoading || displayedWills.length === 0) return;
+
+    const targetWillExists = displayedWills.some(
+      (will) => will.willId === targetWillId,
+    );
+    if (!targetWillExists) return;
+
+    const timeoutId = window.setTimeout(() => {
+      const targetElement = document.getElementById(
+        `associated-will-card-${targetWillId}`,
+      );
+      if (!targetElement) return;
+
+      targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedWillId(targetWillId);
+      clearTargetWillParam();
+
+      window.setTimeout(() => {
+        setHighlightedWillId((current) =>
+          current === targetWillId ? null : current,
+        );
+      }, 2200);
+    }, 120);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [clearTargetWillParam, displayedWills, isLoading, searchParams]);
+
+  if (!mounted) return null;
 
   return (
     <div className="flex flex-col min-h-screen bg-[var(--bg-page)]">
@@ -488,7 +522,12 @@ export default function AssociatedWillsPage() {
               {displayedWills.map((will) => (
                 <div
                   key={will.willId}
-                  className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-section)] shadow-sm overflow-hidden"
+                  id={`associated-will-card-${will.willId}`}
+                  className={`bg-[var(--bg-card)] rounded-xl border border-[var(--border-section)] shadow-sm overflow-hidden ${
+                    highlightedWillId === will.willId
+                      ? "ring-2 ring-[var(--accent)]"
+                      : ""
+                  }`}
                 >
                   {/* Will header */}
                   <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-section)]">
@@ -500,28 +539,85 @@ export default function AssociatedWillsPage() {
                         {will.willId}
                       </p>
                     </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${STATE_COLORS[will.state] ?? "bg-gray-100 text-gray-700"}`}
-                    >
-                      {will.state}
-                    </span>
+                    {(() => {
+                      const execTs = will.executionTimestampOnChain ?? 0;
+                      const badgeState =
+                        will.state === "ACTIVE" &&
+                        execTs > 0 &&
+                        nowSec >= execTs
+                          ? "EXECUTABLE"
+                          : will.state;
+
+                      return (
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${STATE_COLORS[badgeState] ?? "bg-gray-100 text-gray-700"}`}
+                        >
+                          {badgeState}
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <span className="text-xs text-[var(--text-muted)]">
+                      <p className="text-xs text-[var(--text-muted)] mb-1">
                         Created by
-                      </span>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">
-                        {will.owner.firstName} {will.owner.lastName}
                       </p>
-                      <p className="text-xs text-[var(--text-muted)]">
-                        {will.owner.email}
+                      <p className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1">
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span>
+                          {will.owner.firstName} {will.owner.lastName}
+                        </span>
+                      </p>
+                      <p className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1">
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                          />
+                        </svg>
+                        <span>{will.owner.email}</span>
                       </p>
                     </div>
                     <div>
-                      <span className="text-xs text-[var(--text-muted)]">
-                        Owner wallet
+                      <span className="text-xs text-[var(--text-muted)] inline-flex items-center gap-1 mb-1">
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M15 12h3"
+                          />
+                        </svg>
+                        <span>Owner wallet</span>
                       </span>
                       <div className="flex items-start gap-1">
                         <p className="font-mono text-sm text-[var(--text-primary)] break-all">
@@ -572,8 +668,23 @@ export default function AssociatedWillsPage() {
                     )}
                     {will.chainId && (
                       <div>
-                        <span className="text-xs text-[var(--text-muted)]">
-                          Network
+                        <span className="text-xs text-[var(--text-muted)] inline-flex items-center gap-1 mb-1">
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                          </svg>
+                          <span className="text-xs text-[var(--text-muted)]">
+                            Network
+                          </span>
                         </span>
                         <p className="text-sm text-[var(--text-primary)]">
                           {CHAIN_NAMES[will.chainId] ?? `Chain ${will.chainId}`}
@@ -581,9 +692,24 @@ export default function AssociatedWillsPage() {
                       </div>
                     )}
                     <div>
-                      <span className="text-xs text-[var(--text-muted)]">
-                        Security period
+                      <span className="text-xs text-[var(--text-muted)] inline-flex items-center gap-1 mb-1">
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span className="text-xs text-[var(--text-muted)]">
+                          Security period
+                        </span>
                       </span>
+
                       <p className="text-sm text-[var(--text-primary)]">
                         {displaySecurityPeriodRange(
                           will.minSecurityPeriod,
@@ -668,7 +794,86 @@ export default function AssociatedWillsPage() {
                                     <span>Confirming…</span>
                                   </>
                                 ) : (
-                                  action.label
+                                  <>
+                                    <span>{action.label}</span>
+                                    {action.id === "validate" && (
+                                      <svg
+                                        className="w-3.5 h-3.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth={1.5}
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                      </svg>
+                                    )}
+                                    {action.id === "refuse" && (
+                                      <svg
+                                        className="w-3.5 h-3.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth={1.5}
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line
+                                          x1="15"
+                                          y1="9"
+                                          x2="9"
+                                          y2="15"
+                                        ></line>
+                                        <line
+                                          x1="9"
+                                          y1="9"
+                                          x2="15"
+                                          y2="15"
+                                        ></line>
+                                      </svg>
+                                    )}
+                                    {action.id === "declareDeath" && (
+                                      <svg
+                                        className="w-3.5 h-3.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth={1.5}
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                        <line
+                                          x1="12"
+                                          y1="9"
+                                          x2="12"
+                                          y2="13"
+                                        ></line>
+                                        <line
+                                          x1="12"
+                                          y1="17"
+                                          x2="12.01"
+                                          y2="17"
+                                        ></line>
+                                      </svg>
+                                    )}
+                                    {action.id === "swapAssets" && (
+                                      <svg
+                                        className="w-3.5 h-3.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth={1.5}
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                      </svg>
+                                    )}
+                                  </>
                                 )}
                               </button>
                               {isDisabled && reason && (
