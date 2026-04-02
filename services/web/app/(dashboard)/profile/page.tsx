@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/lib/hooks";
 import { authService } from "@/lib/services";
 import { userService } from "@/lib/services";
+import Header from "@/app/components/ui/Header";
 import type { User } from "@/lib/types";
 
 export default function ProfilePage() {
@@ -94,16 +95,21 @@ const handleToggleEmailNotifications = async () => {
 
   if (!mounted || isPending || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
-        <div className="text-[var(--text-primary)]">Loading...</div>
-      </div>
+      <>
+        <Header isAuthenticated={true} user={user || undefined} />
+        <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
+          <div className="text-[var(--text-primary)]">Loading...</div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-page)] py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-lg p-8 shadow-lg">
+    <>
+      <Header isAuthenticated={true} user={user || undefined} />
+      <div className="min-h-screen bg-[var(--bg-page)] py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-lg p-8 shadow-lg">
           <div className="flex items-center space-x-4 mb-8">
             <div className="w-20 h-20 bg-[var(--accent)] rounded-full flex items-center justify-center">
               <span className="text-white text-3xl font-bold">
@@ -399,6 +405,7 @@ const handleToggleEmailNotifications = async () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
