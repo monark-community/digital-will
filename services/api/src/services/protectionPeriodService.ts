@@ -3,14 +3,8 @@ import { ethers } from "ethers";
 import { getProvider } from "../utils/blockchain";
 import { getWillByContractAddress } from "./willService";
 import { notifyExecuteWill } from "../handlers/notificationHandler";
-import {
-  PROTECTION_PERIOD_POLLER_INTERVAL_MS,
-  RETRY_DELAYS_MS,
-} from "../utils/constants";
-
-async function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { PROTECTION_PERIOD_POLLER_INTERVAL_MS } from "../utils/constants";
+import { retryWithBackoff } from "../utils/helpers";
 
 const prisma = new PrismaClient();
 
@@ -37,14 +31,11 @@ export async function upsertProtectionPeriodTimer(
     provider,
   );
 
-  let rawTs: bigint = await contract.executionTimeStampS();
-  for (let i = 0; rawTs === 0n && i < RETRY_DELAYS_MS.length; i++) {
-    console.warn(
-      `[ProtectionPeriodTimer] executionTimeStampS is 0 for will ${will.willId}, retrying in ${RETRY_DELAYS_MS[i]}ms (attempt ${i + 1}/${RETRY_DELAYS_MS.length})`,
-    );
-    await sleep(RETRY_DELAYS_MS[i]);
-    rawTs = await contract.executionTimeStampS();
-  }
+  const rawTs = await retryWithBackoff(
+    () => contract.executionTimeStampS() as Promise<bigint>,
+    (ts) => ts === 0n,
+    `[ProtectionPeriodTimer] executionTimeStampS is 0 for will ${will.willId},`,
+  );
 
   if (rawTs === 0n) {
     console.warn(

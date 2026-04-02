@@ -21,7 +21,8 @@ import {
 import { findUserIdByWalletAddress } from "../services/userService";
 import { emitUserNotification } from "../gateways/userNotificationGateway";
 import { generateUserNotification } from "../utils/userNotificationGenerator";
-import { AWAIT_DELAYS_MS, RETRY_DELAYS_MS } from "../utils/constants";
+import { AWAIT_DELAYS_MS } from "../utils/constants";
+import { sleep, retryWithBackoff } from "../utils/helpers";
 import { getSmListFromChain } from "../utils/blockchain";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -32,37 +33,25 @@ function warn(fn: string, smartContractAddress: string): void {
   );
 }
 
-async function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function getWillWithRetry(
   smartContractAddress: string,
 ): ReturnType<typeof getWillByContractAddress> {
-  let will = await getWillByContractAddress(smartContractAddress);
-  for (let i = 0; will === null && i < RETRY_DELAYS_MS.length; i++) {
-    console.warn(
-      `[NotificationHandler] will not found for ${smartContractAddress}, retrying in ${RETRY_DELAYS_MS[i]}ms (attempt ${i + 1}/${RETRY_DELAYS_MS.length})`,
-    );
-    await sleep(RETRY_DELAYS_MS[i]);
-    will = await getWillByContractAddress(smartContractAddress);
-  }
-  return will;
+  return retryWithBackoff(
+    () => getWillByContractAddress(smartContractAddress),
+    (will) => will === null,
+    `[NotificationHandler] will not found for ${smartContractAddress},`,
+  );
 }
 
 async function getSmWithRetry(
   willId: string,
   smAddress: string,
 ): ReturnType<typeof findSecondaryMemberByAddressAndWill> {
-  let sm = await findSecondaryMemberByAddressAndWill(willId, smAddress);
-  for (let i = 0; sm === null && i < RETRY_DELAYS_MS.length; i++) {
-    console.warn(
-      `[NotificationHandler] SM not found for ${smAddress} in will ${willId}, retrying in ${RETRY_DELAYS_MS[i]}ms (attempt ${i + 1}/${RETRY_DELAYS_MS.length})`,
-    );
-    await sleep(RETRY_DELAYS_MS[i]);
-    sm = await findSecondaryMemberByAddressAndWill(willId, smAddress);
-  }
-  return sm;
+  return retryWithBackoff(
+    () => findSecondaryMemberByAddressAndWill(willId, smAddress),
+    (sm) => sm === null,
+    `[NotificationHandler] SM not found for ${smAddress} in will ${willId},`,
+  );
 }
 
 function registeredUserIds(sms: SmWithWallet[]): string[] {

@@ -32,7 +32,7 @@ export const ROUTES = {
     BASE: "/users",
     RECEIVE_EMAILS: "/receive-emails",
     DELETE_ELIGIBILITY: "/delete-eligibility",
-    DELETE: "/delete"
+    DELETE: "/delete",
   },
   WILLS: {
     BASE: "/wills",
