@@ -8,8 +8,11 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Digital Will",
-  description: "WillChain digital will",
+  title: {
+    template: "%s | WillChain",
+    default: "WillChain",
+  },
+  description: "WillChain - Digital estate planning secured by blockchain technology",
 };
 
 export default function RootLayout({
