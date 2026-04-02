@@ -9,6 +9,7 @@ export async function createInAppNotification(
   willId: string | null,
   userId: string,
   smName?: string,
+  amount?: number,
 ): Promise<string> {
   const notif = await prisma.notifications.create({
     data: {
@@ -16,6 +17,7 @@ export async function createInAppNotification(
       willId,
       userId,
       smName: smName ?? null,
+      amount: amount ?? null,
       readStatus: false,
     },
   });

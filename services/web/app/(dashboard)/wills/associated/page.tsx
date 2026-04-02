@@ -171,6 +171,9 @@ export default function AssociatedWillsPage() {
   const [actionSuccess, setActionSuccess] = useState<
     Record<string, string | null>
   >({});
+  const [usdcBalances, setUsdcBalances] = useState<Record<string, string>>(
+    {},
+  );
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -225,6 +228,38 @@ export default function AssociatedWillsPage() {
       });
 
       setWills(willsWithUpdatedMembership);
+
+      if (typeof window !== "undefined" && (window as any).ethereum) {
+        try {
+          const provider = new ethers.BrowserProvider((window as any).ethereum);
+          const balanceMap: Record<string, string> = {};
+
+          for (const will of willsWithUpdatedMembership) {
+            if (
+              will.state === "EXECUTED" &&
+              will.contractAddressInBlockchain
+            ) {
+              try {
+                const contract = new ethers.Contract(
+                  ethers.getAddress(will.contractAddressInBlockchain),
+                  WILL_ABI,
+                  provider,
+                );
+                const usdcBalance = await contract.getUsdcBalance();
+                // USDC has 6 decimals
+                balanceMap[will.willId] = ethers.formatUnits(usdcBalance, 6);
+              } catch {
+                // Silently handle individual will balance fetch errors
+                balanceMap[will.willId] = "Error";
+              }
+            }
+          }
+
+          setUsdcBalances(balanceMap);
+        } catch {
+          // Silently handle provider initialization errors
+        }
+      }
     } catch (err: any) {
       setError(err.message || "Failed to load associated wills");
     } finally {
@@ -272,10 +307,8 @@ export default function AssociatedWillsPage() {
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       if (action.id === 'refuse') {
-        console.log('🔵 Refuse confirmed, removing from database...');
         try {
           await willService.removeSecondaryMember(will.willId);
-          console.log('🔵 Successfully removed from database');
         } catch (dbError: any) {
           setActionError((prev) => ({
               ...prev,
@@ -313,8 +346,7 @@ export default function AssociatedWillsPage() {
       await navigator.clipboard.writeText(address);
       setCopiedAddress(identifier);
       setTimeout(() => setCopiedAddress(null), 2000);
-    } catch (err) {
-      console.error("Failed to copy address:", err);
+    } catch {
     }
   };
 
@@ -693,6 +725,20 @@ export default function AssociatedWillsPage() {
                         )}
                       </p>
                     </div>
+                    {will.state === "EXECUTED" && (
+                      <div>
+                        <span className="text-xs text-[var(--text-muted)]">
+                          USDC Locked
+                        </span>
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">
+                          {usdcBalances[will.willId] === undefined
+                            ? "Loading..."
+                            : usdcBalances[will.willId] === "Error"
+                              ? "Unable to fetch"
+                              : `${parseFloat(usdcBalances[will.willId]) === 0 ? "0" : parseFloat(parseFloat(usdcBalances[will.willId]).toFixed(6)).toString()} USDC`}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {(() => {

@@ -33,6 +33,8 @@ export enum NotificationType {
   VETO_EXERCISED = "VETO_EXERCISED",
   ASSETS_SWAPPED = "ASSETS_SWAPPED",
   EXECUTE_WILL = "EXECUTE_WILL",
+  SM_SIGNATURE_REFUSED = "SM_SIGNATURE_REFUSED",
+  PROTECTION_PERIOD_REMINDER = "PROTECTION_PERIOD_REMINDER",
 }
 
 export enum NotificationRecipientRole {
@@ -85,6 +87,7 @@ export interface Event_WillActivated {
 export interface Event_WillAssetsSwapped {
   willAddress: string; // hex 0x
   smAddress: string; // hex 0x
+  usdcAmount: number;
 }
 
 /** Fired when a death declaration is confirmed by a secondary member. */
@@ -97,6 +100,7 @@ export interface Event_WillDeathConfirmed {
 export interface Event_WillDeathDeclared {
   willAddress: string; // hex 0x
   smAddress: string; // hex 0x
+  assets: number;
 }
 
 /** Fired when a secondary member is added to the will. */
@@ -110,6 +114,7 @@ export interface Event_WillSmAdded {
 export interface Event_WillSmDesisted {
   willAddress: string; // hex 0x
   smAddress: string; // hex 0x
+  validatedPreDesist: boolean;
 }
 
 /** Fired when a secondary member is removed from the will by the PM. */

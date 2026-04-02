@@ -62,6 +62,7 @@ message Will_EvtWillChainAssetsSwapped {
     uint64 evt_block_number = 4;
     string evt_address = 5;
     bytes sm_address = 6;
+    string usdc_amount = 7;
 }
     
 message Will_EvtWillChainDeathConfirmed {
@@ -80,6 +81,7 @@ message Will_EvtWillChainDeathDeclared {
     uint64 evt_block_number = 4;
     string evt_address = 5;
     bytes sm_address = 6;
+    string assets = 7;
 }
     
 message Will_EvtWillChainSmAdded {
@@ -99,6 +101,7 @@ message Will_EvtWillChainSmDesisted {
     uint64 evt_block_number = 4;
     string evt_address = 5;
     bytes sm_address = 6;
+    string validated_pre_desist = 7;
 }
     
 message Will_EvtWillChainSmRemoved {

@@ -88,7 +88,11 @@ TODO
 
 ## Documentation
 
-TODO
+If changes are done to the will.sol, then the will factory needs to be redeployed as well.
+If the will factory is redeployed, its address needs to be updated in the following .env files: 
+.env.local in services/web
+.env in project root
+.env in services/api/src/substreams
 
 ## Contribution
 

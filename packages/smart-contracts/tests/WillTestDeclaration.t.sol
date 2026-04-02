@@ -124,9 +124,9 @@ contract WillTestDeclaration is Test {
         assertEq(will.deathDeclarationTimestampS(), block.timestamp - 1.1 days);
         assertEq(
             will.executionTimeStampS(),
-            will.deathDeclarationTimestampS() + 1 days
+            will.deathDeclarationTimestampS() + (1 days * 4) / 3
         );
-        assertGt(block.timestamp, will.getExecutionPossibleTimestamp());
+        assertGt(will.getExecutionPossibleTimestamp(), block.timestamp);
         assertEq(will.cumulatedVotePowerS(), 3);
     }
 
@@ -145,6 +145,25 @@ contract WillTestDeclaration is Test {
             will.getCooldownEndTimestamp(),
             block.timestamp + C_WILL.COOLDOWN_PERIOD
         );
+    }
+
+    // Veto post-declaration.
+    function test_Declare_PostVeto() public {
+        vm.prank(sm1);
+        will.declareDeath();
+
+        vm.prank(pm);
+        will.vetoDeath();
+
+        vm.prank(sm1);
+        vm.expectRevert(Errors.ERR_WillOnCooldown.selector);
+        will.declareDeath();
+
+        vm.warp(block.timestamp + C_WILL.COOLDOWN_PERIOD + 1);
+        assertEq(will.deathDeclarationTimestampS(), 0);
+        vm.prank(sm1);
+        will.declareDeath();
+        assertGt(will.deathDeclarationTimestampS(), 0);
     }
 
     // Veto post-(declaration+desist).
@@ -217,6 +236,13 @@ contract WillTestInvalidDeclaration is Test {
         will.validateSm();
         vm.prank(sm3);
         will.validateSm();
+    }
+
+    // Attacker tries cancelling
+    function test_Cancel_NonPM() public {
+        vm.prank(attacker);
+        vm.expectRevert(Errors.ERR_NotPM.selector);
+        will.cancelWill();
     }
 
     // Non-SM declares.
@@ -414,6 +440,13 @@ contract WillTestInvalidDeclaration is Test {
 
         vm.prank(pm);
         vm.expectRevert(Errors.ERR_WillOnCooldown.selector);
+        will.vetoDeath();
+    }
+
+    // Veto_NoDeclare
+    function test_Veto_NoDeclare() public {
+        vm.prank(pm);
+        vm.expectRevert(Errors.ERR_WillNoDeclaration.selector);
         will.vetoDeath();
     }
 }

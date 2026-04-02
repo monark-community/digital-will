@@ -84,6 +84,7 @@ export function mapSmDesisted(
   return {
     willAddress: addHexPrefix(raw.evtAddress),
     smAddress: base64ToHex(raw.smAddress),
+    validatedPreDesist: Number(raw.validatedPreDesist) === 1,
   };
 }
 
@@ -135,6 +136,7 @@ export function mapDeathDeclared(
   return {
     willAddress: addHexPrefix(raw.evtAddress),
     smAddress: base64ToHex(raw.smAddress),
+    assets: weiToNativeToken(raw.assets, ChainId.SEPOLIA),
   };
 }
 
@@ -149,6 +151,7 @@ export function mapAssetsSwapped(
   return {
     willAddress: addHexPrefix(raw.evtAddress),
     smAddress: base64ToHex(raw.smAddress),
+    usdcAmount: Number(raw.usdcAmount)/(10 ** 6), // to have the same unit as displayed in the block explorer
   };
 }
 
