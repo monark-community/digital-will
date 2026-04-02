@@ -109,8 +109,8 @@ export function validateDraftForm(data: {
   // Will name validation
   if (!data.willName.trim()) {
     errors.push("Will name is required");
-  } else if (data.willName.length > 100) {
-    errors.push("Will name must be less than 100 characters");
+  } else if (data.willName.length > 50) {
+    errors.push("Will name must not exceed 50 characters");
   }
 
   // Filter members with any data

@@ -1157,8 +1157,8 @@ export default function WillsPage() {
 
     if (!willName.trim()) {
       errors.push("Will name is required");
-    } else if (willName.length > 100) {
-      errors.push("Will name must be less than 100 characters");
+    } else if (willName.length > 50) {
+      errors.push("Will name must not exceed 50 characters");
     }
 
     // Filtrer les membres qui ont au moins un champ rempli
