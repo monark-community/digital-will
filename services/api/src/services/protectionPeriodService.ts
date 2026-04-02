@@ -3,7 +3,14 @@ import { ethers } from "ethers";
 import { getProvider } from "../utils/blockchain";
 import { getWillByContractAddress } from "./willService";
 import { notifyExecuteWill } from "../handlers/notificationHandler";
-import { PROTECTION_PERIOD_POLLER_INTERVAL_MS } from "../utils/constants";
+import {
+  PROTECTION_PERIOD_POLLER_INTERVAL_MS,
+  RETRY_DELAYS_MS,
+} from "../utils/constants";
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const prisma = new PrismaClient();
 
@@ -13,7 +20,9 @@ const EXECUTION_TS_ABI = [
 
 /**
  * Reads executionTimeStampS from the contract and creates/updates the timer in DB.
- * Called on every DEATH_DECLARED and DEATH_CONFIRMED event.
+ * Retries with exponential backoff if the value is not yet set on-chain (handles
+ * the single-SM case where DEATH_DECLARED auto-confirms before the timestamp is readable).
+ * Called on DEATH_DECLARED and DEATH_CONFIRMED events.
  */
 export async function upsertProtectionPeriodTimer(
   contractAddress: string,
@@ -28,11 +37,23 @@ export async function upsertProtectionPeriodTimer(
     provider,
   );
 
-  const rawTs: bigint = await contract.executionTimeStampS();
-  if (rawTs === 0n) return;
+  let rawTs: bigint = await contract.executionTimeStampS();
+  for (let i = 0; rawTs === 0n && i < RETRY_DELAYS_MS.length; i++) {
+    console.warn(
+      `[ProtectionPeriodTimer] executionTimeStampS is 0 for will ${will.willId}, retrying in ${RETRY_DELAYS_MS[i]}ms (attempt ${i + 1}/${RETRY_DELAYS_MS.length})`,
+    );
+    await sleep(RETRY_DELAYS_MS[i]);
+    rawTs = await contract.executionTimeStampS();
+  }
+
+  if (rawTs === 0n) {
+    console.warn(
+      `[ProtectionPeriodTimer] Could not read executionTimeStampS for will ${will.willId} after all retries — timer not set`,
+    );
+    return;
+  }
 
   const expiresAt = new Date(Number(rawTs) * 1000);
-
   await prisma.protectionPeriodTimer.upsert({
     where: { willId: will.willId },
     create: { willId: will.willId, expiresAt, fired: false },
