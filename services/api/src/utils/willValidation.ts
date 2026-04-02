@@ -147,7 +147,7 @@ export function validateDraftForm(data: {
       if (!member.email?.trim()) {
         errors.push(`Member ${i + 1}: Email is required`);
       } else {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(member.email)) {
           errors.push(`Member ${i + 1}: Invalid email format`);
         }

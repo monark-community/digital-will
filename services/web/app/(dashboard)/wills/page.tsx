@@ -458,7 +458,7 @@ export default function WillsPage() {
   ]);
 
   useEffect(() => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
     const canAdd = editWillMembers.map((member) => {
       const hasAnyField =
@@ -1199,7 +1199,7 @@ export default function WillsPage() {
         if (!member.email.trim()) {
           errors.push(`Member ${i + 1}: Email is required`);
         }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(member.email)) {
           errors.push(`Member ${i + 1}: Invalid email format`);
         }
@@ -1235,7 +1235,7 @@ export default function WillsPage() {
         else if (!member.lastName.trim()) contactValid = false;
         else if (!member.email.trim()) contactValid = false;
         else {
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
           if (!emailRegex.test(member.email)) contactValid = false;
         }
 
