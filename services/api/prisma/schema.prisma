@@ -25,6 +25,7 @@ enum NotificationType {
   ASSETS_SWAPPED
   EXECUTE_WILL
   SM_SIGNATURE_REFUSED
+  PROTECTION_PERIOD_REMINDER
 }
 
 model User {
@@ -162,13 +163,14 @@ model Notifications {
 }
 
 model ProtectionPeriodTimer {
-  timerId   String   @id @default(uuid())
-  willId    String   @unique
-  expiresAt DateTime
-  fired     Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  will      Will     @relation(fields: [willId], references: [willId], onDelete: Cascade)
+  timerId           String    @id @default(uuid())
+  willId            String    @unique
+  expiresAt         DateTime
+  fired             Boolean   @default(false)
+  lastReminderAt    DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  will              Will      @relation(fields: [willId], references: [willId], onDelete: Cascade)
 
   @@index([fired, expiresAt])
   @@map("protectionperiodtimers")

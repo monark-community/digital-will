@@ -557,6 +557,42 @@ const templates: Record<
           ),
         };
   },
+
+  [NotificationType.PROTECTION_PERIOD_REMINDER]: ({
+    willName,
+    recipientName,
+    role,
+  }) =>
+    role === NotificationRecipientRole.PM
+      ? {
+          subject: `⚠️ WillChain — REMINDER: Protection period in progress for "${willName}"`,
+          body: buildEmail(
+            recipientName,
+            `<p style="background-color:#3b1515;border-left:4px solid #ef4444;padding:16px 20px;border-radius:4px;color:#fca5a5;font-weight:600;">
+              ⚠️ REMINDER — The protection period is still active.
+            </p>
+            <p>This is a periodic reminder that the <strong>protection period</strong> for your digital will
+            <strong>"${willName}"</strong> is currently <strong>in progress</strong>.</p>
+            <p>A death declaration has been submitted against your will. If you are still alive, you must
+            log in to your WillChain account and <strong>exercise your veto right</strong> before the
+            protection period expires. Failure to do so will result in the automatic execution of your will.</p>
+            <p>If you have already exercised your veto, you may disregard this message.</p>`,
+            "🚨 Exercise My Veto Right Now",
+          ),
+        }
+      : {
+          subject: `WillChain — REMINDER: Protection period in progress for "${willName}"`,
+          body: buildEmail(
+            recipientName,
+            `<p>This is a periodic reminder that the <strong>protection period</strong> for the digital will
+            <strong>"${willName}"</strong>, in which you are a designated participant, is currently
+            <strong>in progress</strong>.</p>
+            <p>The primary member has not yet exercised their veto right. If the protection period expires
+            without a veto, the will execution process will automatically commence on the blockchain.</p>
+            <p>You can log in to your WillChain account to monitor the current status.</p>`,
+            "Monitor Will Status",
+          ),
+        },
 };
 
 export function generateEmail(

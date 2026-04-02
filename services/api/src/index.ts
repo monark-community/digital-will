@@ -10,7 +10,10 @@ import { NotFoundError } from "./utils/errors";
 import { ROUTES } from "./utils/constants";
 import { startSubstreamsListener } from "./substreams/substreams";
 import { initGateway } from "./gateways/userNotificationGateway";
-import { startProtectionPeriodPoller } from "./services/protectionPeriodService";
+import {
+  startProtectionPeriodPoller,
+  startProtectionPeriodReminderPoller,
+} from "./services/protectionPeriodService";
 
 // Load environment variables
 loadEnvironment();
@@ -83,4 +86,7 @@ httpServer.listen(config.port, config.hostname, () => {
 
   // Start the protection period expiration poller (non-blocking)
   startProtectionPeriodPoller();
+
+  // Start the protection period reminder poller (non-blocking)
+  startProtectionPeriodReminderPoller();
 });

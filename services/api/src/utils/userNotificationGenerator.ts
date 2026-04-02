@@ -165,6 +165,17 @@ const templates: Record<
           message: `${name} has refused to participate in the will "${willName}".`,
         };
   },
+
+  [NotificationType.PROTECTION_PERIOD_REMINDER]: ({ willName, role }) =>
+    role === NotificationRecipientRole.PM
+      ? {
+          title: "REMINDER — Protection period in progress",
+          message: `The protection period for your will "${willName}" is still active. Exercise your veto right if needed.`,
+        }
+      : {
+          title: "REMINDER — Protection period in progress",
+          message: `The protection period for the will "${willName}" is still in progress. The primary member has not yet exercised their veto.`,
+        },
 };
 
 export function generateUserNotification(
