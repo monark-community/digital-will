@@ -10,7 +10,8 @@ import type { User } from "@/lib/types";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(authService.getUser());
+  const [user, setUser] = useState<User | null>(null);
+  const [isReady, setIsReady] = useState(false);
   const { mutate: getUser, isPending } = useCurrentUser();
 
   useEffect(() => {
@@ -19,21 +20,25 @@ export default function DashboardPage() {
       return;
     }
 
-    // Only fetch from API if we don't have cached user data
-    if (!user) {
+    const cached = authService.getUser();
+    if (cached) {
+      setUser(cached);
+      setIsReady(true);
+    } else {
       getUser(undefined, {
         onSuccess: (data) => {
           setUser(data);
           authService.setUser(data);
+          setIsReady(true);
         },
         onError: () => {
           router.push("/login");
         },
       });
     }
-  }, [getUser, router, user]);
+  }, [getUser, router]);
 
-  if (isPending || !user) {
+  if (!isReady || isPending || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
         <div className="text-[var(--text-primary)]">Loading...</div>
