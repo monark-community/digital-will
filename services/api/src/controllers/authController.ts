@@ -1,6 +1,12 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import { signUp, signIn, checkWalletExists, walletSignIn, createAccountWithWallet } from "../services/authService";
+import {
+  signUp,
+  signIn,
+  checkWalletExists,
+  walletSignIn,
+  createAccountWithWallet,
+} from "../services/authService";
 import { asyncHandler } from "../middlewares/errorMiddleware";
 
 /**
@@ -83,13 +89,23 @@ export const handleWalletSignIn = asyncHandler(
  */
 export const handleCreateAccountWithWallet = asyncHandler(
   async (req: Request, res: Response) => {
-    const { firstName, lastName, email, phoneNo, walletAddress, signature, message } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      phoneNo,
+      walletAddress,
+      signature,
+      message,
+      wantToReceiveMails,
+    } = req.body;
 
     const result = await createAccountWithWallet({
       firstName,
       lastName,
       email,
       phoneNo,
+      wantToReceiveMails,
       walletAddress,
       signature,
       message,
