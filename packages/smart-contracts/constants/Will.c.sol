@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.19;
 
-uint256 constant COOLDOWN_PERIOD = 72 hours;
+uint256 constant COOLDOWN_PERIOD = 3 minutes;
 
 address constant ANVIL_SWAP_ROUTER = 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0;
 address constant ANVIL_QUOTER = 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9;
