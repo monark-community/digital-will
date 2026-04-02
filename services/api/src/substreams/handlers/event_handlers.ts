@@ -38,6 +38,7 @@ import {
   notifySecurityPeriodUpdated,
   notifySmToSign,
   notifySmDesisted,
+  notifySmSignatureRefused,
   notifySmRemoved,
   notifySmUpdated,
   notifySmValidated,
@@ -63,6 +64,7 @@ export async function handleAssetsSwapped(
   await notifyAssetsSwapped(
     event_WillAssetsSwapped.willAddress,
     event_WillAssetsSwapped.smAddress,
+    event_WillAssetsSwapped.usdcAmount,
   );
   await cancelProtectionPeriodTimer(event_WillAssetsSwapped.willAddress);
 }
@@ -99,6 +101,7 @@ export async function handleDeathDeclared(
   await notifyDeathDeclared(
     event_WillDeathDeclared.willAddress,
     event_WillDeathDeclared.smAddress,
+    event_WillDeathDeclared.assets,
   );
   await upsertProtectionPeriodTimer(event_WillDeathDeclared.willAddress);
 }
@@ -127,10 +130,17 @@ export async function handleSmDesisted(
     { fn: "handleSmDesisted", event_WillSmDesisted },
     { depth: null, colors: true },
   );
-  await notifySmDesisted(
-    event_WillSmDesisted.willAddress,
-    event_WillSmDesisted.smAddress,
-  );
+  if (event_WillSmDesisted.validatedPreDesist) {
+    await notifySmDesisted(
+      event_WillSmDesisted.willAddress,
+      event_WillSmDesisted.smAddress,
+    );
+  } else {
+    await notifySmSignatureRefused(
+      event_WillSmDesisted.willAddress,
+      event_WillSmDesisted.smAddress,
+    );
+  }
 }
 
 export async function handleSmRemoved(

@@ -21,7 +21,8 @@ import {
 import { findUserIdByWalletAddress } from "../services/userService";
 import { emitUserNotification } from "../gateways/userNotificationGateway";
 import { generateUserNotification } from "../utils/userNotificationGenerator";
-import { AWAIT_DELAYS_MS, RETRY_DELAYS_MS } from "../utils/constants";
+import { AWAIT_DELAYS_MS } from "../utils/constants";
+import { sleep, retryWithBackoff } from "../utils/helpers";
 import { getSmListFromChain } from "../utils/blockchain";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -32,37 +33,25 @@ function warn(fn: string, smartContractAddress: string): void {
   );
 }
 
-async function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function getWillWithRetry(
   smartContractAddress: string,
 ): ReturnType<typeof getWillByContractAddress> {
-  let will = await getWillByContractAddress(smartContractAddress);
-  for (let i = 0; will === null && i < RETRY_DELAYS_MS.length; i++) {
-    console.warn(
-      `[NotificationHandler] will not found for ${smartContractAddress}, retrying in ${RETRY_DELAYS_MS[i]}ms (attempt ${i + 1}/${RETRY_DELAYS_MS.length})`,
-    );
-    await sleep(RETRY_DELAYS_MS[i]);
-    will = await getWillByContractAddress(smartContractAddress);
-  }
-  return will;
+  return retryWithBackoff(
+    () => getWillByContractAddress(smartContractAddress),
+    (will) => will === null,
+    `[NotificationHandler] will not found for ${smartContractAddress},`,
+  );
 }
 
 async function getSmWithRetry(
   willId: string,
   smAddress: string,
 ): ReturnType<typeof findSecondaryMemberByAddressAndWill> {
-  let sm = await findSecondaryMemberByAddressAndWill(willId, smAddress);
-  for (let i = 0; sm === null && i < RETRY_DELAYS_MS.length; i++) {
-    console.warn(
-      `[NotificationHandler] SM not found for ${smAddress} in will ${willId}, retrying in ${RETRY_DELAYS_MS[i]}ms (attempt ${i + 1}/${RETRY_DELAYS_MS.length})`,
-    );
-    await sleep(RETRY_DELAYS_MS[i]);
-    sm = await findSecondaryMemberByAddressAndWill(willId, smAddress);
-  }
-  return sm;
+  return retryWithBackoff(
+    () => findSecondaryMemberByAddressAndWill(willId, smAddress),
+    (sm) => sm === null,
+    `[NotificationHandler] SM not found for ${smAddress} in will ${willId},`,
+  );
 }
 
 function registeredUserIds(sms: SmWithWallet[]): string[] {
@@ -75,12 +64,14 @@ function buildUserNotif(
   willId: string,
   role: NotificationRecipientRole,
   smName?: string,
+  amount?: number,
 ): UserNotification {
   const { title, message } = generateUserNotification(
     type,
     willName,
     role,
     smName,
+    amount,
   );
   return {
     type,
@@ -102,6 +93,7 @@ async function broadcastSplit(
   smUserIds: string[],
   type: NotificationType,
   smName?: string,
+  amount?: number,
 ): Promise<void> {
   if (pmUserId) {
     const pmNotifId = await createAppNotification(
@@ -109,6 +101,7 @@ async function broadcastSplit(
       willId,
       pmUserId,
       smName,
+      amount,
     );
     emitUserNotification(pmUserId, {
       ...buildUserNotif(
@@ -117,6 +110,7 @@ async function broadcastSplit(
         willId,
         NotificationRecipientRole.PM,
         smName,
+        amount,
       ),
       id: pmNotifId,
     });
@@ -126,10 +120,17 @@ async function broadcastSplit(
       pmUserId,
       NotificationRecipientRole.PM,
       smName,
+      amount,
     );
   }
   for (const userId of smUserIds) {
-    const smNotifId = await createAppNotification(type, willId, userId, smName);
+    const smNotifId = await createAppNotification(
+      type,
+      willId,
+      userId,
+      smName,
+      amount,
+    );
     emitUserNotification(userId, {
       ...buildUserNotif(
         type,
@@ -137,6 +138,7 @@ async function broadcastSplit(
         willId,
         NotificationRecipientRole.SM,
         smName,
+        amount,
       ),
       id: smNotifId,
     });
@@ -147,6 +149,7 @@ async function broadcastSplit(
     smUserIds,
     NotificationRecipientRole.SM,
     smName,
+    amount,
   );
 }
 
@@ -196,6 +199,7 @@ async function notifyPmAndSmsExcluding(
   smartContractAddress: string,
   excludeAddress: string,
   type: NotificationType,
+  amount?: number,
 ): Promise<void> {
   const will = await getWillWithRetry(smartContractAddress);
   if (!will) {
@@ -216,6 +220,7 @@ async function notifyPmAndSmsExcluding(
     registeredUserIds(sms),
     type,
     smName,
+    amount,
   );
 }
 
@@ -464,8 +469,10 @@ export async function notifyWillCanceled(
   }
 }
 
-export const notifyWillActivated = (smartContractAddress: string) =>
-  notifyPmAndSms(smartContractAddress, NotificationType.WILL_ACTIVATED);
+export const notifyWillActivated = async (smartContractAddress: string) => {
+  await sleep(AWAIT_DELAYS_MS[4]);
+  return notifyPmAndSms(smartContractAddress, NotificationType.WILL_ACTIVATED);
+};
 
 export const notifySecurityPeriodUpdated = (smartContractAddress: string) =>
   notifySmsOnly(smartContractAddress, NotificationType.SECURITY_PERIOD_UPDATED);
@@ -490,11 +497,26 @@ export const notifySmDesisted = (smartContractAddress: string, sm: string) =>
     NotificationType.SM_DESISTED,
   );
 
-export const notifyDeathDeclared = (smartContractAddress: string, sm: string) =>
+export const notifySmSignatureRefused = (
+  smartContractAddress: string,
+  sm: string,
+) =>
+  notifyPmAndSmsExcluding(
+    smartContractAddress,
+    sm,
+    NotificationType.SM_SIGNATURE_REFUSED,
+  );
+
+export const notifyDeathDeclared = (
+  smartContractAddress: string,
+  sm: string,
+  amount?: number,
+) =>
   notifyPmAndSmsExcluding(
     smartContractAddress,
     sm,
     NotificationType.DEATH_DECLARED,
+    amount,
   );
 
 export const notifyDeathConfirmed = (
@@ -507,11 +529,16 @@ export const notifyDeathConfirmed = (
     NotificationType.DEATH_CONFIRMED,
   );
 
-export const notifyAssetsSwapped = (smartContractAddress: string, sm: string) =>
+export const notifyAssetsSwapped = (
+  smartContractAddress: string,
+  sm: string,
+  amount?: number,
+) =>
   notifyPmAndSmsExcluding(
     smartContractAddress,
     sm,
     NotificationType.ASSETS_SWAPPED,
+    amount,
   );
 
 export const notifySmUpdated = (

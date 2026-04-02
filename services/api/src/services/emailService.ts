@@ -33,12 +33,20 @@ export async function sendEmailNotification(
   userId: string,
   role: NotificationRecipientRole = NotificationRecipientRole.SM,
   smName?: string,
+  amount?: number,
 ): Promise<void> {
   const user = await findUserById(userId);
   if (!user || !user.wantToReceiveMails) return;
 
   const name = user.firstName + " " + user.lastName;
-  const { subject, body } = generateEmail(type, willName, name, role, smName);
+  const { subject, body } = generateEmail(
+    type,
+    willName,
+    name,
+    role,
+    smName,
+    amount,
+  );
 
   const { error } = await throttledSend({
     from: config.email.from,
@@ -155,8 +163,9 @@ export async function sendEmailNotifications(
   userIds: string[],
   role: NotificationRecipientRole = NotificationRecipientRole.SM,
   smName?: string,
+  amount?: number,
 ): Promise<void> {
   for (const userId of userIds) {
-    await sendEmailNotification(type, willName, userId, role, smName);
+    await sendEmailNotification(type, willName, userId, role, smName, amount);
   }
 }

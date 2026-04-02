@@ -11,6 +11,7 @@ import {
 import type { Contact } from "@/lib/types";
 import { config } from "@/lib/config";
 import { ethers } from "ethers";
+import { WILL_ABI } from "@/lib/contracts/WillABI";
 import {
   fundWillContract,
   withdrawWillContract,
@@ -145,6 +146,9 @@ export default function WillsPage() {
   const [contractBalances, setContractBalances] = useState<
     Record<string, string>
   >({});
+  const [usdcBalances, setUsdcBalances] = useState<Record<string, string>>(
+    {},
+  );
   const [fundModal, setFundModal] = useState<{
     willId: string;
     contractAddress: string;
@@ -306,8 +310,41 @@ export default function WillsPage() {
         }
       });
       setContractBalances(balanceMap);
+
+      // Fetch USDC balances for executed wills
+      if (typeof window !== "undefined" && (window as any).ethereum) {
+        try {
+          const provider = new ethers.BrowserProvider((window as any).ethereum);
+          const usdcBalanceMap: Record<string, string> = {};
+
+          for (const will of allWills) {
+            if (
+              will.state === "EXECUTED" &&
+              will.contractAddressInBlockchain
+            ) {
+              try {
+                const contract = new ethers.Contract(
+                  ethers.getAddress(will.contractAddressInBlockchain),
+                  WILL_ABI,
+                  provider,
+                );
+                const usdcBalance = await contract.getUsdcBalance();
+                // USDC has 6 decimals
+                usdcBalanceMap[will.willId] = ethers.formatUnits(
+                  usdcBalance,
+                  6,
+                );
+              } catch {
+                usdcBalanceMap[will.willId] = "Error";
+              }
+            }
+          }
+
+          setUsdcBalances(usdcBalanceMap);
+        } catch {
+        }
+      }
     } catch (error) {
-      console.error("Error fetching wills:", error);
     } finally {
       setIsLoadingWills(false);
     }
@@ -402,8 +439,7 @@ export default function WillsPage() {
     try {
       const balance = await willService.getContractBalance(contractAddress);
       setContractBalances((prev) => ({ ...prev, [willId]: balance }));
-    } catch (error) {
-      console.error("Error refreshing balance:", error);
+    } catch {
     }
   };
 
@@ -594,8 +630,7 @@ export default function WillsPage() {
       await navigator.clipboard.writeText(address);
       setCopiedAddress(identifier);
       setTimeout(() => setCopiedAddress(null), 2000);
-    } catch (err) {
-      console.error("Failed to copy address:", err);
+    } catch {
     }
   };
 
@@ -1024,7 +1059,6 @@ export default function WillsPage() {
 
       setTimeout(() => window.location.reload(), 2000);
     } catch (error: any) {
-      console.error("Deployment error:", error);
       setErrorMessage(
         getMetaMaskErrorMessage(error) ??
           error.message ??
@@ -2390,6 +2424,36 @@ export default function WillsPage() {
                                 </button>
                               </div>
                             </div>
+                          </div>
+                        )}
+                      {will.state === "EXECUTED" &&
+                        will.contractAddressInBlockchain && (
+                          <div className="mt-3 flex items-center justify-between rounded-lg border border-[var(--border-section)] bg-[var(--bg-card)] px-4 py-2">
+                            <div className="flex items-center gap-2">
+                              <svg
+                                className="w-4 h-4 text-[var(--text-muted-alt)]"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                              </svg>
+                              <span className="text-xs text-[var(--text-muted-alt)]">
+                                USDC Locked
+                              </span>
+                            </div>
+                            <span className="text-sm font-semibold text-[var(--text-primary)] font-mono">
+                              {usdcBalances[will.willId] === undefined
+                                ? "Loading..."
+                                : usdcBalances[will.willId] === "Error"
+                                  ? "Unable to fetch"
+                                  : `${parseFloat(usdcBalances[will.willId]) === 0 ? "0" : parseFloat(parseFloat(usdcBalances[will.willId]).toFixed(6)).toString()} USDC`}
+                            </span>
                           </div>
                         )}
                     </div>

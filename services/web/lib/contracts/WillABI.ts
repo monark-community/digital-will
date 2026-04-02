@@ -140,6 +140,13 @@ export const WILL_ABI = [
   },
   {
     "inputs": [],
+    "name": "getUsdcBalance",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "executionTimeStampS",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",

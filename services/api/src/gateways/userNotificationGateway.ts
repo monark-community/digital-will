@@ -69,6 +69,7 @@ export function initGateway(httpServer: HttpServer): void {
             willName,
             role,
             n.smName ?? undefined,
+            n.amount ?? undefined,
           );
           return {
             id: n.notifId,

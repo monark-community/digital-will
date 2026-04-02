@@ -23,8 +23,6 @@ export interface Will_EvtWillChainWillActivated {
   evtAddress: string; // will address hex (without 0x prefix)
 }
 
-// not tested
-
 export interface Will_EvtWillChainAssetsSwapped {
   evtTxHash: string;
   evtIndex: number;
@@ -32,6 +30,7 @@ export interface Will_EvtWillChainAssetsSwapped {
   evtBlockNumber: string;
   evtAddress: string;
   smAddress: string;
+  usdcAmount: string;
 }
 
 export interface Will_EvtWillChainDeathConfirmed {
@@ -49,6 +48,7 @@ export interface Will_EvtWillChainDeathDeclared {
   evtBlockNumber: string;
   evtAddress: string;
   smAddress: string;
+  assets: string;
 }
 export interface Will_EvtWillChainSmAdded {
   evtTxHash: string;
@@ -66,6 +66,7 @@ export interface Will_EvtWillChainSmDesisted {
   evtBlockNumber: string;
   evtAddress: string;
   smAddress: string;
+  validatedPreDesist: string; // '1' if they had validated before desisting, '0' if they never validated (refused the signature request).
 }
 export interface Will_EvtWillChainSmRemoved {
   evtTxHash: string;

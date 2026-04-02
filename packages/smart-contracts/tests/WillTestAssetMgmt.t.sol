@@ -55,16 +55,46 @@ contract WillTestAssetMgmt is Test {
         will = new Will(pm, sms, securityPeriodConfig, swapConfig);
     }
 
-    // deposit valid funds.
-    function test_Deposit() public {
+    // deposit valid funds, state INACTIVE.
+    function test_Deposit_Inactive() public {
         vm.deal(pm, 2 ether);
         vm.prank(pm);
         will.deposit{value: 1 ether}();
         assertEq(will.getBalance(), 1 ether);
     }
 
-    // withdraw a valid sum of funds.
-    function test_Withdraw() public {
+    // withdraw a valid sum of funds, , state INACTIVE.
+    function test_Withdraw_Inactive() public {
+        vm.deal(pm, 2 ether);
+        vm.prank(pm);
+        will.deposit{value: 1 ether}();
+
+        vm.prank(pm);
+        will.withdraw(0.5 ether);
+        assertEq(will.getBalance(), 0.5 ether);
+        assertEq(pm.balance, 1.5 ether);
+    }
+
+    // deposit valid funds, state ACTIVE.
+    function test_Deposit_Active() public {
+        vm.prank(sm1);
+        will.validateSm();
+        vm.prank(sm2);
+        will.validateSm();
+        assertEq(uint8(will.getState()), uint8(WillState.ACTIVE));
+        vm.deal(pm, 2 ether);
+        vm.prank(pm);
+        will.deposit{value: 1 ether}();
+        assertEq(will.getBalance(), 1 ether);
+    }
+
+    // withdraw a valid sum of funds, , state ACTIVE.
+    function test_Withdraw_Active() public {
+        vm.prank(sm1);
+        will.validateSm();
+        vm.prank(sm2);
+        will.validateSm();
+        assertEq(uint8(will.getState()), uint8(WillState.ACTIVE));
         vm.deal(pm, 2 ether);
         vm.prank(pm);
         will.deposit{value: 1 ether}();
@@ -104,6 +134,51 @@ contract WillTestAssetMgmt is Test {
 
         vm.prank(sm1);
         assertTrue(will.getUsdcBalance() > 0);
+    }
+
+    // swap assets with no balance.
+    function test_SwapAssets_NoBalance() public {
+        SMPartialInfo[] memory sms = new SMPartialInfo[](2);
+        sms[0] = SMPartialInfo({smAddress: sm1, votePower: 1});
+        sms[1] = SMPartialInfo({smAddress: sm2, votePower: 1});
+        SecurityPeriodConfig
+            memory securityPeriodConfig = SecurityPeriodConfig({
+                minSecurityPeriod: 1 days,
+                maxSecurityPeriod: 2 days
+            });
+        MockWETH eth = new MockWETH();
+        MockUSDC usdc = new MockUSDC();
+        MockSwapRouter router = new MockSwapRouter();
+        MockQuoterV2 quoter = new MockQuoterV2();
+        SwapConfig memory swapConfig = SwapConfig({
+            swapRouter: address(router),
+            quoter: address(quoter),
+            wNative: address(eth),
+            usdc: address(usdc),
+            poolFee: 0
+        });
+
+        will = new Will(address(pm), sms, securityPeriodConfig, swapConfig);
+        vm.prank(sm1);
+        will.validateSm();
+        vm.prank(sm2);
+        will.validateSm();
+
+        vm.prank(sm1);
+        will.declareDeath();
+        vm.prank(sm2);
+        will.declareDeath();
+
+        // Fast forward time to make the will active.
+        vm.warp(block.timestamp + 1 days);
+        // Try to swap assets owith 0 balance
+        vm.prank(sm1);
+        uint256 res = will.swapAssets();
+        assertEq(res, 0);
+
+        vm.prank(pm);
+        vm.expectRevert(Errors.ERR_WillExecuted.selector);
+        will.cancelWill();
     }
 }
 
@@ -176,7 +251,12 @@ contract WillTestInvalidAssetMgmt is Test {
         will.declareDeath();
 
         // Fast forward time to make the will executable.
-        vm.warp(block.timestamp + 2 days);
+        vm.warp(block.timestamp + 3 days);
+
+        vm.deal(pm, 1 ether);
+        vm.prank(pm);
+        vm.expectRevert(Errors.ERR_WillExecuted.selector);
+        will.deposit{value: 1 ether}();
 
         // Swap assets.
         vm.prank(sm1);
@@ -506,47 +586,6 @@ contract WillTestInvalidAssetMgmt is Test {
         // Try to swap assets before security period finishes.
         vm.prank(sm1);
         vm.expectRevert(Errors.ERR_SecurityPeriodNotFinished.selector);
-        will.swapAssets();
-    }
-
-    // swap assets with no balance.
-    function test_SwapAssets_NoBalance() public {
-        SMPartialInfo[] memory sms = new SMPartialInfo[](2);
-        sms[0] = SMPartialInfo({smAddress: sm1, votePower: 1});
-        sms[1] = SMPartialInfo({smAddress: sm2, votePower: 1});
-        SecurityPeriodConfig
-            memory securityPeriodConfig = SecurityPeriodConfig({
-                minSecurityPeriod: 1 days,
-                maxSecurityPeriod: 2 days
-            });
-        MockWETH eth = new MockWETH();
-        MockUSDC usdc = new MockUSDC();
-        MockSwapRouter router = new MockSwapRouter();
-        MockQuoterV2 quoter = new MockQuoterV2();
-        SwapConfig memory swapConfig = SwapConfig({
-            swapRouter: address(router),
-            quoter: address(quoter),
-            wNative: address(eth),
-            usdc: address(usdc),
-            poolFee: 0
-        });
-
-        will = new Will(address(pm), sms, securityPeriodConfig, swapConfig);
-        vm.prank(sm1);
-        will.validateSm();
-        vm.prank(sm2);
-        will.validateSm();
-
-        vm.prank(sm1);
-        will.declareDeath();
-        vm.prank(sm2);
-        will.declareDeath();
-
-        // Fast forward time to make the will active.
-        vm.warp(block.timestamp + 1 days);
-        // Try to swap assets owith 0 balance
-        vm.prank(sm1);
-        vm.expectRevert(Errors.ERR_InsufficientBalance.selector);
         will.swapAssets();
     }
 }

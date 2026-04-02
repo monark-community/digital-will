@@ -553,6 +553,12 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      },
+      {
+        "name": "usdcAmount",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -579,6 +585,12 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      },
+      {
+        "name": "assets",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -611,6 +623,12 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      },
+      {
+        "name": "validatedPreDesist",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "uint8"
       }
     ],
     "anonymous": false

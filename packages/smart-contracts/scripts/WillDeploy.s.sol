@@ -23,13 +23,13 @@ contract DeployWill is Script {
         });
         smList[1] = SMPartialInfo({
             smAddress: 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC,
-            votePower: 2
+            votePower: 1
         });
 
         // Configure the security period
         SecurityPeriodConfig memory config = SecurityPeriodConfig({
-            minSecurityPeriod: 1 seconds,
-            maxSecurityPeriod: 2 seconds
+            minSecurityPeriod: 60 seconds,
+            maxSecurityPeriod: 70 seconds
         });
 
         // Deploy a new Will through the factory

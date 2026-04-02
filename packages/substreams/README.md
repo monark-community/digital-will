@@ -17,12 +17,14 @@ Full documentation for installing, running and working with Substreams is availa
 ## How to repackage for a new factory address (make sure it is all lowercase)
 1. Update WILLFACTORY_TRACKED_CONTRACT in lib.rs:16 
 2. Update the blockFilter address + initialBlock in substreams.yaml:34
-3. Run Substreams build to generate new spkg
+3. Run Substreams build in packages/substreams/willchain_events directory to generate new spkg. If you are on Windows, you may need WSL to run this command since the Substreams CLI is only available on Linux or MacOS.
 
 ## How to update spkg if change is made in WillFactory.sol or will.sol
 1. Recompile the Solidity contracts with forge build or similar
 2. Extract the new ABIs from the compiled artifacts
 3. Update both willfactory_contract.abi.json AND will_contract.abi.json in substreams directory
+4. Update the lib.rs accordingly (the command cargo build can throw errors if necessary code is missing in lib.rs) 
+5. Run Substreams build in packages/substreams/willchain_events directory
 
 ## Contributing
 
