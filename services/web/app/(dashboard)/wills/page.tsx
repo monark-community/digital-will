@@ -4082,7 +4082,7 @@ export default function WillsPage() {
             </p>
 
             <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 py-3 mb-5 text-xs text-orange-300">
-              âš  The security period countdown will be reset. SMs will need to
+              ⚠  The security period countdown will be reset. SMs will need to
               re-declare death to restart it.
             </div>
 
@@ -5020,7 +5020,7 @@ export default function WillsPage() {
                               {addrChanged && (
                                 <div className="absolute right-2 top-1/2 -translate-y-1/2 group">
                                   <span className="text-amber-400 text-xs">
-                                    âš 
+                                    ⚠ 
                                   </span>
                                   <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
                                     Address changed - will require blockchain
