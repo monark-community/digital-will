@@ -1,15 +1,19 @@
-import { redirect } from 'next/navigation';
-import React from "react";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { authService } from "@/lib/services";
 
 export default function Home() {
-  // TODO: Replace this with actual authentication check
-  const isAuthenticated = false; // This should come from your auth system
-  
-  if (isAuthenticated) {
-    // Redirect authenticated users to dashboard
-    redirect('/dashboard');
-  } else {
-    // Redirect unauthenticated users to landing page
-    redirect('/landing');
-  }
+  const router = useRouter();
+
+  useEffect(() => {
+    if (authService.isAuthenticated()) {
+      router.replace("/dashboard");
+    } else {
+      router.replace("/landing");
+    }
+  }, [router]);
+
+  return null;
 }

@@ -15,7 +15,7 @@ import {
 import { displaySecurityPeriodRange } from "@/lib/utils/blockchain";
 import { getErrorMessage } from "@/lib/contract-errors";
 
-type ActionId = 'validate' | 'refuse' |  'declareDeath' | 'swapAssets';
+type ActionId = "validate" | "refuse" | "declareDeath" | "swapAssets";
 
 interface ActionDef {
   id: ActionId;
@@ -40,16 +40,16 @@ const SM_ACTIONS: ActionDef[] = [
     colorActive: "bg-emerald-600 hover:bg-emerald-500 text-white",
   },
   {
-    id: 'refuse',
-    label: 'Refuse',
-    description: 'Refuse to participate.',
+    id: "refuse",
+    label: "Refuse",
+    description: "Refuse to participate.",
     disabledReason: (w) => {
-      if (w.state === 'CANCELED') return 'Will is canceled';
-      if (w.state === 'EXECUTED') return 'Will is already executed';
-      if (w.state === 'DRAFT')    return 'Will is not yet deployed';
+      if (w.state === "CANCELED") return "Will is canceled";
+      if (w.state === "EXECUTED") return "Will is already executed";
+      if (w.state === "DRAFT") return "Will is not yet deployed";
       return null;
     },
-    colorActive: 'bg-red-600 hover:bg-red-500 text-white',
+    colorActive: "bg-red-600 hover:bg-red-500 text-white",
   },
   {
     id: "declareDeath",
@@ -171,9 +171,7 @@ export default function AssociatedWillsPage() {
   const [actionSuccess, setActionSuccess] = useState<
     Record<string, string | null>
   >({});
-  const [usdcBalances, setUsdcBalances] = useState<Record<string, string>>(
-    {},
-  );
+  const [usdcBalances, setUsdcBalances] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -185,7 +183,9 @@ export default function AssociatedWillsPage() {
   useEffect(() => {
     setMounted(true);
     if (!authService.isAuthenticated()) {
-      router.push("/login");
+      router.push(
+        `/login?redirectTo=${encodeURIComponent("/wills/associated")}`,
+      );
       return;
     }
     setUser(authService.getUser());
@@ -235,10 +235,7 @@ export default function AssociatedWillsPage() {
           const balanceMap: Record<string, string> = {};
 
           for (const will of willsWithUpdatedMembership) {
-            if (
-              will.state === "EXECUTED" &&
-              will.contractAddressInBlockchain
-            ) {
+            if (will.state === "EXECUTED" && will.contractAddressInBlockchain) {
               try {
                 const contract = new ethers.Contract(
                   ethers.getAddress(will.contractAddressInBlockchain),
@@ -267,57 +264,58 @@ export default function AssociatedWillsPage() {
     }
   }, []);
 
-  const handleSmAction = useCallback(async (will: AssociatedWill, action: ActionDef) => {
-    if (!will.contractAddressInBlockchain) return;
-    const id = will.willId;
-    setActionError(prev  => ({ ...prev, [id]: null }));
-    setActionSuccess(prev => ({ ...prev, [id]: null }));
-    setActionLoading(prev => ({ ...prev, [id]: action.id }));
-    try {
-      if (typeof window === 'undefined' || !(window as any).ethereum) {
-        throw new Error('No Web3 provider found. Please install MetaMask.');
-      }
-      const provider = new ethers.BrowserProvider((window as any).ethereum);
-      const signer   = await provider.getSigner();
-      const contract = new ethers.Contract(
-        ethers.getAddress(will.contractAddressInBlockchain),
-        WILL_ABI,
-        signer
-      );
-      let tx: ethers.TransactionResponse;
-      switch (action.id) {
-        case 'validate':
-          tx = await contract.validateSm();
-          break;
-        case 'refuse':
-          tx = await contract.desistSm();
-          break;
-        case 'declareDeath':
-          tx = await contract.declareDeath();
-        break;
-        case 'swapAssets':
-          tx = await contract.swapAssets();
-          break;
-      }
-      const receipt = await tx.wait();
-      
-      /*
+  const handleSmAction = useCallback(
+    async (will: AssociatedWill, action: ActionDef) => {
+      if (!will.contractAddressInBlockchain) return;
+      const id = will.willId;
+      setActionError((prev) => ({ ...prev, [id]: null }));
+      setActionSuccess((prev) => ({ ...prev, [id]: null }));
+      setActionLoading((prev) => ({ ...prev, [id]: action.id }));
+      try {
+        if (typeof window === "undefined" || !(window as any).ethereum) {
+          throw new Error("No Web3 provider found. Please install MetaMask.");
+        }
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const signer = await provider.getSigner();
+        const contract = new ethers.Contract(
+          ethers.getAddress(will.contractAddressInBlockchain),
+          WILL_ABI,
+          signer,
+        );
+        let tx: ethers.TransactionResponse;
+        switch (action.id) {
+          case "validate":
+            tx = await contract.validateSm();
+            break;
+          case "refuse":
+            tx = await contract.desistSm();
+            break;
+          case "declareDeath":
+            tx = await contract.declareDeath();
+            break;
+          case "swapAssets":
+            tx = await contract.swapAssets();
+            break;
+        }
+        const receipt = await tx.wait();
+
+        /*
       2 seconds delay added instead of waiting 2 block confirmation
       */
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      if (action.id === 'refuse') {
-        try {
-          await willService.removeSecondaryMember(will.willId);
-        } catch (dbError: any) {
-          setActionError((prev) => ({
+        if (action.id === "refuse") {
+          try {
+            await willService.removeSecondaryMember(will.willId);
+          } catch (dbError: any) {
+            setActionError((prev) => ({
               ...prev,
               [id]: "Blockchain transaction succeeded, but failed to update database. Please refresh.",
             }));
             setActionLoading((prev) => ({ ...prev, [id]: null }));
-          return;
+            return;
+          }
         }
-      }
         setActionSuccess((prev) => ({
           ...prev,
           [id]: `"${action.label}" confirmed!`,
@@ -346,8 +344,7 @@ export default function AssociatedWillsPage() {
       await navigator.clipboard.writeText(address);
       setCopiedAddress(identifier);
       setTimeout(() => setCopiedAddress(null), 2000);
-    } catch {
-    }
+    } catch {}
   };
 
   const selectedFilterWallet = wallets?.find(
@@ -404,12 +401,7 @@ export default function AssociatedWillsPage() {
     }, 120);
 
     return () => window.clearTimeout(timeoutId);
-  }, [
-    clearTargetWillParam,
-    displayedWills,
-    isLoading,
-    searchParams,
-  ]);
+  }, [clearTargetWillParam, displayedWills, isLoading, searchParams]);
 
   if (!mounted) return null;
 
@@ -550,7 +542,9 @@ export default function AssociatedWillsPage() {
                     {(() => {
                       const execTs = will.executionTimestampOnChain ?? 0;
                       const badgeState =
-                        will.state === "ACTIVE" && execTs > 0 && nowSec >= execTs
+                        will.state === "ACTIVE" &&
+                        execTs > 0 &&
+                        nowSec >= execTs
                           ? "EXECUTABLE"
                           : will.state;
 
@@ -600,9 +594,7 @@ export default function AssociatedWillsPage() {
                             d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                           />
                         </svg>
-                        <span>
-                          {will.owner.email}
-                        </span>
+                        <span>{will.owner.email}</span>
                       </p>
                     </div>
                     <div>
@@ -717,7 +709,7 @@ export default function AssociatedWillsPage() {
                           Security period
                         </span>
                       </span>
-                      
+
                       <p className="text-sm text-[var(--text-primary)]">
                         {displaySecurityPeriodRange(
                           will.minSecurityPeriod,
@@ -829,8 +821,18 @@ export default function AssociatedWillsPage() {
                                         viewBox="0 0 24 24"
                                       >
                                         <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="15" y1="9" x2="9" y2="15"></line>
-                                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                                        <line
+                                          x1="15"
+                                          y1="9"
+                                          x2="9"
+                                          y2="15"
+                                        ></line>
+                                        <line
+                                          x1="9"
+                                          y1="9"
+                                          x2="15"
+                                          y2="15"
+                                        ></line>
                                       </svg>
                                     )}
                                     {action.id === "declareDeath" && (
@@ -844,8 +846,18 @@ export default function AssociatedWillsPage() {
                                         viewBox="0 0 24 24"
                                       >
                                         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                                        <line x1="12" y1="9" x2="12" y2="13"></line>
-                                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                        <line
+                                          x1="12"
+                                          y1="9"
+                                          x2="12"
+                                          y2="13"
+                                        ></line>
+                                        <line
+                                          x1="12"
+                                          y1="17"
+                                          x2="12.01"
+                                          y2="17"
+                                        ></line>
                                       </svg>
                                     )}
                                     {action.id === "swapAssets" && (

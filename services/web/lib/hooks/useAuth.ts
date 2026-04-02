@@ -1,13 +1,13 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authService } from "@/lib/services";
-import type { 
-  SignInRequest, 
-  SignUpRequest, 
+import type {
+  SignInRequest,
+  SignUpRequest,
   CreateAccountWithWalletRequest,
-  WalletAuthRequest
+  WalletAuthRequest,
 } from "@/lib/types";
 import { AxiosError } from "axios";
 
@@ -16,6 +16,7 @@ import { AxiosError } from "axios";
  */
 export function useSignIn() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -23,8 +24,9 @@ export function useSignIn() {
     onSuccess: (response) => {
       authService.setToken(response.token);
       authService.setUser(response.user);
-      queryClient.clear(); 
-      router.push("/dashboard");
+      queryClient.clear();
+      const redirectTo = searchParams.get("redirectTo");
+      router.push(redirectTo || "/dashboard");
     },
     onError: (error: AxiosError<{ message: string }>) => {
       console.error("Sign in error:", error.response?.data?.message);
@@ -37,6 +39,7 @@ export function useSignIn() {
  */
 export function useSignUp() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -45,7 +48,8 @@ export function useSignUp() {
       authService.setToken(response.token);
       authService.setUser(response.user);
       queryClient.clear();
-      router.push("/dashboard");
+      const redirectTo = searchParams.get("redirectTo");
+      router.push(redirectTo || "/dashboard");
     },
     onError: (error: AxiosError<{ message: string }>) => {
       console.error("Sign up error:", error.response?.data?.message);
@@ -89,7 +93,8 @@ export function useCurrentUser() {
  */
 export function useCheckWallet() {
   return useMutation({
-    mutationFn: (walletAddress: string) => authService.checkWallet(walletAddress),
+    mutationFn: (walletAddress: string) =>
+      authService.checkWallet(walletAddress),
     onError: (error: AxiosError<{ message: string }>) => {
       console.error("Check wallet error:", error.response?.data?.message);
     },
@@ -101,6 +106,7 @@ export function useCheckWallet() {
  */
 export function useWalletSignIn() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -109,7 +115,8 @@ export function useWalletSignIn() {
       authService.setToken(response.token);
       authService.setUser(response.user);
       queryClient.clear();
-      router.push("/dashboard");
+      const redirectTo = searchParams.get("redirectTo");
+      router.push(redirectTo || "/dashboard");
     },
     onError: (error: AxiosError<{ message: string }>) => {
       console.error("Wallet sign in error:", error.response?.data?.message);
@@ -122,19 +129,24 @@ export function useWalletSignIn() {
  */
 export function useCreateAccountWithWallet() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateAccountWithWalletRequest) => 
+    mutationFn: (data: CreateAccountWithWalletRequest) =>
       authService.createAccountWithWallet(data),
     onSuccess: (response) => {
       authService.setToken(response.token);
       authService.setUser(response.user);
       queryClient.clear();
-      router.push("/dashboard");
+      const redirectTo = searchParams.get("redirectTo");
+      router.push(redirectTo || "/dashboard");
     },
     onError: (error: AxiosError<{ message: string }>) => {
-      console.error("Create account with wallet error:", error.response?.data?.message);
+      console.error(
+        "Create account with wallet error:",
+        error.response?.data?.message,
+      );
     },
   });
 }

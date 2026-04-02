@@ -1,18 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCheckWallet, useWalletSignIn } from "@/lib/hooks";
 import { connectWallet, isMetaMaskInstalled } from "@/lib/utils/wallet";
+import { authService } from "@/lib/services";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [walletConnecting, setWalletConnecting] = useState(false);
 
   const { mutate: checkWallet } = useCheckWallet();
   const { mutate: walletSignIn } = useWalletSignIn();
+
+  useEffect(() => {
+    if (authService.isAuthenticated()) {
+      router.replace("/dashboard");
+    }
+  }, [router]);
 
   const handleMetaMaskConnect = async () => {
     try {
@@ -20,7 +28,9 @@ export default function LoginPage() {
       setErrorMessage(null);
 
       if (!isMetaMaskInstalled()) {
-        setErrorMessage("MetaMask is not installed. Please install MetaMask to continue.");
+        setErrorMessage(
+          "MetaMask is not installed. Please install MetaMask to continue.",
+        );
         return;
       }
 
@@ -33,10 +43,12 @@ export default function LoginPage() {
               { walletAddress: address, signature, message },
               {
                 onError: (error: any) => {
-                  const message = error?.response?.data?.message || "Failed to sign in with wallet";
+                  const message =
+                    error?.response?.data?.message ||
+                    "Failed to sign in with wallet";
                   setErrorMessage(message);
                 },
-              }
+              },
             );
           } else {
             const params = new URLSearchParams({
@@ -44,11 +56,16 @@ export default function LoginPage() {
               signature,
               message,
             });
+            const redirectTo = searchParams.get("redirectTo");
+            if (redirectTo) {
+              params.set("redirectTo", redirectTo);
+            }
             router.push(`/signup/wallet?${params.toString()}`);
           }
         },
         onError: (error: any) => {
-          const message = error?.response?.data?.message || "Failed to check wallet";
+          const message =
+            error?.response?.data?.message || "Failed to check wallet";
           setErrorMessage(message);
         },
       });
@@ -65,7 +82,10 @@ export default function LoginPage() {
         {/* Left: brand / hero */}
         <div className="relative hidden lg:flex lg:w-2/5 flex-col justify-center px-10 py-12 gap-6 bg-gradient-to-br from-[var(--bg-card)] via-[var(--bg-page)] to-[var(--bg-card)]">
           <div className="flex items-center gap-3">
-            <Link href="/landing" className="inline-flex items-center justify-center">
+            <Link
+              href="/landing"
+              className="inline-flex items-center justify-center"
+            >
               <div className="w-11 h-11 rounded-xl bg-[var(--accent)] flex items-center justify-center shadow-lg shadow-[var(--accent)]/40">
                 <svg
                   className="w-7 h-7 text-white"
@@ -91,8 +111,9 @@ export default function LoginPage() {
               <span className="text-[var(--accent)]">closest ones.</span>
             </h1>
             <p className="text-sm md:text-base leading-relaxed text-[var(--text-muted)] max-w-md">
-              Create, manage, and execute digital wills on the blockchain with confidence. Your assets,
-              your wishes, delivered exactly as you intend.
+              Create, manage, and execute digital wills on the blockchain with
+              confidence. Your assets, your wishes, delivered exactly as you
+              intend.
             </p>
           </div>
 
@@ -143,15 +164,16 @@ export default function LoginPage() {
               </svg>
             </div>
           </div>
-
-
         </div>
 
         {/* Right: login card */}
         <div className="w-full lg:w-3/5 flex items-center justify-center bg-[var(--bg-page)]/60">
           <div className="w-full max-w-md lg:max-w-xl px-6 py-10 sm:px-10 mx-auto">
             <div className="lg:hidden flex justify-center mb-6">
-              <Link href="/landing" className="inline-flex items-center justify-center">
+              <Link
+                href="/landing"
+                className="inline-flex items-center justify-center"
+              >
                 <div className="w-11 h-11 rounded-xl bg-[var(--accent)] flex items-center justify-center shadow-lg shadow-[var(--accent)]/40">
                   <svg
                     className="w-7 h-7 text-white"
@@ -237,8 +259,14 @@ export default function LoginPage() {
               <div className="mt-4 text-center text-xs text-[var(--text-muted)]">
                 <p>
                   By connecting your wallet, you agree to the{" "}
-                  <span className="font-medium text-[var(--accent)]">Terms</span> and{" "}
-                  <span className="font-medium text-[var(--accent)]">Privacy Policy</span>.
+                  <span className="font-medium text-[var(--accent)]">
+                    Terms
+                  </span>{" "}
+                  and{" "}
+                  <span className="font-medium text-[var(--accent)]">
+                    Privacy Policy
+                  </span>
+                  .
                 </p>
               </div>
 
