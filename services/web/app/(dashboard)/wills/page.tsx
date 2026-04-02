@@ -142,6 +142,9 @@ export default function WillsPage() {
   const [powerDraftByIndex, setPowerDraftByIndex] = useState<
     Record<number, string>
   >({});
+  const [editPowerDraftByIndex, setEditPowerDraftByIndex] = useState<
+    Record<number, string>
+  >({});
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [addContactTooltip, setAddContactTooltip] = useState<{
     index: number;
@@ -225,6 +228,21 @@ export default function WillsPage() {
   const [editWillMaxPeriod, setEditWillMaxPeriod] = useState("");
   const [isUpdatingWill, setIsUpdatingWill] = useState(false);
   const [editWillError, setEditWillError] = useState<string | null>(null);
+  const [showEditContactDropdown, setShowEditContactDropdown] = useState<
+    number | null
+  >(null);
+  const [editAddingToContacts, setEditAddingToContacts] = useState<{
+    index: number;
+    isLoading: boolean;
+  } | null>(null);
+  const [editContactSuccessByIndex, setEditContactSuccessByIndex] = useState<
+    Record<number, string>
+  >({});
+  const [editAddedContactFingerprintByIndex, setEditAddedContactFingerprintByIndex] =
+    useState<Record<number, string>>({});
+  const [editCanAddToContacts, setEditCanAddToContacts] = useState<boolean[]>(
+    [],
+  );
   const [highlightedWillId, setHighlightedWillId] = useState<string | null>(
     null,
   );
@@ -387,6 +405,35 @@ export default function WillsPage() {
     willName,
     editingWillId,
   ]);
+
+  useEffect(() => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    const canAdd = editWillMembers.map((member) => {
+      const hasAnyField =
+        member.firstName.trim() ||
+        member.lastName.trim() ||
+        member.email.trim() ||
+        member.address.trim();
+
+      if (!hasAnyField) return false;
+      if (!member.firstName.trim()) return false;
+      if (!member.lastName.trim()) return false;
+      if (!member.email.trim()) return false;
+      if (!emailRegex.test(member.email)) return false;
+      if (!member.address.trim()) return false;
+
+      try {
+        ethers.getAddress(member.address.trim());
+      } catch {
+        return false;
+      }
+
+      return true;
+    });
+
+    setEditCanAddToContacts(canAdd);
+  }, [editWillMembers]);
   // Quand le min change, ajuster le max si nÃ©cessaire
   useEffect(() => {
     const min = parseInt(minSecurityPeriod);
@@ -433,10 +480,37 @@ export default function WillsPage() {
     ].join("|");
   };
 
+  const getEditContactFingerprint = (member: EditWillMember) => {
+    return [
+      member.firstName.trim(),
+      member.lastName.trim(),
+      member.email.trim().toLowerCase(),
+      member.address.trim().toLowerCase(),
+    ].join("|");
+  };
+
   const normalizeContactField = (value?: string | null) =>
     (value || "").trim().toLowerCase();
 
   const memberMatchesExistingContact = (member: SecondaryMember) => {
+    if (!contacts || contacts.length === 0) return false;
+
+    const normalizedMemberFirstName = normalizeContactField(member.firstName);
+    const normalizedMemberLastName = normalizeContactField(member.lastName);
+    const normalizedMemberEmail = normalizeContactField(member.email);
+    const normalizedMemberAddress = normalizeContactField(member.address);
+
+    return contacts.some((contact) => {
+      return (
+        normalizeContactField(contact.firstName) === normalizedMemberFirstName &&
+        normalizeContactField(contact.lastName) === normalizedMemberLastName &&
+        normalizeContactField(contact.email) === normalizedMemberEmail &&
+        normalizeContactField(contact.walletAddress) === normalizedMemberAddress
+      );
+    });
+  };
+
+  const editMemberMatchesExistingContact = (member: EditWillMember) => {
     if (!contacts || contacts.length === 0) return false;
 
     const normalizedMemberFirstName = normalizeContactField(member.firstName);
@@ -487,6 +561,54 @@ export default function WillsPage() {
     }
   };
 
+  const removeEditWillMemberAtIndex = (index: number) => {
+    setEditWillMembers((prev) => prev.filter((_, i) => i !== index));
+
+    setEditContactSuccessByIndex((prev) => {
+      const next: Record<number, string> = {};
+      for (const [key, value] of Object.entries(prev)) {
+        const numericKey = Number(key);
+        if (numericKey < index) next[numericKey] = value;
+        if (numericKey > index) next[numericKey - 1] = value;
+      }
+      return next;
+    });
+
+    setEditAddedContactFingerprintByIndex((prev) => {
+      const next: Record<number, string> = {};
+      for (const [key, value] of Object.entries(prev)) {
+        const numericKey = Number(key);
+        if (numericKey < index) next[numericKey] = value;
+        if (numericKey > index) next[numericKey - 1] = value;
+      }
+      return next;
+    });
+
+    setEditPowerDraftByIndex((prev) => {
+      const next: Record<number, string> = {};
+      for (const [key, value] of Object.entries(prev)) {
+        const numericKey = Number(key);
+        if (numericKey < index) next[numericKey] = value;
+        if (numericKey > index) next[numericKey - 1] = value;
+      }
+      return next;
+    });
+
+    setShowEditContactDropdown((prev) => {
+      if (prev === null) return null;
+      if (prev === index) return null;
+      if (prev > index) return prev - 1;
+      return prev;
+    });
+
+    setEditAddingToContacts((prev) => {
+      if (!prev) return null;
+      if (prev.index === index) return null;
+      if (prev.index > index) return { ...prev, index: prev.index - 1 };
+      return prev;
+    });
+  };
+
   const updateSecondaryMember = (
     index: number,
     field: keyof SecondaryMember,
@@ -511,6 +633,24 @@ export default function WillsPage() {
     };
     setSecondaryMembers(updated);
     setShowContactDropdown(null);
+  };
+
+  const selectContactForEditMember = (index: number, contact: Contact) => {
+    setEditWillMembers((prev) =>
+      prev.map((m, i) => {
+        if (i !== index) return m;
+        return {
+          ...m,
+          firstName: contact.firstName,
+          lastName: contact.lastName,
+          email: contact.email,
+          address: contact.walletAddress,
+          relationship: contact.relationship || "",
+        };
+      }),
+    );
+    setShowEditContactDropdown(null);
+    setEditWillError(null);
   };
 
   const refreshBalance = async (willId: string, contractAddress: string) => {
@@ -741,6 +881,46 @@ export default function WillsPage() {
       setErrorMessage(error.message);
     } finally {
       setAddingToContacts(null);
+    }
+  };
+
+  const handleAddToContactsFromEdit = async (memberIndex: number) => {
+    const member = editWillMembers[memberIndex];
+    if (!member) return;
+
+    setEditAddingToContacts({ index: memberIndex, isLoading: true });
+
+    try {
+      await willService.addMemberToContacts({
+        firstName: member.firstName,
+        lastName: member.lastName,
+        email: member.email,
+        phoneNumber: undefined,
+        walletAddress: member.address,
+        relationship: member.relationship,
+      });
+
+      setEditContactSuccessByIndex((prev) => ({
+        ...prev,
+        [memberIndex]: "Contact added successfully!",
+      }));
+      setEditAddedContactFingerprintByIndex((prev) => ({
+        ...prev,
+        [memberIndex]: getEditContactFingerprint(member),
+      }));
+
+      setTimeout(() => {
+        setEditContactSuccessByIndex((prev) => {
+          if (!(memberIndex in prev)) return prev;
+          const next = { ...prev };
+          delete next[memberIndex];
+          return next;
+        });
+      }, 3000);
+    } catch (error: any) {
+      setEditWillError(error?.message ?? "Failed to add contact.");
+    } finally {
+      setEditAddingToContacts(null);
     }
   };
 
@@ -1228,6 +1408,11 @@ export default function WillsPage() {
   };
 
   const handleOpenEditWill = (will: WillFromDB) => {
+    setEditPowerDraftByIndex({});
+    setShowEditContactDropdown(null);
+    setEditAddingToContacts(null);
+    setEditContactSuccessByIndex({});
+    setEditAddedContactFingerprintByIndex({});
     setEditWillMembers(
       will.secondaryMembers.map((m) => ({
         secondaryMemberId: m.secondaryMemberId,
@@ -1483,6 +1668,7 @@ export default function WillsPage() {
         });
       }
       setEditWillModal(null);
+      setEditPowerDraftByIndex({});
       setSuccessMessage("Will updated successfully.");
       setTimeout(() => window.location.reload(), 2000);
     } catch (err: any) {
@@ -2417,6 +2603,7 @@ export default function WillsPage() {
                         onClick={addSecondaryMember}
                         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--accent)] border border-[var(--accent)] rounded-lg hover:bg-[var(--accent)]/10 transition-colors w-full justify-center"
                       >
+                        Add Another Member
                         <svg
                           className="w-5 h-5"
                           fill="none"
@@ -2430,7 +2617,6 @@ export default function WillsPage() {
                             d="M12 4v16m8-8H4"
                           />
                         </svg>
-                        Add Another Member
                       </button>
                     </div>
                   </div>
@@ -2478,15 +2664,32 @@ export default function WillsPage() {
                           setMinSecurityPeriod(onlyDigits);
                         }}
                         onBlur={(e) => {
-                          // Quand l'utilisateur quitte le champ, forcer les limites
-                          const value = parseInt(e.target.value);
-                          if (!isNaN(value)) {
-                            const minLimit = config.isLocalOrDev ? 1 : 28;
-                            const maxLimit = config.isLocalOrDev ? 10000 : 154;
-                            if (value < minLimit)
-                              setMinSecurityPeriod(minLimit.toString());
-                            else if (value > maxLimit)
-                              setMaxSecurityPeriod(maxLimit.toString());
+                          const minLimit = config.isLocalOrDev ? 1 : 28;
+                          const maxLimit = config.isLocalOrDev ? 10000 : 154;
+
+                          const rawMin = parseInt(e.target.value);
+                          const safeMin = Number.isFinite(rawMin)
+                            ? rawMin
+                            : minLimit;
+                          const finalMin = Math.min(
+                            Math.max(safeMin, minLimit),
+                            maxLimit - 1
+                          );
+
+                          setMinSecurityPeriod(finalMin.toString());
+
+                          const rawMax = parseInt(maxSecurityPeriod);
+                          const minPlusOne = finalMin + 1;
+                          const safeMax = Number.isFinite(rawMax)
+                            ? rawMax
+                            : minPlusOne;
+                          const finalMax = Math.min(
+                            Math.max(safeMax, minPlusOne),
+                            maxLimit
+                          );
+
+                          if (finalMax !== safeMax || maxSecurityPeriod === "") {
+                            setMaxSecurityPeriod(finalMax.toString());
                           }
                         }}
                         placeholder={`e.g., ${config.isLocalOrDev ? 1 : 28}`}
@@ -2535,17 +2738,33 @@ export default function WillsPage() {
                           setMaxSecurityPeriod(onlyDigits);
                         }}
                         onBlur={(e) => {
-                          const value = parseInt(e.target.value);
-                          if (!isNaN(value)) {
-                            const minLimit = config.isLocalOrDev ? 1 : 28;
-                            const maxLimit = config.isLocalOrDev ? 10000 : 154;
-                            if (value < minLimit)
-                              setMaxSecurityPeriod(minLimit.toString());
-                            else if (value > maxLimit)
-                              setMaxSecurityPeriod(maxLimit.toString());
-                          }
+                          const minLimit = config.isLocalOrDev ? 1 : 28;
+                          const maxLimit = config.isLocalOrDev ? 10000 : 154;
 
-                          setMaxSecurityPeriod(String(finalMax));
+                          const rawMin = parseInt(minSecurityPeriod);
+                          const safeMin = Number.isFinite(rawMin)
+                            ? rawMin
+                            : minLimit;
+                          const finalMin = Math.min(
+                            Math.max(safeMin, minLimit),
+                            maxLimit - 1
+                          );
+                          const minPlusOne = finalMin + 1;
+
+                          const rawMax = parseInt(e.target.value);
+                          const safeMax = Number.isFinite(rawMax)
+                            ? rawMax
+                            : minPlusOne;
+
+                          const finalMax = Math.min(
+                            Math.max(safeMax, minPlusOne),
+                            maxLimit
+                          );
+
+                          if (finalMin.toString() !== minSecurityPeriod) {
+                            setMinSecurityPeriod(finalMin.toString());
+                          }
+                          setMaxSecurityPeriod(finalMax.toString());
                         }}
                         placeholder={`e.g., ${config.isLocalOrDev ? 10000 : 154}`}
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
@@ -4164,7 +4383,10 @@ export default function WillsPage() {
                 </p>
               </div>
               <button
-                onClick={() => setEditWillModal(null)}
+                onClick={() => {
+                  setEditWillModal(null);
+                  setEditPowerDraftByIndex({});
+                }}
                 className="text-[var(--text-muted-alt)] hover:text-[var(--text-primary)] transition-colors flex-shrink-0"
               >
                 <svg
@@ -4191,38 +4413,160 @@ export default function WillsPage() {
               )}
 
               <div>
-                <p className="text-xs font-semibold text-[var(--text-primary)] mb-2 uppercase tracking-wide">
-                  Security Period
+                <p className="text-xs font-semibold text-[var(--text-primary)] mb-2 uppercase tracking-wide inline-flex items-center gap-1">
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  <span>Security Period</span>
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-[var(--text-muted-alt)] mb-1">
-                      Min ({config.securityPeriod.unit})
+                    <label className="block text-xs text-[var(--text-muted-alt)] mb-1 inline-flex items-center gap-1">
+                      <span>Min ({config.securityPeriod.unit})</span>
+                      <span
+                        aria-label="What is the security period?"
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[var(--border-section)] text-[10px] text-[var(--text-muted-alt)] cursor-help"
+                        onMouseEnter={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setSecurityPeriodTooltip({
+                            top: rect.top - 8,
+                            left: rect.left + rect.width / 2,
+                          });
+                        }}
+                        onMouseLeave={() => setSecurityPeriodTooltip(null)}
+                      >
+                        ?
+                      </span>
                     </label>
                     <input
-                      type="number"
-                      min={config.securityPeriod.min}
-                      max={config.securityPeriod.max}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={editWillMinPeriod}
                       onChange={(e) => {
-                        setEditWillMinPeriod(e.target.value);
+                        const onlyDigits = e.target.value.replace(/\D/g, "");
+                        setEditWillMinPeriod(onlyDigits);
                         setEditWillError(null);
+                      }}
+                      onBlur={(e) => {
+                        const fallbackMin = config.isLocalOrDev ? 1 : 28;
+                        const fallbackMax = config.isLocalOrDev ? 10000 : 154;
+                        const minLimit = Number.isFinite(
+                          Number(config.securityPeriod.min)
+                        )
+                          ? Number(config.securityPeriod.min)
+                          : fallbackMin;
+                        const maxLimit = Number.isFinite(
+                          Number(config.securityPeriod.max)
+                        )
+                          ? Number(config.securityPeriod.max)
+                          : fallbackMax;
+
+                        const maxForMin = Math.max(minLimit, maxLimit - 1);
+                        const rawMin = parseInt(e.target.value);
+                        const safeMin = Number.isFinite(rawMin)
+                          ? rawMin
+                          : minLimit;
+                        const finalMin = Math.min(
+                          Math.max(safeMin, minLimit),
+                          maxForMin
+                        );
+                        setEditWillMinPeriod(finalMin.toString());
+
+                        const rawMax = parseInt(editWillMaxPeriod);
+                        const minPlusOne = finalMin + 1;
+                        const safeMax = Number.isFinite(rawMax)
+                          ? rawMax
+                          : minPlusOne;
+                        const finalMax = Math.min(
+                          Math.max(safeMax, minPlusOne),
+                          maxLimit
+                        );
+                        if (
+                          editWillMaxPeriod === "" ||
+                          finalMax.toString() !== editWillMaxPeriod
+                        ) {
+                          setEditWillMaxPeriod(finalMax.toString());
+                        }
                       }}
                       className="w-full px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-[var(--text-muted-alt)] mb-1">
-                      Max ({config.securityPeriod.unit})
+                    <label className="block text-xs text-[var(--text-muted-alt)] mb-1 inline-flex items-center gap-1">
+                      <span>Max ({config.securityPeriod.unit})</span>
+                      <span
+                        aria-label="What is the security period?"
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[var(--border-section)] text-[10px] text-[var(--text-muted-alt)] cursor-help"
+                        onMouseEnter={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setSecurityPeriodTooltip({
+                            top: rect.top - 8,
+                            left: rect.left + rect.width / 2,
+                          });
+                        }}
+                        onMouseLeave={() => setSecurityPeriodTooltip(null)}
+                      >
+                        ?
+                      </span>
                     </label>
                     <input
-                      type="number"
-                      min={config.securityPeriod.min}
-                      max={config.securityPeriod.max}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={editWillMaxPeriod}
                       onChange={(e) => {
-                        setEditWillMaxPeriod(e.target.value);
+                        const onlyDigits = e.target.value.replace(/\D/g, "");
+                        setEditWillMaxPeriod(onlyDigits);
                         setEditWillError(null);
+                      }}
+                      onBlur={(e) => {
+                        const fallbackMin = config.isLocalOrDev ? 1 : 28;
+                        const fallbackMax = config.isLocalOrDev ? 10000 : 154;
+                        const minLimit = Number.isFinite(
+                          Number(config.securityPeriod.min)
+                        )
+                          ? Number(config.securityPeriod.min)
+                          : fallbackMin;
+                        const maxLimit = Number.isFinite(
+                          Number(config.securityPeriod.max)
+                        )
+                          ? Number(config.securityPeriod.max)
+                          : fallbackMax;
+
+                        const maxForMin = Math.max(minLimit, maxLimit - 1);
+                        const rawMin = parseInt(editWillMinPeriod);
+                        const safeMin = Number.isFinite(rawMin)
+                          ? rawMin
+                          : minLimit;
+                        const finalMin = Math.min(
+                          Math.max(safeMin, minLimit),
+                          maxForMin
+                        );
+                        const minPlusOne = finalMin + 1;
+
+                        const rawMax = parseInt(e.target.value);
+                        const safeMax = Number.isFinite(rawMax)
+                          ? rawMax
+                          : minPlusOne;
+                        const finalMax = Math.min(
+                          Math.max(safeMax, minPlusOne),
+                          maxLimit
+                        );
+
+                        if (finalMin.toString() !== editWillMinPeriod) {
+                          setEditWillMinPeriod(finalMin.toString());
+                        }
+                        setEditWillMaxPeriod(finalMax.toString());
                       }}
                       className="w-full px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                     />
@@ -4263,11 +4607,210 @@ export default function WillsPage() {
                       ).toLowerCase();
                       const addrChanged =
                         m.address.trim().toLowerCase() !== origAddr;
+
+                      const isAlreadyAddedUnchanged =
+                        editAddedContactFingerprintByIndex[absIdx] !==
+                          undefined &&
+                        editAddedContactFingerprintByIndex[absIdx] ===
+                          getEditContactFingerprint(m);
+                      const isMatchingContactList =
+                        editMemberMatchesExistingContact(m);
+                      const addToContactsDisabledReason =
+                        isMatchingContactList
+                          ? "Contact already exists in contacts' list"
+                          : isAlreadyAddedUnchanged
+                            ? "Contact already added in contacts' list"
+                            : null;
                       return (
                         <div
                           key={m.secondaryMemberId}
                           className="bg-[var(--bg-section)]/40 border border-[var(--border-section)] rounded-lg px-3 py-3 space-y-2"
                         >
+                          <div className="flex items-center justify-end gap-2">
+                            <div className="relative group hover:z-20">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  contacts &&
+                                  contacts.length > 0 &&
+                                  setShowEditContactDropdown(
+                                    showEditContactDropdown === absIdx
+                                      ? null
+                                      : absIdx,
+                                  )
+                                }
+                                disabled={!contacts || contacts.length === 0}
+                                className={`px-3 py-1 text-xs font-medium rounded transition-colors flex items-center gap-1 ${
+                                  !contacts || contacts.length === 0
+                                    ? "text-[var(--text-muted-alt)] border border-[var(--border-section)] cursor-not-allowed opacity-50"
+                                    : "text-[var(--accent)] border border-[var(--accent)] hover:bg-[var(--accent)]/10"
+                                }`}
+                              >
+                                Contact's List
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 4v16m8-8H4"
+                                  />
+                                </svg>
+                              </button>
+                              {(!contacts || contacts.length === 0) && (
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                  You have no contacts
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+                                </div>
+                              )}
+                            </div>
+
+                            <div
+                              className="relative"
+                              onMouseEnter={(e) => {
+                                if (!addToContactsDisabledReason) return;
+                                const rect =
+                                  e.currentTarget.getBoundingClientRect();
+                                setAddContactTooltip({
+                                  index: absIdx,
+                                  top: rect.top - 8,
+                                  left: rect.left + rect.width / 2,
+                                  message: addToContactsDisabledReason,
+                                });
+                              }}
+                              onMouseLeave={() => {
+                                setAddContactTooltip((prev) =>
+                                  prev?.index === absIdx ? null : prev,
+                                );
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => handleAddToContactsFromEdit(absIdx)}
+                                disabled={
+                                  editAddingToContacts?.index === absIdx ||
+                                  !editCanAddToContacts[absIdx] ||
+                                  isMatchingContactList ||
+                                  isAlreadyAddedUnchanged
+                                }
+                                className={`px-3 py-1 text-xs font-medium rounded transition-colors flex items-center gap-1 ${
+                                  editCanAddToContacts[absIdx] &&
+                                  !isMatchingContactList &&
+                                  !isAlreadyAddedUnchanged
+                                    ? "text-blue-500 border border-blue-500 hover:bg-blue-500/10"
+                                    : "text-gray-400 border border-gray-400 cursor-not-allowed opacity-50"
+                                }`}
+                              >
+                                {editAddingToContacts?.index === absIdx ? (
+                                  <>
+                                    Adding...
+                                    <svg
+                                      className="animate-spin w-3 h-3"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                        fill="none"
+                                      />
+                                      <path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                      />
+                                    </svg>
+                                  </>
+                                ) : (
+                                  <>
+                                    Add to Contacts
+                                    <svg
+                                      className="w-3 h-3"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                                      />
+                                    </svg>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+
+                          {editContactSuccessByIndex[absIdx] && (
+                            <div className="px-3 py-2 bg-green-500/10 border border-green-500/50 rounded-md text-green-500 text-xs">
+                              {editContactSuccessByIndex[absIdx]}
+                            </div>
+                          )}
+
+                          {showEditContactDropdown === absIdx &&
+                            contacts &&
+                            contacts.length > 0 && (
+                              <div className="max-h-40 overflow-y-auto border border-[var(--border-section)] rounded-lg bg-[var(--bg-card)]">
+                                {contacts
+                                  .filter((contact) => {
+                                    const usedAddresses = editWillMembers
+                                      .map((x, i) =>
+                                        i !== absIdx
+                                          ? x.address.toLowerCase()
+                                          : null,
+                                      )
+                                      .filter(Boolean) as string[];
+                                    return !usedAddresses.includes(
+                                      contact.walletAddress.toLowerCase(),
+                                    );
+                                  })
+                                  .map((contact) => (
+                                    <button
+                                      key={contact.contactId}
+                                      type="button"
+                                      onClick={() =>
+                                        selectContactForEditMember(absIdx, contact)
+                                      }
+                                      className="w-full px-3 py-2 text-left hover:bg-[var(--bg-section)] transition-colors border-b border-[var(--border-section)] last:border-b-0"
+                                    >
+                                      <div className="text-sm font-medium text-[var(--text-primary)]">
+                                        {contact.firstName} {contact.lastName}
+                                      </div>
+                                      <div className="text-xs text-[var(--text-muted-alt)] font-mono inline-flex items-center gap-1">
+                                        <svg
+                                          className="w-3 h-3"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth={2}
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                                          />
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M15 12h3"
+                                          />
+                                        </svg>
+                                        <span>{contact.walletAddress}</span>
+                                      </div>
+                                    </button>
+                                  ))}
+                              </div>
+                            )}
+
                           <div className="grid grid-cols-2 gap-2">
                             <input
                               type="text"
@@ -4362,16 +4905,49 @@ export default function WillsPage() {
                                 </div>
                               )}
                             </div>
-                            <label className="text-xs text-[var(--text-muted-alt)] flex-shrink-0">
-                              Power
+                            <label className="text-xs text-[var(--text-muted-alt)] flex-shrink-0 inline-flex items-center gap-1">
+                              <span>Power</span>
+                              <span
+                                aria-label="What is voting power?"
+                                className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[var(--border-section)] text-[10px] text-[var(--text-muted-alt)] cursor-help"
+                                onMouseEnter={(e) => {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setPowerInfoTooltip({
+                                    index: absIdx,
+                                    top: rect.top - 8,
+                                    left: rect.left + rect.width / 2,
+                                  });
+                                }}
+                                onMouseLeave={() => {
+                                  setPowerInfoTooltip((prev) =>
+                                    prev?.index === absIdx ? null : prev,
+                                  );
+                                }}
+                              >
+                                ?
+                              </span>
                             </label>
                             <input
-                              type="number"
-                              min="1"
-                              max="100"
-                              value={m.power}
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              maxLength={3}
+                              value={
+                                editPowerDraftByIndex[absIdx] ?? String(m.power)
+                              }
                               onChange={(e) => {
-                                const v = parseInt(e.target.value) || 1;
+                                const onlyDigits = e.target.value
+                                  .replace(/\D/g, "")
+                                  .slice(0, 3);
+
+                                setEditPowerDraftByIndex((prev) => ({
+                                  ...prev,
+                                  [absIdx]: onlyDigits,
+                                }));
+
+                                if (onlyDigits === "") return;
+
+                                const v = parseInt(onlyDigits, 10) || 1;
                                 setEditWillMembers((prev) =>
                                   prev.map((x, i) =>
                                     i === absIdx ? { ...x, power: v } : x,
@@ -4379,6 +4955,48 @@ export default function WillsPage() {
                                 );
                                 setEditWillError(null);
                               }}
+                              onBlur={(e) => {
+                                const onlyDigits = e.target.value.replace(
+                                  /\D/g,
+                                  "",
+                                );
+                                const value = parseInt(onlyDigits, 10);
+
+                                if (isNaN(value) || value <= 0) {
+                                  setEditWillMembers((prev) =>
+                                    prev.map((x, i) =>
+                                      i === absIdx ? { ...x, power: 1 } : x,
+                                    ),
+                                  );
+                                  setEditPowerDraftByIndex((prev) => ({
+                                    ...prev,
+                                    [absIdx]: "1",
+                                  }));
+                                } else if (value > 100) {
+                                  setEditWillMembers((prev) =>
+                                    prev.map((x, i) =>
+                                      i === absIdx ? { ...x, power: 100 } : x,
+                                    ),
+                                  );
+                                  setEditPowerDraftByIndex((prev) => ({
+                                    ...prev,
+                                    [absIdx]: "100",
+                                  }));
+                                } else {
+                                  setEditWillMembers((prev) =>
+                                    prev.map((x, i) =>
+                                      i === absIdx
+                                        ? { ...x, power: value }
+                                        : x,
+                                    ),
+                                  );
+                                  setEditPowerDraftByIndex((prev) => ({
+                                    ...prev,
+                                    [absIdx]: String(value),
+                                  }));
+                                }
+                              }}
+                              placeholder="Power"
                               className="w-16 px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-center text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                             />
                             <button
@@ -4394,9 +5012,7 @@ export default function WillsPage() {
                                   );
                                   return;
                                 }
-                                setEditWillMembers((prev) =>
-                                  prev.filter((_, i) => i !== absIdx),
-                                );
+                                removeEditWillMemberAtIndex(absIdx);
                                 setEditWillError(null);
                               }}
                               className="p-1 text-red-400 hover:bg-red-500/10 rounded transition-colors flex-shrink-0"
@@ -4445,6 +5061,217 @@ export default function WillsPage() {
                             key={absIdx}
                             className="bg-[var(--bg-section)]/40 border border-[var(--accent)]/30 rounded-lg px-3 py-3 space-y-2"
                           >
+                            {(() => {
+                              const isAlreadyAddedUnchanged =
+                                editAddedContactFingerprintByIndex[absIdx] !==
+                                  undefined &&
+                                editAddedContactFingerprintByIndex[absIdx] ===
+                                  getEditContactFingerprint(m);
+                              const isMatchingContactList =
+                                editMemberMatchesExistingContact(m);
+                              const addToContactsDisabledReason =
+                                isMatchingContactList
+                                  ? "Contact already exists in contacts' list"
+                                  : isAlreadyAddedUnchanged
+                                    ? "Contact already added in contacts' list"
+                                    : null;
+
+                              return (
+                                <>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <div className="relative group hover:z-20">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          contacts &&
+                                          contacts.length > 0 &&
+                                          setShowEditContactDropdown(
+                                            showEditContactDropdown === absIdx
+                                              ? null
+                                              : absIdx,
+                                          )
+                                        }
+                                        disabled={!contacts || contacts.length === 0}
+                                        className={`px-3 py-1 text-xs font-medium rounded transition-colors flex items-center gap-1 ${
+                                          !contacts || contacts.length === 0
+                                            ? "text-[var(--text-muted-alt)] border border-[var(--border-section)] cursor-not-allowed opacity-50"
+                                            : "text-[var(--accent)] border border-[var(--accent)] hover:bg-[var(--accent)]/10"
+                                        }`}
+                                      >
+                                        Contact's List
+                                        <svg
+                                          className="w-3 h-3"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M12 4v16m8-8H4"
+                                          />
+                                        </svg>
+                                      </button>
+                                      {(!contacts || contacts.length === 0) && (
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                          You have no contacts
+                                          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div
+                                      className="relative"
+                                      onMouseEnter={(e) => {
+                                        if (!addToContactsDisabledReason) return;
+                                        const rect =
+                                          e.currentTarget.getBoundingClientRect();
+                                        setAddContactTooltip({
+                                          index: absIdx,
+                                          top: rect.top - 8,
+                                          left: rect.left + rect.width / 2,
+                                          message: addToContactsDisabledReason,
+                                        });
+                                      }}
+                                      onMouseLeave={() => {
+                                        setAddContactTooltip((prev) =>
+                                          prev?.index === absIdx ? null : prev,
+                                        );
+                                      }}
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleAddToContactsFromEdit(absIdx)
+                                        }
+                                        disabled={
+                                          editAddingToContacts?.index === absIdx ||
+                                          !editCanAddToContacts[absIdx] ||
+                                          isMatchingContactList ||
+                                          isAlreadyAddedUnchanged
+                                        }
+                                        className={`px-3 py-1 text-xs font-medium rounded transition-colors flex items-center gap-1 ${
+                                          editCanAddToContacts[absIdx] &&
+                                          !isMatchingContactList &&
+                                          !isAlreadyAddedUnchanged
+                                            ? "text-blue-500 border border-blue-500 hover:bg-blue-500/10"
+                                            : "text-gray-400 border border-gray-400 cursor-not-allowed opacity-50"
+                                        }`}
+                                      >
+                                        {editAddingToContacts?.index ===
+                                        absIdx ? (
+                                          <>
+                                            Adding...
+                                            <svg
+                                              className="animate-spin w-3 h-3"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <circle
+                                                className="opacity-25"
+                                                cx="12"
+                                                cy="12"
+                                                r="10"
+                                                stroke="currentColor"
+                                                strokeWidth="4"
+                                                fill="none"
+                                              />
+                                              <path
+                                                className="opacity-75"
+                                                fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                              />
+                                            </svg>
+                                          </>
+                                        ) : (
+                                          <>
+                                            Add to Contacts
+                                            <svg
+                                              className="w-3 h-3"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                                              />
+                                            </svg>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {editContactSuccessByIndex[absIdx] && (
+                                    <div className="px-3 py-2 bg-green-500/10 border border-green-500/50 rounded-md text-green-500 text-xs">
+                                      {editContactSuccessByIndex[absIdx]}
+                                    </div>
+                                  )}
+
+                                  {showEditContactDropdown === absIdx &&
+                                    contacts &&
+                                    contacts.length > 0 && (
+                                      <div className="max-h-40 overflow-y-auto border border-[var(--border-section)] rounded-lg bg-[var(--bg-card)]">
+                                        {contacts
+                                          .filter((contact) => {
+                                            const usedAddresses = editWillMembers
+                                              .map((x, i) =>
+                                                i !== absIdx
+                                                  ? x.address.toLowerCase()
+                                                  : null,
+                                              )
+                                              .filter(Boolean) as string[];
+                                            return !usedAddresses.includes(
+                                              contact.walletAddress.toLowerCase(),
+                                            );
+                                          })
+                                          .map((contact) => (
+                                            <button
+                                              key={contact.contactId}
+                                              type="button"
+                                              onClick={() =>
+                                                selectContactForEditMember(
+                                                  absIdx,
+                                                  contact,
+                                                )
+                                              }
+                                              className="w-full px-3 py-2 text-left hover:bg-[var(--bg-section)] transition-colors border-b border-[var(--border-section)] last:border-b-0"
+                                            >
+                                              <div className="text-sm font-medium text-[var(--text-primary)]">
+                                                {contact.firstName}{" "}
+                                                {contact.lastName}
+                                              </div>
+                                              <div className="text-xs text-[var(--text-muted-alt)] font-mono inline-flex items-center gap-1">
+                                                <svg
+                                                  className="w-3 h-3"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  strokeWidth={2}
+                                                  viewBox="0 0 24 24"
+                                                >
+                                                  <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                                                  />
+                                                  <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M15 12h3"
+                                                  />
+                                                </svg>
+                                                <span>{contact.walletAddress}</span>
+                                              </div>
+                                            </button>
+                                          ))}
+                                      </div>
+                                    )}
+                                </>
+                              );
+                            })()}
                             <div className="grid grid-cols-2 gap-2">
                               <input
                                 type="text"
@@ -4528,16 +5355,49 @@ export default function WillsPage() {
                                 }}
                                 className="flex-1 min-w-0 px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                               />
-                              <label className="text-xs text-[var(--text-muted-alt)] flex-shrink-0">
-                                Power
+                              <label className="text-xs text-[var(--text-muted-alt)] flex-shrink-0 inline-flex items-center gap-1">
+                                <span>Power</span>
+                                <span
+                                  aria-label="What is voting power?"
+                                  className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[var(--border-section)] text-[10px] text-[var(--text-muted-alt)] cursor-help"
+                                  onMouseEnter={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    setPowerInfoTooltip({
+                                      index: absIdx,
+                                      top: rect.top - 8,
+                                      left: rect.left + rect.width / 2,
+                                    });
+                                  }}
+                                  onMouseLeave={() => {
+                                    setPowerInfoTooltip((prev) =>
+                                      prev?.index === absIdx ? null : prev,
+                                    );
+                                  }}
+                                >
+                                  ?
+                                </span>
                               </label>
                               <input
-                                type="number"
-                                min="1"
-                                max="100"
-                                value={m.power}
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                maxLength={3}
+                                value={
+                                  editPowerDraftByIndex[absIdx] ?? String(m.power)
+                                }
                                 onChange={(e) => {
-                                  const v = parseInt(e.target.value) || 1;
+                                  const onlyDigits = e.target.value
+                                    .replace(/\D/g, "")
+                                    .slice(0, 3);
+
+                                  setEditPowerDraftByIndex((prev) => ({
+                                    ...prev,
+                                    [absIdx]: onlyDigits,
+                                  }));
+
+                                  if (onlyDigits === "") return;
+
+                                  const v = parseInt(onlyDigits, 10) || 1;
                                   setEditWillMembers((prev) =>
                                     prev.map((x, i) =>
                                       i === absIdx ? { ...x, power: v } : x,
@@ -4545,13 +5405,55 @@ export default function WillsPage() {
                                   );
                                   setEditWillError(null);
                                 }}
+                                onBlur={(e) => {
+                                  const onlyDigits = e.target.value.replace(
+                                    /\D/g,
+                                    "",
+                                  );
+                                  const value = parseInt(onlyDigits, 10);
+
+                                  if (isNaN(value) || value <= 0) {
+                                    setEditWillMembers((prev) =>
+                                      prev.map((x, i) =>
+                                        i === absIdx ? { ...x, power: 1 } : x,
+                                      ),
+                                    );
+                                    setEditPowerDraftByIndex((prev) => ({
+                                      ...prev,
+                                      [absIdx]: "1",
+                                    }));
+                                  } else if (value > 100) {
+                                    setEditWillMembers((prev) =>
+                                      prev.map((x, i) =>
+                                        i === absIdx
+                                          ? { ...x, power: 100 }
+                                          : x,
+                                      ),
+                                    );
+                                    setEditPowerDraftByIndex((prev) => ({
+                                      ...prev,
+                                      [absIdx]: "100",
+                                    }));
+                                  } else {
+                                    setEditWillMembers((prev) =>
+                                      prev.map((x, i) =>
+                                        i === absIdx
+                                          ? { ...x, power: value }
+                                          : x,
+                                      ),
+                                    );
+                                    setEditPowerDraftByIndex((prev) => ({
+                                      ...prev,
+                                      [absIdx]: String(value),
+                                    }));
+                                  }
+                                }}
+                                placeholder="Power"
                                 className="w-16 px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-center text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                               />
                               <button
                                 onClick={() => {
-                                  setEditWillMembers((prev) =>
-                                    prev.filter((_, i) => i !== absIdx),
-                                  );
+                                  removeEditWillMemberAtIndex(absIdx);
                                   setEditWillError(null);
                                 }}
                                 className="p-1 text-red-400 hover:bg-red-500/10 rounded transition-colors flex-shrink-0"
@@ -4594,6 +5496,7 @@ export default function WillsPage() {
                 }
                 className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-[var(--accent)] border border-[var(--accent)] rounded-lg hover:bg-[var(--accent)]/10 transition-colors w-full justify-center"
               >
+                Add Member
                 <svg
                   className="w-4 h-4"
                   fill="none"
@@ -4607,7 +5510,6 @@ export default function WillsPage() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Add Member
               </button>
 
               {(() => {
@@ -4648,7 +5550,7 @@ export default function WillsPage() {
                         key={m.secondaryMemberId}
                         className="text-[var(--text-muted-alt)]"
                       >
-                        âœï¸ Info updated: {m.firstName} {m.lastName}
+                        Info updated: {m.firstName} {m.lastName}
                       </p>
                     ))}
                     {diffs.updatedSmList.map((m) => (
@@ -4656,25 +5558,23 @@ export default function WillsPage() {
                         key={m.smAddress}
                         className="text-[var(--text-muted-alt)]"
                       >
-                        ðŸ”‘ Power updated: {m.smAddress.slice(0, 8)}â€¦ â†’{" "}
-                        {m.votePower}
+                        Power updated: {m.smAddress.slice(0, 8)}... to {m.votePower}
                       </p>
                     ))}
                     {diffs.addedSmList.map((m) => (
                       <p key={m.smAddress} className="text-emerald-400">
-                        âœš Added: {m.smAddress.slice(0, 8)}â€¦ (power {m.votePower}
-                        )
+                        Added: {m.smAddress.slice(0, 8)}... (power {m.votePower})
                       </p>
                     ))}
                     {diffs.deletedSmList.map((addr) => (
                       <p key={addr} className="text-red-400">
-                        âœ• Removed: {addr.slice(0, 8)}â€¦
+                        Removed: {addr.slice(0, 8)}...
                       </p>
                     ))}
                     {diffs.periodChanged && (
                       <p className="text-[var(--text-muted-alt)]">
-                        ðŸ“… Security period: {editWillMinPeriod}â€“
-                        {editWillMaxPeriod} {config.securityPeriod.unit}
+                        Security period: {editWillMinPeriod} - {editWillMaxPeriod}{" "}
+                        {config.securityPeriod.unit}
                       </p>
                     )}
                   </div>
@@ -4684,11 +5584,29 @@ export default function WillsPage() {
 
             <div className="flex gap-2 px-6 py-4 border-t border-[var(--border-section)] flex-shrink-0">
               <button
-                onClick={() => setEditWillModal(null)}
+                onClick={() => {
+                  setEditWillModal(null);
+                  setEditPowerDraftByIndex({});
+                }}
                 disabled={isUpdatingWill}
-                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors"
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors inline-flex items-center justify-center gap-2"
               >
                 Cancel
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#FFFFFF"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="15" y1="9" x2="9" y2="15"></line>
+                  <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
               </button>
               <button
                 onClick={handleUpdateWill}
@@ -4698,10 +5616,26 @@ export default function WillsPage() {
                 {isUpdatingWill ? (
                   <>
                     <span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />{" "}
-                    Updatingâ€¦
+                    Updating...
                   </>
                 ) : (
-                  "Update Will"
+                  <>
+                    Update Will
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#FFFFFF"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                  </>
                 )}
               </button>
             </div>
