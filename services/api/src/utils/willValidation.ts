@@ -138,10 +138,14 @@ export function validateDraftForm(data: {
       // If any field is filled, require essential fields
       if (!member.firstName?.trim()) {
         errors.push(`Member ${i + 1}: First name is required`);
+      } else if (member.firstName.length > 30) {
+        errors.push(`Member ${i + 1}: First name must not exceed 30 characters`);
       }
 
       if (!member.lastName?.trim()) {
         errors.push(`Member ${i + 1}: Last name is required`);
+      } else if (member.lastName.length > 30) {
+        errors.push(`Member ${i + 1}: Last name must not exceed 30 characters`);
       }
 
       if (!member.email?.trim()) {

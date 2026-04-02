@@ -2523,6 +2523,7 @@ export default function WillsPage() {
                                   );
                                 }}
                                 placeholder="First Name *"
+                                maxLength={30}
                                 className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                               />
                               <input
@@ -2537,6 +2538,7 @@ export default function WillsPage() {
                                   );
                                 }}
                                 placeholder="Last Name *"
+                                maxLength={30}
                                 className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                               />
                             </div>
@@ -4972,6 +4974,7 @@ export default function WillsPage() {
                               type="text"
                               value={m.firstName}
                               placeholder="First name"
+                              maxLength={30}
                               onChange={(e) => {
                                 setEditWillMembers((prev) =>
                                   prev.map((x, i) =>
@@ -4988,6 +4991,7 @@ export default function WillsPage() {
                               type="text"
                               value={m.lastName}
                               placeholder="Last name"
+                              maxLength={30}
                               onChange={(e) => {
                                 setEditWillMembers((prev) =>
                                   prev.map((x, i) =>
@@ -5443,6 +5447,7 @@ export default function WillsPage() {
                                 type="text"
                                 value={m.firstName}
                                 placeholder="First name"
+                                maxLength={30}
                                 onChange={(e) => {
                                   setEditWillMembers((prev) =>
                                     prev.map((x, i) =>
@@ -5459,6 +5464,7 @@ export default function WillsPage() {
                                 type="text"
                                 value={m.lastName}
                                 placeholder="Last name"
+                                maxLength={30}
                                 onChange={(e) => {
                                   setEditWillMembers((prev) =>
                                     prev.map((x, i) =>

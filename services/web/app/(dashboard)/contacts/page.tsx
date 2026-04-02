@@ -50,15 +50,15 @@ export default function ContactsPage() {
     // Prénom
     if (!formData.firstName.trim()) {
       errors.push("First name is required");
-    } else if (formData.firstName.length > 50) {
-      errors.push("First name must be less than 50 characters");
+    } else if (formData.firstName.length > 30) {
+      errors.push("First name must not exceed 30 characters");
     }
 
     // Nom
     if (!formData.lastName.trim()) {
       errors.push("Last name is required");
-    } else if (formData.lastName.length > 50) {
-      errors.push("Last name must be less than 50 characters");
+    } else if (formData.lastName.length > 30) {
+      errors.push("Last name must not exceed 30 characters");
     }
 
     // Email
@@ -380,6 +380,7 @@ export default function ContactsPage() {
                         value={formData.firstName}
                         onChange={handleInputChange}
                         required
+                        maxLength={30}
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
                         placeholder="John"
                       />
@@ -399,6 +400,7 @@ export default function ContactsPage() {
                         value={formData.lastName}
                         onChange={handleInputChange}
                         required
+                        maxLength={30}
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
                         placeholder="Doe"
                       />
