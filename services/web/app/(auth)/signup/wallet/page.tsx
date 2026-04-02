@@ -175,6 +175,7 @@ function WalletSignupContent() {
                 type="email"
                 autoComplete="email"
                 required
+                maxLength={254}
                 className="appearance-none relative block w-full px-4 py-3 border border-[var(--border-section)] bg-[var(--bg-section)] placeholder-[var(--text-muted)] text-[var(--text-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent sm:text-sm"
                 placeholder="Enter your email"
                 value={formData.email}

@@ -75,5 +75,10 @@ export function validateSignIn(
     throw new BadRequestError("Invalid email format");
   }
 
+  // Validate email length (RFC 5321)
+  if (email.length > 254) {
+    throw new BadRequestError("Email address must not exceed 254 characters");
+  }
+
   next();
 }

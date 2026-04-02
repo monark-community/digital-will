@@ -80,6 +80,10 @@ export async function createContact(data: {
         throw new BadRequestError("Invalid email format");
     }
 
+    if (data.email.length > 254) {
+        throw new BadRequestError("Email address must not exceed 254 characters");
+    }
+
     if (data.phoneNumber && !REGEX.PHONE.test(data.phoneNumber)) {
         throw new BadRequestError("Invalid phone number format");
     }
@@ -130,6 +134,9 @@ export async function updateContact(data: {
     if (updateFields.email) {
         if (!REGEX.EMAIL.test(updateFields.email)) {
             throw new BadRequestError("Invalid email format");
+        }
+        if (updateFields.email.length > 254) {
+            throw new BadRequestError("Email address must not exceed 254 characters");
         }
         updateData.email = updateFields.email;
     }

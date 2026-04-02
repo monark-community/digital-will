@@ -2546,10 +2546,11 @@ export default function WillsPage() {
                                 type="email"
                                 value={member.email}
                                 onChange={(e) => {
-                                  const value = e.target.value.slice(0, 50);
+                                  const value = e.target.value.slice(0, 254);
                                   updateSecondaryMember(index, "email", value);
                                 }}
                                 placeholder="Email *"
+                                maxLength={254}
                                 className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                               />
                               <input
@@ -5003,6 +5004,7 @@ export default function WillsPage() {
                               type="email"
                               value={m.email}
                               placeholder="Email"
+                              maxLength={254}
                               onChange={(e) => {
                                 setEditWillMembers((prev) =>
                                   prev.map((x, i) =>
@@ -5473,6 +5475,7 @@ export default function WillsPage() {
                                 type="email"
                                 value={m.email}
                                 placeholder="Email"
+                                maxLength={254}
                                 onChange={(e) => {
                                   setEditWillMembers((prev) =>
                                     prev.map((x, i) =>

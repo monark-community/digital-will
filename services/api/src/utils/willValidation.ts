@@ -151,6 +151,9 @@ export function validateDraftForm(data: {
         if (!emailRegex.test(member.email)) {
           errors.push(`Member ${i + 1}: Invalid email format`);
         }
+        if (member.email.length > 254) {
+          errors.push(`Member ${i + 1}: Email address must not exceed 254 characters`);
+        }
       }
 
       if (member.phoneNumber && member.phoneNumber.trim()) {

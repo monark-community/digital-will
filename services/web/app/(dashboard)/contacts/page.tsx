@@ -69,6 +69,9 @@ export default function ContactsPage() {
       if (!emailRegex.test(formData.email)) {
         errors.push("Please enter a valid email address");
       }
+      if (formData.email.length > 254) {
+        errors.push("Email address must not exceed 254 characters");
+      }
     }
 
     // Wallet Address
@@ -416,6 +419,7 @@ export default function ContactsPage() {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
+                      maxLength={254}
                       className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
                       placeholder="john.doe@example.com"
                     />
