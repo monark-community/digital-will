@@ -16,8 +16,8 @@ export async function ensureWillFactoryExists(
   const chainId_parsed = parseInt(chainId);
   const blockDeployed_parsed = parseInt(blockDeployed);
 
-  const existing = await prisma.willFactory.findUnique({
-    where: { chainId: chainId_parsed },
+  const existing = await prisma.willFactory.findFirst({
+    where: { chainId: chainId_parsed, contractAddressInBlockchain },
   });
 
   if (existing) {
@@ -26,8 +26,14 @@ export async function ensureWillFactoryExists(
     return existing.lastProcessedCursor || undefined;
   }
 
-  await prisma.willFactory.create({
-    data: {
+  await prisma.willFactory.upsert({
+    where: { chainId: chainId_parsed },
+    update: {
+      contractAddressInBlockchain,
+      blockDeployed: blockDeployed_parsed,
+      lastProcessedCursor: "",
+    },
+    create: {
       contractAddressInBlockchain,
       chainId: chainId_parsed,
       blockDeployed: blockDeployed_parsed,
@@ -36,7 +42,7 @@ export async function ensureWillFactoryExists(
   });
 
   console.log(
-    `[SubstreamsDB] Created WillFactory entry for chainId ${chainId} at ${contractAddressInBlockchain}.`,
+    `[SubstreamsDB] Upserted WillFactory entry for chainId ${chainId} at ${contractAddressInBlockchain}.`,
   );
   return undefined;
 }
