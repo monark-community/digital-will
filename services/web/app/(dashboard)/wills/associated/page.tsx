@@ -118,6 +118,7 @@ const STATE_COLORS: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-700",
   INACTIVE: "bg-yellow-100 text-yellow-700",
   ACTIVE: "bg-green-100 text-green-700",
+  EXECUTABLE: "bg-purple-100 text-purple-700",
   CANCELED: "bg-red-100 text-red-700",
   EXECUTED: "bg-blue-100 text-blue-700",
 };
@@ -144,6 +145,8 @@ export default function AssociatedWillsPage() {
   const { data: wallets } = useWallets();
   const filterWalletDropdownRef = useRef<HTMLDivElement>(null);
 
+  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
+
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [wills, setWills] = useState<AssociatedWill[]>([]);
@@ -168,6 +171,13 @@ export default function AssociatedWillsPage() {
   const [actionSuccess, setActionSuccess] = useState<
     Record<string, string | null>
   >({});
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setNowSec(Math.floor(Date.now() / 1000));
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -505,11 +515,21 @@ export default function AssociatedWillsPage() {
                         {will.willId}
                       </p>
                     </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${STATE_COLORS[will.state] ?? "bg-gray-100 text-gray-700"}`}
-                    >
-                      {will.state}
-                    </span>
+                    {(() => {
+                      const execTs = will.executionTimestampOnChain ?? 0;
+                      const badgeState =
+                        will.state === "ACTIVE" && execTs > 0 && nowSec >= execTs
+                          ? "EXECUTABLE"
+                          : will.state;
+
+                      return (
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${STATE_COLORS[badgeState] ?? "bg-gray-100 text-gray-700"}`}
+                        >
+                          {badgeState}
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">

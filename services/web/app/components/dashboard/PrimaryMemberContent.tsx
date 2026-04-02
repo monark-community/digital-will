@@ -269,7 +269,7 @@ export default function PrimaryMemberContent() {
               <div className="text-center py-8">
                 <div className="border border-[var(--border-section)] rounded-lg p-6 bg-[var(--bg-section)]/30">
                   <p className="text-[var(--text-muted-alt)]">
-                    No wills created yet
+                    No wills deployed yet
                   </p>
                 </div>
               </div>

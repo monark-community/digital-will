@@ -18,11 +18,12 @@ export default function WalletsPage() {
   const [labelValue, setLabelValue] = useState("");
   const [walletToDelete, setWalletToDelete] = useState<Wallet | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
-  const [deletedWalletToast, setDeletedWalletToast] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleAddWallet = async () => {
     try {
       setErrorMessage(null);
+      setSuccessMessage(null);
 
       if (!isMetaMaskInstalled()) {
         setErrorMessage("MetaMask is not installed. Please install MetaMask to continue.");
@@ -34,7 +35,13 @@ export default function WalletsPage() {
       addWallet(
         { walletAddress: address, signature, message },
         {
+          onSuccess: () => {
+            setErrorMessage(null);
+            setSuccessMessage("Wallet added successfully!");
+            setTimeout(() => setSuccessMessage(null), 3000);
+          },
           onError: (error: any) => {
+            setSuccessMessage(null);
             const msg = error?.response?.data?.message || "Failed to add wallet";
             setErrorMessage(msg);
           },
@@ -59,9 +66,10 @@ export default function WalletsPage() {
 
     removeWallet(walletToDelete.walletId, {
       onSuccess: () => {
-        setDeletedWalletToast(walletToDelete.label || walletToDelete.address);
+        setErrorMessage(null);
+        setSuccessMessage("Wallet removed successfully!");
         setWalletToDelete(null);
-        setTimeout(() => setDeletedWalletToast(null), 3000);
+        setTimeout(() => setSuccessMessage(null), 3000);
       },
       onError: (error: any) => {
         const msg = error?.response?.data?.message || "Failed to remove wallet";
@@ -135,13 +143,6 @@ export default function WalletsPage() {
   return (
     <>
       <Header isAuthenticated={true} user={user} />
-      {deletedWalletToast && (
-        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-50">
-          <div className="bg-emerald-500/20 border border-emerald-500/30 px-6 py-4 rounded-lg text-emerald-400 font-semibold backdrop-blur-sm">
-            ✓ Wallet successfully deleted
-          </div>
-        </div>
-      )}
       <div className="min-h-screen bg-[var(--bg-page)] py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
         <div className="mb-8">
@@ -157,16 +158,22 @@ export default function WalletsPage() {
           </div>
         )}
 
+        {successMessage && (
+          <div className="mb-6 rounded-md bg-green-500/10 border border-green-500/20 p-4">
+            <p className="text-sm text-green-400">{successMessage}</p>
+          </div>
+        )}
+
         <div className="mb-6">
           <button
             onClick={handleAddWallet}
             disabled={isAdding}
             className="flex items-center space-x-2 bg-[var(--accent)] hover:opacity-90 text-white px-6 py-3 rounded-lg font-semibold transition-opacity disabled:opacity-50"
           >
+            <span>{isAdding ? "Adding..." : "Add Wallet"}</span>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <span>{isAdding ? "Adding..." : "Add Wallet"}</span>
           </button>
         </div>
 

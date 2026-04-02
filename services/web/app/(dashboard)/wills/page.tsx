@@ -31,6 +31,7 @@ const WILL_STATE_COLORS: Record<string, string> = {
   DRAFT: "bg-gray-500/20 text-gray-400",
   INACTIVE: "bg-yellow-500/20 text-yellow-400",
   ACTIVE: "bg-emerald-500/20 text-emerald-400",
+  EXECUTABLE: "bg-purple-500/20 text-purple-400",
   CANCELED: "bg-red-500/20 text-red-400",
   EXECUTED: "bg-blue-500/20 text-blue-400",
 };
@@ -83,6 +84,7 @@ export default function WillsPage() {
   const { data: user } = useCurrentUser();
   const { data: wallets } = useWallets();
   const { data: contacts } = useContacts();
+  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
   const [showCreateForm, setShowCreateForm] = useState(false);
   const walletDropdownRef = useRef<HTMLDivElement>(null);
   const filterWalletDropdownRef = useRef<HTMLDivElement>(null);
@@ -125,7 +127,7 @@ export default function WillsPage() {
     (config.isLocalOrDev ? 1 : 28).toString(),
   );
   const [maxSecurityPeriod, setMaxSecurityPeriod] = useState(
-    (config.isLocalOrDev ? 10000 : 154).toString(),
+    (config.isLocalOrDev ? 166 : 154).toString(),
   );
   const [showWalletDropdown, setShowWalletDropdown] = useState(false);
   const [showContactDropdown, setShowContactDropdown] = useState<number | null>(
@@ -246,6 +248,13 @@ export default function WillsPage() {
   const [highlightedWillId, setHighlightedWillId] = useState<string | null>(
     null,
   );
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setNowSec(Math.floor(Date.now() / 1000));
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const clearOpenCreateParam = useCallback(() => {
     if (!searchParams.has("openCreate")) return;
@@ -1701,7 +1710,7 @@ export default function WillsPage() {
       },
     ]);
     setMinSecurityPeriod((config.isLocalOrDev ? 1 : 28).toString());
-    setMaxSecurityPeriod((config.isLocalOrDev ? 10000 : 154).toString());
+    setMaxSecurityPeriod((config.isLocalOrDev ? 166 : 154).toString());
     setShowCreateForm(false);
     setShowWalletDropdown(false);
     setShowContactDropdown(null);
@@ -2665,7 +2674,7 @@ export default function WillsPage() {
                         }}
                         onBlur={(e) => {
                           const minLimit = config.isLocalOrDev ? 1 : 28;
-                          const maxLimit = config.isLocalOrDev ? 10000 : 154;
+                          const maxLimit = config.isLocalOrDev ? 166 : 154;
 
                           const rawMin = parseInt(e.target.value);
                           const safeMin = Number.isFinite(rawMin)
@@ -2739,7 +2748,7 @@ export default function WillsPage() {
                         }}
                         onBlur={(e) => {
                           const minLimit = config.isLocalOrDev ? 1 : 28;
-                          const maxLimit = config.isLocalOrDev ? 10000 : 154;
+                          const maxLimit = config.isLocalOrDev ? 166 : 154;
 
                           const rawMin = parseInt(minSecurityPeriod);
                           const safeMin = Number.isFinite(rawMin)
@@ -2766,7 +2775,7 @@ export default function WillsPage() {
                           }
                           setMaxSecurityPeriod(finalMax.toString());
                         }}
-                        placeholder={`e.g., ${config.isLocalOrDev ? 10000 : 154}`}
+                        placeholder={`e.g., ${config.isLocalOrDev ? 166 : 154}`}
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                       />
                     </div>
@@ -2887,11 +2896,21 @@ export default function WillsPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold ${WILL_STATE_COLORS[will.state] ?? "bg-gray-500/20 text-gray-400"}`}
-                        >
-                          {will.state}
-                        </span>
+                        {(() => {
+                          const execTs = will.executionTimestampOnChain ?? 0;
+                          const badgeState =
+                            will.state === "ACTIVE" && execTs > 0 && nowSec >= execTs
+                              ? "EXECUTABLE"
+                              : will.state;
+
+                          return (
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-semibold ${WILL_STATE_COLORS[badgeState] ?? "bg-gray-500/20 text-gray-400"}`}
+                            >
+                              {badgeState}
+                            </span>
+                          );
+                        })()}
                         {will.state === "DRAFT" && (
                           <button
                             onClick={() =>
@@ -4459,7 +4478,7 @@ export default function WillsPage() {
                       }}
                       onBlur={(e) => {
                         const fallbackMin = config.isLocalOrDev ? 1 : 28;
-                        const fallbackMax = config.isLocalOrDev ? 10000 : 154;
+                        const fallbackMax = config.isLocalOrDev ? 166 : 154;
                         const minLimit = Number.isFinite(
                           Number(config.securityPeriod.min)
                         )
@@ -4531,7 +4550,7 @@ export default function WillsPage() {
                       }}
                       onBlur={(e) => {
                         const fallbackMin = config.isLocalOrDev ? 1 : 28;
-                        const fallbackMax = config.isLocalOrDev ? 10000 : 154;
+                        const fallbackMax = config.isLocalOrDev ? 166 : 154;
                         const minLimit = Number.isFinite(
                           Number(config.securityPeriod.min)
                         )
