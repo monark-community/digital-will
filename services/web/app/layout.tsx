@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
@@ -12,7 +13,8 @@ export const metadata: Metadata = {
     template: "%s | WillChain",
     default: "WillChain",
   },
-  description: "WillChain - Digital estate planning secured by blockchain technology",
+  description:
+    "WillChain - Digital estate planning secured by blockchain technology",
 };
 
 export default function RootLayout({
@@ -31,7 +33,9 @@ export default function RootLayout({
           }}
         />
         <Providers>
-          <main className="flex-1">{children}</main>
+          <Suspense>
+            <main className="flex-1">{children}</main>
+          </Suspense>
           <Footer />
         </Providers>
       </body>
