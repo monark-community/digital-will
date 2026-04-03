@@ -192,7 +192,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
                 <div className="relative">
                   <button
                     onClick={() => setIsNotifOpen((prev) => !prev)}
-                    className="relative text-[var(--text-primary)] hover:text-[var(--accent)] p-2 rounded-lg transition-colors"
+                    className="relative text-[var(--text-primary)] hover:text-[var(--accent)] hover:bg-[var(--bg-card)] active:scale-95 p-2 rounded-lg transition-all cursor-pointer"
                     aria-label="Notifications"
                   >
                     <svg
@@ -230,7 +230,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="flex items-center space-x-2 text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                    className="flex items-center space-x-2 text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--bg-card)] active:scale-95 p-2 rounded-lg transition-all cursor-pointer"
                   >
                     <div className="w-10 h-10 bg-[var(--accent)] rounded-full flex items-center justify-center">
                       <span className="text-white text-sm font-bold">

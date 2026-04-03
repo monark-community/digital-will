@@ -424,7 +424,7 @@ export default function AssociatedWillsPage() {
               onClick={() =>
                 setShowFilterWalletDropdown(!showFilterWalletDropdown)
               }
-              className="w-full bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-between hover:border-[var(--accent)] transition-colors"
+              className="w-full bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-between hover:border-[var(--accent)] transition-all cursor-pointer active:scale-[0.99]"
             >
               <div className="flex-1 text-left">
                 <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">

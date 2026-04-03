@@ -1849,7 +1849,7 @@ export default function WillsPage() {
           <div className="mb-6">
             <button
               onClick={() => setShowCreateForm(true)}
-              className="flex items-center space-x-2 bg-[var(--accent)] hover:opacity-90 text-white px-6 py-3 rounded-lg font-semibold transition-opacity"
+              className="flex items-center space-x-2 bg-[var(--accent)] hover:opacity-90 text-white px-6 py-3 rounded-lg font-semibold transition-all cursor-pointer active:scale-[0.97]"
             >
               <span>Create Will</span>
               <svg
@@ -1873,7 +1873,7 @@ export default function WillsPage() {
               onClick={() =>
                 setShowFilterWalletDropdown(!showFilterWalletDropdown)
               }
-              className="w-full bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-between hover:border-[var(--accent)] transition-colors"
+              className="w-full bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-between hover:border-[var(--accent)] transition-all cursor-pointer active:scale-[0.99]"
             >
               <div className="flex items-center gap-3 flex-1">
                 <div className="w-10 h-10 rounded-full bg-[var(--bg-section)] border border-[var(--border-section)] flex items-center justify-center flex-shrink-0">
@@ -2105,7 +2105,7 @@ export default function WillsPage() {
                         onClick={() =>
                           setShowWalletDropdown(!showWalletDropdown)
                         }
-                        className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-left text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] flex items-center justify-between"
+                        className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-left text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] flex items-center justify-between cursor-pointer hover:border-[var(--accent)] transition-all active:scale-[0.99]"
                       >
                         <div className="flex-1 min-w-0">
                           {selectedWallet ? (
@@ -3502,7 +3502,7 @@ export default function WillsPage() {
                       {will.state === "DRAFT" ? (
                         <button
                           onClick={() => handleEditDraft(will)}
-                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors inline-flex items-center justify-center gap-1.5"
+                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-all cursor-pointer active:scale-[0.97] inline-flex items-center justify-center gap-1.5"
                         >
                           <span>Edit Will</span>
                           <svg
@@ -3522,7 +3522,7 @@ export default function WillsPage() {
                         will.state !== "EXECUTED" ? (
                         <button
                           onClick={() => handleOpenEditWill(will)}
-                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors inline-flex items-center justify-center gap-1.5"
+                          className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-all cursor-pointer active:scale-[0.97] inline-flex items-center justify-center gap-1.5"
                         >
                           <span>Edit Will</span>
                           <svg
@@ -3552,7 +3552,7 @@ export default function WillsPage() {
                               });
                               setCancelError(null);
                             }}
-                            className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors inline-flex items-center justify-center gap-1.5"
+                            className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-all cursor-pointer active:scale-[0.97] inline-flex items-center justify-center gap-1.5"
                           >
                             <span>Cancel Will</span>
                             <svg
@@ -3589,9 +3589,9 @@ export default function WillsPage() {
                                 setVetoError(null))
                               }
                               disabled={!canVeto}
-                              className={`w-full px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                              className={`w-full px-3 py-2 text-xs font-medium rounded-lg border transition-all ${
                                 canVeto
-                                  ? "border-orange-500/50 text-orange-400 hover:bg-orange-500/10"
+                                  ? "border-orange-500/50 text-orange-400 hover:bg-orange-500/10 cursor-pointer active:scale-[0.97]"
                                   : "border-[var(--border-section)] text-[var(--text-muted-alt)] opacity-40 cursor-not-allowed"
                               } inline-flex items-center justify-center gap-1.5`}
                             >
@@ -4082,7 +4082,7 @@ export default function WillsPage() {
             </p>
 
             <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 py-3 mb-5 text-xs text-orange-300">
-              ⚠  The security period countdown will be reset. SMs will need to
+              ⚠ The security period countdown will be reset. SMs will need to
               re-declare death to restart it.
             </div>
 
@@ -5020,7 +5020,7 @@ export default function WillsPage() {
                               {addrChanged && (
                                 <div className="absolute right-2 top-1/2 -translate-y-1/2 group">
                                   <span className="text-amber-400 text-xs">
-                                    ⚠ 
+                                    ⚠
                                   </span>
                                   <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
                                     Address changed - will require blockchain

@@ -105,7 +105,7 @@ export default function PrimaryMemberContent() {
         <div className="mb-8 relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="w-full bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-between hover:border-[var(--accent)] transition-colors"
+            className="w-full bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-between hover:border-[var(--accent)] transition-all cursor-pointer active:scale-[0.99]"
           >
             <div className="flex items-center gap-3 flex-1">
               <div className="w-10 h-10 rounded-full bg-[var(--bg-section)] border border-[var(--border-section)] flex items-center justify-center flex-shrink-0">
@@ -288,19 +288,35 @@ export default function PrimaryMemberContent() {
                         {will.contractAddressInBlockchain}
                       </p>
                     </div>
-                    <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ml-2 flex-shrink-0 ${
-                        will.state === "ACTIVE"
+                    {(() => {
+                      const execTs = will.executionTimestampOnChain ?? 0;
+                      const nowSec = Math.floor(Date.now() / 1000);
+                      const badgeState =
+                        will.state === "ACTIVE" &&
+                        execTs > 0 &&
+                        nowSec >= execTs
+                          ? "EXECUTABLE"
+                          : will.state;
+                      const badgeClass =
+                        badgeState === "ACTIVE"
                           ? "bg-emerald-500/20 text-emerald-400"
-                          : will.state === "INACTIVE"
-                            ? "bg-blue-500/20 text-blue-400"
-                            : will.state === "CANCELED"
-                              ? "bg-red-500/20 text-red-400"
-                              : "bg-gray-500/20 text-gray-400"
-                      }`}
-                    >
-                      {will.state}
-                    </span>
+                          : badgeState === "EXECUTABLE"
+                            ? "bg-purple-500/20 text-purple-400"
+                            : badgeState === "INACTIVE"
+                              ? "bg-blue-500/20 text-blue-400"
+                              : badgeState === "CANCELED"
+                                ? "bg-red-500/20 text-red-400"
+                                : badgeState === "EXECUTED"
+                                  ? "bg-blue-500/20 text-blue-400"
+                                  : "bg-gray-500/20 text-gray-400";
+                      return (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ml-2 flex-shrink-0 ${badgeClass}`}
+                        >
+                          {badgeState}
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
@@ -459,7 +475,10 @@ export default function PrimaryMemberContent() {
                                     onClick={() => {
                                       navigator.clipboard.writeText(addr);
                                       setCopiedAddress(addr);
-                                      setTimeout(() => setCopiedAddress(null), 2000);
+                                      setTimeout(
+                                        () => setCopiedAddress(null),
+                                        2000,
+                                      );
                                     }}
                                     className="p-1 hover:bg-[var(--bg-card)] rounded transition-colors"
                                   >
@@ -523,10 +542,10 @@ export default function PrimaryMemberContent() {
             <div className="text-center mt-4">
               <Link
                 href="/wills?openCreate=true"
-                className="group relative inline-flex justify-center items-center space-x-2 py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-[var(--accent)] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)] transition-opacity"
+                className="group relative inline-flex justify-center items-center space-x-2 py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-[var(--accent)] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)] transition-all cursor-pointer active:scale-[0.97]"
               >
                 <span>Create Will</span>
-                             <svg
+                <svg
                   className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"

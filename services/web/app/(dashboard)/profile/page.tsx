@@ -268,7 +268,7 @@ export default function ProfilePage() {
                   <button
                     onClick={handleToggleEmailNotifications}
                     disabled={isUpdatingPreferences}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 ${
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 cursor-pointer active:scale-[0.97] ${
                       user?.wantToReceiveMails
                         ? "bg-[var(--accent)]"
                         : "bg-gray-600"
@@ -295,7 +295,7 @@ export default function ProfilePage() {
                   <button
                     onClick={handleCheckDeleteEligibility}
                     disabled={isLoading}
-                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-opacity disabled:opacity-50 flex items-center gap-2"
+                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer active:scale-[0.97]"
                   >
                     {isLoading ? "Checking..." : "Delete Account"}
                     <svg
@@ -314,7 +314,7 @@ export default function ProfilePage() {
                   </button>
                   <button
                     onClick={() => router.push("/dashboard")}
-                    className="px-6 py-3 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg font-semibold transition-opacity flex items-center gap-2"
+                    className="px-6 py-3 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg font-semibold transition-all flex items-center gap-2 cursor-pointer active:scale-[0.97]"
                   >
                     Back to Dashboard
                     <svg
@@ -458,7 +458,7 @@ export default function ProfilePage() {
                   <button
                     onClick={handleDeleteAccount}
                     disabled={isLoading}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-all disabled:opacity-50 cursor-pointer active:scale-[0.97]"
                   >
                     {isLoading ? "Deleting..." : "Delete Account"}
                   </button>
