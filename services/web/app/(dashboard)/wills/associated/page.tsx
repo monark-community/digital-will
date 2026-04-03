@@ -821,8 +821,9 @@ export default function AssociatedWillsPage() {
                                 ) : (
                                   <>
                                     <span>
-                                      {action.id === "refuse" && will.myMembership.state === "VALIDATED"
-                                        ? "Désister"
+                                      {action.id === "refuse" &&
+                                      will.myMembership.state !== "PENDING"
+                                        ? "Desist"
                                         : action.label}
                                     </span>
                                     {action.id === "validate" && (
@@ -912,7 +913,10 @@ export default function AssociatedWillsPage() {
                               )}
                               {!isDisabled && (
                                 <p className="mt-1 text-xs text-[var(--text-muted-alt)] text-center leading-snug">
-                                  {action.description}
+                                  {action.id === "refuse" &&
+                                  will.myMembership.state !== "PENDING"
+                                    ? "Desist from the will."
+                                    : action.description}
                                 </p>
                               )}
                             </div>

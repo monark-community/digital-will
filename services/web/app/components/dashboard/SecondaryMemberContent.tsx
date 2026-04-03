@@ -303,6 +303,9 @@ function WillCard({ will, onRefresh }: WillCardProps) {
                     <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                     <span>Confirming…</span>
                   </>
+                ) : action.id === "refuse" &&
+                  will.myMembership.state !== "PENDING" ? (
+                  "Desist"
                 ) : (
                   action.label
                 )}

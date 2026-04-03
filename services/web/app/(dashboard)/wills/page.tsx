@@ -2944,9 +2944,45 @@ export default function WillsPage() {
                               </span>
                             )}
                         </div>
-                        <p className="text-xs text-[var(--text-muted-alt)] font-mono">
-                          {will.contractAddressInBlockchain}
-                        </p>
+                        <div className="flex items-center gap-1">
+                          <p className="text-xs text-[var(--text-muted-alt)] font-mono truncate max-w-xs">
+                            {will.contractAddressInBlockchain}
+                          </p>
+                          {will.contractAddressInBlockchain && (
+                            <div className="relative flex-shrink-0">
+                              <button
+                                onClick={() =>
+                                  copyToClipboard(
+                                    will.contractAddressInBlockchain!,
+                                    `pm-contract-${will.willId}`,
+                                  )
+                                }
+                                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                                title="Copy contract address"
+                              >
+                                <svg
+                                  className="w-3.5 h-3.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                  />
+                                </svg>
+                              </button>
+                              {copiedAddress ===
+                                `pm-contract-${will.willId}` && (
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                                  Copied!
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {(() => {
