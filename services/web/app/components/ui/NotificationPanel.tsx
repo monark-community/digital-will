@@ -159,23 +159,23 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  {/* Unread dot — click to toggle */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleRead(notif.id);
-                    }}
-                    className="mt-1.5 shrink-0 p-0.5 rounded-full hover:bg-[var(--border-section)] transition-colors"
-                    title={notif.read ? "Mark as unread" : "Mark as read"}
-                  >
-                    <span
-                      className={`block w-2 h-2 rounded-full transition-colors ${
-                        !notif.read
-                          ? "bg-[var(--accent)]"
-                          : "bg-[var(--text-muted-alt)]/30"
-                      }`}
-                    />
-                  </button>
+                  {/* Unread dot — click to mark as read only */}
+                  {!notif.read ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleRead(notif.id);
+                      }}
+                      className="mt-1.5 shrink-0 p-0.5 rounded-full hover:bg-[var(--border-section)] transition-colors"
+                      title="Mark as read"
+                    >
+                      <span className="block w-2 h-2 rounded-full bg-[var(--accent)]" />
+                    </button>
+                  ) : (
+                    <span className="mt-1.5 shrink-0 p-0.5">
+                      <span className="block w-2 h-2 rounded-full bg-[var(--text-muted-alt)]/30" />
+                    </span>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p
                       title={notif.title}
