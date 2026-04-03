@@ -530,15 +530,7 @@ export default function AssociatedWillsPage() {
                   }`}
                 >
                   {/* Will header */}
-                  <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-section)]">
-                    <div>
-                      <span className="text-xs text-[var(--text-muted)] font-mono">
-                        Will ID
-                      </span>
-                      <p className="font-mono text-sm text-[var(--text-primary)]">
-                        {will.willId}
-                      </p>
-                    </div>
+                  <div className="flex items-center justify-end px-6 py-4 border-b border-[var(--border-section)]">
                     {(() => {
                       const execTs = will.executionTimestampOnChain ?? 0;
                       const badgeState =
@@ -661,9 +653,42 @@ export default function AssociatedWillsPage() {
                         <span className="text-xs text-[var(--text-muted)]">
                           Contract address
                         </span>
-                        <p className="font-mono text-sm text-[var(--text-primary)] break-all">
-                          {will.contractAddressInBlockchain}
-                        </p>
+                        <div className="flex items-start gap-1">
+                          <p className="font-mono text-sm text-[var(--text-primary)] break-all">
+                            {will.contractAddressInBlockchain}
+                          </p>
+                          <div className="relative flex-shrink-0">
+                            <button
+                              onClick={() =>
+                                copyToClipboard(
+                                  will.contractAddressInBlockchain!,
+                                  `contract-${will.willId}`,
+                                )
+                              }
+                              className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                              title="Copy address"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                />
+                              </svg>
+                            </button>
+                            {copiedAddress === `contract-${will.willId}` && (
+                              <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                                Copied!
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
                     {will.chainId && (
@@ -795,7 +820,11 @@ export default function AssociatedWillsPage() {
                                   </>
                                 ) : (
                                   <>
-                                    <span>{action.label}</span>
+                                    <span>
+                                      {action.id === "refuse" && will.myMembership.state === "VALIDATED"
+                                        ? "Désister"
+                                        : action.label}
+                                    </span>
                                     {action.id === "validate" && (
                                       <svg
                                         className="w-3.5 h-3.5"
