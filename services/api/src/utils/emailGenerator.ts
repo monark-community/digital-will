@@ -198,8 +198,7 @@ const templates: Record<
       recipientName,
       `<p>You have been designated as a <strong>secondary member</strong> of the digital will
       <strong>"${willName}"</strong> on WillChain.</p>
-      <p>As a secondary member, you play an important role in the execution of this digital legacy.
-      Your participation must be formally validated before the will can become active on the blockchain.</p>
+      <p>As a secondary member, you play an important role in the execution of this digital legacy.</p>
       <p><strong>Action required:</strong> Please log in to your WillChain account to review the full
       details of your participation — including your responsibilities — and confirm
       your involvement. The will cannot be activated until all secondary members have completed this step.</p>
