@@ -9,6 +9,7 @@ import { sendEmailNotification } from "./emailService";
 import {
   PROTECTION_PERIOD_POLLER_INTERVAL_MS,
   PROTECTION_PERIOD_REMINDER_INTERVAL_MS,
+  REMINDER_POLLER_CHECK_INTERVAL_MS,
   REMINDER_POLLER_STARTUP_DELAY_MS,
   SM_STATE_DECLARED_DEATH,
   MS_PER_SECOND,
@@ -337,9 +338,9 @@ export function startProtectionPeriodReminderPoller(): void {
 
   setInterval(() => {
     sendProtectionPeriodReminders().catch(console.error);
-  }, PROTECTION_PERIOD_REMINDER_INTERVAL_MS);
+  }, REMINDER_POLLER_CHECK_INTERVAL_MS);
 
-  const intervalMs = PROTECTION_PERIOD_REMINDER_INTERVAL_MS;
+  const intervalMs = REMINDER_POLLER_CHECK_INTERVAL_MS;
   const intervalLabel =
     intervalMs >= MS_PER_DAY
       ? `${intervalMs / MS_PER_DAY}d`
