@@ -268,7 +268,12 @@ async function sendProtectionPeriodReminders(): Promise<void> {
   const timers = await prisma.protectionPeriodTimer.findMany({
     where: {
       fired: false,
-      OR: [{ lastReminderAt: null }, { lastReminderAt: { lte: cutoff } }],
+      OR: [
+        // Never reminded yet, but timer was created long enough ago
+        { lastReminderAt: null, createdAt: { lte: cutoff } },
+        // Already reminded at least once, and enough time has passed since
+        { lastReminderAt: { lte: cutoff } },
+      ],
     },
     include: { will: true },
   });
