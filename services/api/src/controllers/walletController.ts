@@ -5,6 +5,7 @@ import {
   addWallet,
   removeWallet,
   updateWalletLabel,
+  checkWalletRemovalEligibility,
 } from "../services/walletService";
 import { asyncHandler } from "../middlewares/errorMiddleware";
 
@@ -44,6 +45,23 @@ export const handleAddWallet = asyncHandler(
       success: true,
       message: "Wallet added successfully",
       data: { wallet },
+    });
+  },
+);
+
+/**
+ * Check if wallet can be removed
+ */
+export const handleCheckWalletRemovalEligibility = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const { walletId } = req.params;
+
+    const result = await checkWalletRemovalEligibility(userId, walletId);
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: result,
     });
   },
 );

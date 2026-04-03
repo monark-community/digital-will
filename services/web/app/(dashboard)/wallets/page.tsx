@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useWallets, useAddWallet, useRemoveWallet, useUpdateWalletLabel, useCurrentUser } from "@/lib/hooks";
 import { connectWallet, isMetaMaskInstalled } from "@/lib/utils/wallet";
+import { walletService } from "@/lib/services";
 import Header from "@/app/components/ui/Header";
 import type { Wallet } from "@/lib/types";
+import type { WalletRemovalEligibilityResponse } from "@/lib/services/wallet.service";
 
 export default function WalletsPage() {
   const { data: wallets, isLoading, error } = useWallets();
@@ -17,6 +19,8 @@ export default function WalletsPage() {
   const [editingLabel, setEditingLabel] = useState<string | null>(null);
   const [labelValue, setLabelValue] = useState("");
   const [walletToDelete, setWalletToDelete] = useState<Wallet | null>(null);
+  const [walletRemovalEligibility, setWalletRemovalEligibility] = useState<WalletRemovalEligibilityResponse | null>(null);
+  const [isCheckingRemovalEligibility, setIsCheckingRemovalEligibility] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -52,13 +56,24 @@ export default function WalletsPage() {
     }
   };
 
-  const handleRemoveWallet = (wallet: Wallet) => {
+  const handleRemoveWallet = async (wallet: Wallet) => {
     if (wallets && wallets.length === 1) {
       setErrorMessage("Cannot remove the last wallet from your account. You must have at least one wallet.");
       return;
     }
 
-    setWalletToDelete(wallet);
+    setIsCheckingRemovalEligibility(true);
+    setErrorMessage(null);
+
+    try {
+      const eligibility = await walletService.checkWalletRemovalEligibility(wallet.walletId);
+      setWalletRemovalEligibility(eligibility);
+      setWalletToDelete(wallet);
+    } catch (error: any) {
+      setErrorMessage(error?.message || "Failed to check wallet removal eligibility");
+    } finally {
+      setIsCheckingRemovalEligibility(false);
+    }
   };
 
   const confirmDeleteWallet = () => {
@@ -69,6 +84,7 @@ export default function WalletsPage() {
         setErrorMessage(null);
         setSuccessMessage("Wallet removed successfully!");
         setWalletToDelete(null);
+        setWalletRemovalEligibility(null);
         setTimeout(() => setSuccessMessage(null), 3000);
       },
       onError: (error: any) => {
@@ -80,6 +96,7 @@ export default function WalletsPage() {
 
   const cancelDeleteWallet = () => {
     setWalletToDelete(null);
+    setWalletRemovalEligibility(null);
   };
 
   const copyToClipboard = async (address: string, walletId: string) => {
@@ -327,14 +344,21 @@ export default function WalletsPage() {
                       <div className="relative flex-shrink-0 group">
                         <button
                           onClick={() => handleRemoveWallet(wallet)}
-                          className="p-2 text-red-400 hover:bg-[var(--bg-section)] rounded transition-colors cursor-pointer"
+                          disabled={isCheckingRemovalEligibility}
+                          className="p-2 text-red-400 hover:bg-[var(--bg-section)] rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
+                          {isCheckingRemovalEligibility ? (
+                            <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          )}
                         </button>
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                          Remove wallet
+                          {isCheckingRemovalEligibility ? "Checking..." : "Remove wallet"}
                           <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
                         </div>
                       </div>
@@ -346,36 +370,107 @@ export default function WalletsPage() {
           ))}
         </div>
 
-        {walletToDelete && (
+        {walletToDelete && walletRemovalEligibility && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl max-w-md w-full">
-              <div className="p-6">
-                <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">
-                  Remove Wallet
+            <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-[var(--bg-card)] border-b border-[var(--border-section)] px-6 py-4 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+                  {walletRemovalEligibility.canRemove
+                    ? "Remove Wallet"
+                    : "Cannot Remove Wallet"}
                 </h2>
-                <p className="text-[var(--text-muted)] mb-4">
-                  Are you sure you want to remove this wallet? This action cannot be undone.
-                </p>
-                <div className="bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg p-3 mb-6">
+                <button
+                  onClick={cancelDeleteWallet}
+                  className="text-[var(--text-muted-alt)] hover:text-[var(--text-primary)] transition-colors"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg p-3">
                   <p className="text-xs text-[var(--text-muted)] mb-1">Wallet Address:</p>
                   <p className="font-mono text-sm text-[var(--text-primary)] break-all">
                     {walletToDelete.address}
                   </p>
                 </div>
-                <div className="flex gap-4">
+
+                {!walletRemovalEligibility.canRemove ? (
+                  <>
+                    <p className="text-[var(--text-primary)]">
+                      This wallet cannot be removed because it is associated with deployed wills:
+                    </p>
+
+                    {walletRemovalEligibility.obstacles.secondaryMemberWills.length > 0 && (
+                      <div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-4">
+                        <p className="font-semibold text-yellow-500 mb-2">
+                          As secondary member in:
+                        </p>
+                        <ul className="list-disc list-inside text-yellow-500/80 text-sm space-y-1">
+                          {walletRemovalEligibility.obstacles.secondaryMemberWills.map(
+                            (name, idx) => (
+                              <li key={idx}>"{name}"</li>
+                            ),
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    {walletRemovalEligibility.obstacles.ownedDeployedWills.length > 0 && (
+                      <div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-4">
+                        <p className="font-semibold text-yellow-500 mb-2">
+                          As primary member in:
+                        </p>
+                        <ul className="list-disc list-inside text-yellow-500/80 text-sm space-y-1">
+                          {walletRemovalEligibility.obstacles.ownedDeployedWills.map(
+                            (name, idx) => (
+                              <li key={idx}>"{name}"</li>
+                            ),
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    <p className="text-[var(--text-muted)] text-sm mt-4">
+                      You must cancel or withdraw from these wills on the blockchain before removing this wallet.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[var(--text-muted)] mb-4">
+                  Are you sure you want to remove this wallet? This action cannot be undone.
+                </p>
+                  </>
+                )}
+              </div>
+
+              <div className="border-t border-[var(--border-section)] px-6 py-4 flex gap-3">
+                <button
+                  onClick={cancelDeleteWallet}
+                  className="flex-1 px-4 py-2 border border-[var(--border-section)] text-[var(--text-primary)] rounded-lg font-medium hover:bg-[var(--bg-section)] transition-colors"
+                >
+                  Back
+                </button>
+                {walletRemovalEligibility.canRemove && (
                   <button
                     onClick={confirmDeleteWallet}
-                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
                   >
-                    Remove
+                    Remove Wallet
                   </button>
-                  <button
-                    onClick={cancelDeleteWallet}
-                    className="flex-1 px-4 py-2 bg-[var(--bg-section)] hover:bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] font-semibold rounded-lg transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
+                )}
               </div>
             </div>
           </div>

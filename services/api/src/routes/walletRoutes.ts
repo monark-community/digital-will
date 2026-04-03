@@ -4,6 +4,7 @@ import {
   handleAddWallet,
   handleRemoveWallet,
   handleUpdateWalletLabel,
+  handleCheckWalletRemovalEligibility,
 } from '../controllers/walletController';
 import { verifyToken } from '../middlewares/authMiddleware';
 import { ROUTES } from '../utils/constants';
@@ -23,6 +24,13 @@ router.get('/', verifyToken, handleGetWallets);
  * @access  Private
  */
 router.post('/', verifyToken, handleAddWallet);
+
+/**
+ * @route   GET /wallets/:walletId/removal-eligibility
+ * @desc    Check if wallet can be removed
+ * @access  Private
+ */
+router.get('/:walletId/removal-eligibility', verifyToken, handleCheckWalletRemovalEligibility);
 
 /**
  * @route   DELETE /wallets/:walletId
