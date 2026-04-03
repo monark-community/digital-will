@@ -1330,6 +1330,16 @@ export default function WillsPage() {
       errors.push("Duplicate secondary member addresses are not allowed");
     }
 
+    // VÃ©rifier que l'adresse du wallet principal ne correspond Ã  aucune adresse secondaire
+    if (selectedWallet?.address) {
+      const primaryAddress = selectedWallet.address.trim().toLowerCase();
+      if (primaryAddress !== "" && addresses.includes(primaryAddress)) {
+        errors.push(
+          "Primary wallet address cannot be the same as a secondary member address",
+        );
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors,
