@@ -9,6 +9,7 @@ import { sendEmailNotification } from "./emailService";
 import {
   PROTECTION_PERIOD_POLLER_INTERVAL_MS,
   PROTECTION_PERIOD_REMINDER_INTERVAL_MS,
+  REMINDER_POLLER_CHECK_INTERVAL_MS,
   REMINDER_POLLER_STARTUP_DELAY_MS,
   SM_STATE_DECLARED_DEATH,
   MS_PER_SECOND,
@@ -267,7 +268,12 @@ async function sendProtectionPeriodReminders(): Promise<void> {
   const timers = await prisma.protectionPeriodTimer.findMany({
     where: {
       fired: false,
-      OR: [{ lastReminderAt: null }, { lastReminderAt: { lte: cutoff } }],
+      OR: [
+        // Never reminded yet, but timer was created long enough ago
+        { lastReminderAt: null, createdAt: { lte: cutoff } },
+        // Already reminded at least once, and enough time has passed since
+        { lastReminderAt: { lte: cutoff } },
+      ],
     },
     include: { will: true },
   });
@@ -337,9 +343,9 @@ export function startProtectionPeriodReminderPoller(): void {
 
   setInterval(() => {
     sendProtectionPeriodReminders().catch(console.error);
-  }, PROTECTION_PERIOD_REMINDER_INTERVAL_MS);
+  }, REMINDER_POLLER_CHECK_INTERVAL_MS);
 
-  const intervalMs = PROTECTION_PERIOD_REMINDER_INTERVAL_MS;
+  const intervalMs = REMINDER_POLLER_CHECK_INTERVAL_MS;
   const intervalLabel =
     intervalMs >= MS_PER_DAY
       ? `${intervalMs / MS_PER_DAY}d`

@@ -120,11 +120,11 @@ const templates: Record<
     return role === NotificationRecipientRole.PM
       ? {
           title: "Death confirmed",
-          message: `${name} confirmed the death declaration for your will "${willName}". Execution has started.`,
+          message: `${name} confirmed the death declaration for your will "${willName}".`,
         }
       : {
           title: "Death confirmed",
-          message: `${name} confirmed the death declaration for the will "${willName}". Execution has started.`,
+          message: `${name} confirmed the death declaration for the will "${willName}".`,
         };
   },
 
