@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import type { AppNotification } from "@/lib/types";
 
 interface NotificationPanelProps {
@@ -44,15 +45,15 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
 
   const hasUnread = notifications.some((n) => !n.read);
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="fixed inset-0 z-[60]" onClick={onClose} />
 
       {/* Panel */}
       <div
         ref={panelRef}
-        className="fixed top-16 right-4 z-50 w-[420px] max-w-[90vw] min-h-[360px] max-h-[70vh] flex flex-col bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl shadow-2xl"
+        className="fixed top-16 right-4 z-[61] w-[420px] max-w-[90vw] min-h-[360px] max-h-[70vh] flex flex-col bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl shadow-2xl"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-section)] shrink-0">
@@ -177,6 +178,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                   </button>
                   <div className="flex-1 min-w-0">
                     <p
+                      title={notif.title}
                       className={`text-sm font-medium truncate ${
                         !notif.read
                           ? "text-[var(--text-primary)]"
@@ -185,7 +187,10 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                     >
                       {notif.title}
                     </p>
-                    <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed line-clamp-2">
+                    <p
+                      title={notif.message}
+                      className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed line-clamp-2"
+                    >
                       {notif.message}
                     </p>
                     <p className="text-xs text-[var(--text-muted-alt)] mt-1.5">
@@ -221,7 +226,8 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
           )}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 };
 
