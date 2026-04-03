@@ -2393,10 +2393,17 @@ export default function WillsPage() {
                                     )}
                                   </button>
                                 </div>
-                                {secondaryMembers.length > 2 && (
+                                <div className="relative group">
                                   <button
-                                    onClick={() => removeSecondaryMember(index)}
-                                    className="p-1 text-red-500 hover:bg-red-500/10 rounded transition-colors"
+                                    onClick={() =>
+                                      secondaryMembers.length > 2 &&
+                                      removeSecondaryMember(index)
+                                    }
+                                    className={`p-1.5 rounded transition-colors ${
+                                      secondaryMembers.length > 2
+                                        ? "text-red-500 hover:bg-red-500/10"
+                                        : "text-[var(--text-muted-alt)] opacity-40 cursor-not-allowed"
+                                    }`}
                                   >
                                     <svg
                                       className="w-4 h-4"
@@ -2408,11 +2415,16 @@ export default function WillsPage() {
                                         strokeLinecap="round"
                                         strokeLinejoin="round"
                                         strokeWidth={2}
-                                        d="M6 18L18 6M6 6l12 12"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                                       />
                                     </svg>
                                   </button>
-                                )}
+                                  {secondaryMembers.length <= 2 && (
+                                    <div className="pointer-events-none absolute bottom-full right-0 mb-2 px-2 py-1 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-muted)] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg">
+                                      Minimum 2 secondary members required
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
 
@@ -4511,7 +4523,7 @@ export default function WillsPage() {
 
       {editWillModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl w-full max-w-lg shadow-xl flex flex-col max-h-[90vh]">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-2xl w-full max-w-2xl shadow-xl flex flex-col max-h-[90vh]">
             <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border-section)] flex-shrink-0">
               <div className="flex-shrink-0 w-9 h-9 rounded-full bg-[var(--accent)]/15 flex items-center justify-center">
                 <svg
@@ -4559,7 +4571,7 @@ export default function WillsPage() {
               </button>
             </div>
 
-            <div className="overflow-y-auto flex-1 px-6 py-4 space-y-5">
+            <div className="overflow-y-auto overflow-x-hidden flex-1 px-6 py-4 space-y-5">
               {editWillError && (
                 <div className="px-4 py-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-xs">
                   {editWillError}
@@ -4903,6 +4915,49 @@ export default function WillsPage() {
                                 )}
                               </button>
                             </div>
+                            {(() => {
+                              const totalValid = editWillMembers.filter(
+                                (x) =>
+                                  x.secondaryMemberId ||
+                                  (!x.secondaryMemberId && x.address.trim()),
+                              ).length;
+                              const canRemove = totalValid > 2;
+                              return (
+                                <div className="relative group">
+                                  <button
+                                    onClick={() => {
+                                      if (!canRemove) return;
+                                      removeEditWillMemberAtIndex(absIdx);
+                                      setEditWillError(null);
+                                    }}
+                                    className={`p-1.5 rounded transition-colors ${
+                                      canRemove
+                                        ? "text-red-500 hover:bg-red-500/10"
+                                        : "text-[var(--text-muted-alt)] opacity-40 cursor-not-allowed"
+                                    }`}
+                                  >
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                      />
+                                    </svg>
+                                  </button>
+                                  {!canRemove && (
+                                    <div className="pointer-events-none absolute bottom-full right-0 mb-2 px-2 py-1 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-muted)] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg">
+                                      Minimum 2 secondary members required
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
 
                           {editContactSuccessByIndex[absIdx] && (
@@ -5159,38 +5214,6 @@ export default function WillsPage() {
                               placeholder="Power"
                               className="w-16 px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-center text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                             />
-                            <button
-                              onClick={() => {
-                                const totalValid = editWillMembers.filter(
-                                  (x) =>
-                                    x.secondaryMemberId ||
-                                    (!x.secondaryMemberId && x.address.trim()),
-                                ).length;
-                                if (totalValid <= 2) {
-                                  setEditWillError(
-                                    "A will must have at least 2 secondary members.",
-                                  );
-                                  return;
-                                }
-                                removeEditWillMemberAtIndex(absIdx);
-                                setEditWillError(null);
-                              }}
-                              className="p-1 text-red-400 hover:bg-red-500/10 rounded transition-colors flex-shrink-0"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
-                            </button>
                           </div>
                         </div>
                       );
@@ -5367,6 +5390,27 @@ export default function WillsPage() {
                                         )}
                                       </button>
                                     </div>
+                                    <button
+                                      onClick={() => {
+                                        removeEditWillMemberAtIndex(absIdx);
+                                        setEditWillError(null);
+                                      }}
+                                      className="p-1.5 text-red-500 hover:bg-red-500/10 rounded transition-colors flex-shrink-0"
+                                    >
+                                      <svg
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                        />
+                                      </svg>
+                                    </button>
                                   </div>
 
                                   {editContactSuccessByIndex[absIdx] && (
@@ -5618,27 +5662,6 @@ export default function WillsPage() {
                                 placeholder="Power"
                                 className="w-16 px-2 py-1.5 text-xs bg-[var(--bg-section)] border border-[var(--border-section)] rounded text-center text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                               />
-                              <button
-                                onClick={() => {
-                                  removeEditWillMemberAtIndex(absIdx);
-                                  setEditWillError(null);
-                                }}
-                                className="p-1 text-red-400 hover:bg-red-500/10 rounded transition-colors flex-shrink-0"
-                              >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M6 18L18 6M6 6l12 12"
-                                  />
-                                </svg>
-                              </button>
                             </div>
                           </div>
                         );
