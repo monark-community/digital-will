@@ -13,20 +13,23 @@ export interface DeleteEligibilityResponse {
 
 class UserService {
   /**
- * Update email notification preference
- */
-async updateEmailNotifications(wantToReceiveMails: boolean): Promise<User> {
-  try {
-    const response = await apiClient.patch<{
-      success: boolean;
-      data: User;
-    }>(API_ROUTES.USERS.RECEIVE_EMAILS, { wantToReceiveMails });
-    return response.data.data;
-  } catch (error: any) {
-    console.error("Error updating email notifications:", error);
-    throw new Error(error.response?.data?.message || "Failed to update email notification preference");
+   * Update email notification preference
+   */
+  async updateEmailNotifications(wantToReceiveMails: boolean): Promise<User> {
+    try {
+      const response = await apiClient.patch<{
+        success: boolean;
+        data: User;
+      }>(API_ROUTES.USERS.RECEIVE_EMAILS, { wantToReceiveMails });
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error updating email notifications:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          "Failed to update email notification preference",
+      );
+    }
   }
-}
 
   /**
    * Check if current user can delete their account
@@ -40,7 +43,9 @@ async updateEmailNotifications(wantToReceiveMails: boolean): Promise<User> {
       return response.data.data;
     } catch (error: any) {
       console.error("Error checking delete eligibility:", error);
-      throw new Error(error.response?.data?.message || "Failed to check delete eligibility");
+      throw new Error(
+        error.response?.data?.message || "Failed to check delete eligibility",
+      );
     }
   }
 
@@ -50,11 +55,11 @@ async updateEmailNotifications(wantToReceiveMails: boolean): Promise<User> {
   async deleteAccount(): Promise<void> {
     try {
       await apiClient.delete(API_ROUTES.USERS.DELETE);
-      // Clear local storage and logout
-      authService.logout();
     } catch (error: any) {
       console.error("Error deleting account:", error);
-      throw new Error(error.response?.data?.message || "Failed to delete account");
+      throw new Error(
+        error.response?.data?.message || "Failed to delete account",
+      );
     }
   }
 }
