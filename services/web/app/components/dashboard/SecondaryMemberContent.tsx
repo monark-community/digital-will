@@ -156,23 +156,24 @@ function WillCard({ will, onRefresh }: WillCardProps) {
         console.log("Transaction sent:", tx.hash);
         const receipt = await tx.wait();
 
-        /*
+        
+        if (action.id === 'refuse') {
+          console.log('Refuse confirmed, removing from database...');
+          try {
+            await willService.removeSecondaryMember(will.willId);
+            console.log('Successfully removed from database');
+          } catch (dbError: any) {
+            setError('Blockchain transaction succeeded, but failed to update database. Please refresh.');
+            setLoadingAction(null);
+            return;
+          }
+        }
+
+      /*
       Delay added instead of waiting 2 block confirmation 
       */
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      if (action.id === 'refuse') {
-        console.log('Refuse confirmed, removing from database...');
-        try {
-          await willService.removeSecondaryMember(will.willId);
-          console.log('Successfully removed from database');
-        } catch (dbError: any) {
-          setError('Blockchain transaction succeeded, but failed to update database. Please refresh.');
-          setLoadingAction(null);
-          return;
-        }
-      }
-
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        
         setSuccess(`"${action.label}" transaction confirmed!`);
         onRefresh();
       } catch (err: any) {
