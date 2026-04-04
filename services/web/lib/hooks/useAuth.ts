@@ -1,6 +1,7 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authService } from "@/lib/services";
 import type {
@@ -80,12 +81,32 @@ export function useLogout() {
 }
 
 /**
- * Hook to get current user
+ * Hook to get current user (auto-fetches and caches)
  */
 export function useCurrentUser() {
-  return useMutation({
-    mutationFn: () => authService.getMe(),
+  const query = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: () => authService.getMe(),
+    enabled: typeof window !== "undefined" && !!authService.getToken(),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    initialData: () => {
+      if (typeof window === "undefined") return undefined;
+      const cached = authService.getUser();
+      // Only use localStorage data if it has a full profile (firstName present)
+      return cached?.firstName ? cached : undefined;
+    },
+    initialDataUpdatedAt: 0,
   });
+
+  // Keep localStorage in sync so initialData is always fresh on next mount
+  useEffect(() => {
+    if (query.data) {
+      authService.setUser(query.data);
+    }
+  }, [query.data]);
+
+  return query;
 }
 
 /**

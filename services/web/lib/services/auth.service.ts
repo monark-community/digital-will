@@ -123,7 +123,11 @@ export const authService = {
   /**
    * Sign in with wallet address
    */
-  walletSignIn: async (data: { walletAddress: string; signature: string; message: string }): Promise<AuthResponse> => {
+  walletSignIn: async (data: {
+    walletAddress: string;
+    signature: string;
+    message: string;
+  }): Promise<AuthResponse> => {
     const response = await apiClient.post<{
       success: boolean;
       data: AuthResponse;
@@ -135,12 +139,23 @@ export const authService = {
    * Create account with wallet
    */
   createAccountWithWallet: async (
-    data: CreateAccountWithWalletRequest
+    data: CreateAccountWithWalletRequest,
   ): Promise<AuthResponse> => {
     const response = await apiClient.post<{
       success: boolean;
       data: AuthResponse;
     }>(API_ROUTES.AUTH.WALLET_CREATE, data);
     return response.data.data;
+  },
+
+  /**
+   * Refresh JWT token — get a new token with fresh expiry
+   */
+  refreshToken: async (): Promise<string> => {
+    const response = await apiClient.post<{
+      success: boolean;
+      data: { token: string };
+    }>(API_ROUTES.AUTH.REFRESH);
+    return response.data.data.token;
   },
 };

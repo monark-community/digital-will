@@ -10,9 +10,9 @@ import type { User } from "@/lib/types";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(authService.getUser());
+  const [user, setUser] = useState<User | null>(null);
   const [mounted, setMounted] = useState(false);
-  const { mutate: getUser, isPending } = useCurrentUser();
+  const { data: queryUser, isPending } = useCurrentUser();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteEligibility, setDeleteEligibility] = useState<{
     canDelete: boolean;
@@ -28,24 +28,14 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
+    if (queryUser) setUser(queryUser);
+  }, [queryUser]);
+
+  useEffect(() => {
     if (!authService.isAuthenticated()) {
       router.push(`/login?redirectTo=${encodeURIComponent("/profile")}`);
-      return;
     }
-
-    // Only fetch from API if we don't have cached user data
-    if (!user) {
-      getUser(undefined, {
-        onSuccess: (data) => {
-          setUser(data);
-          authService.setUser(data);
-        },
-        onError: () => {
-          router.push(`/login?redirectTo=${encodeURIComponent("/profile")}`);
-        },
-      });
-    }
-  }, [getUser, router, user]);
+  }, [router]);
 
   const handleToggleEmailNotifications = async () => {
     if (!user) return;
