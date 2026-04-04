@@ -117,16 +117,17 @@ contract WillTestDeclaration is Test {
             block.timestamp + (1 days * 4) / 3
         );
 
+        uint256 declarationTimestamp = block.timestamp;
         vm.warp(block.timestamp + 1.1 days);
         vm.prank(sm3);
         will.declareDeath();
 
-        assertEq(will.deathDeclarationTimestampS(), block.timestamp - 1.1 days);
+        assertEq(will.deathDeclarationTimestampS(), declarationTimestamp);
         assertEq(
             will.executionTimeStampS(),
-            will.deathDeclarationTimestampS() + (1 days * 4) / 3
+            declarationTimestamp + 1 days // floor, all voted, first term is 0
         );
-        assertGt(will.getExecutionPossibleTimestamp(), block.timestamp);
+        assertLe(will.getExecutionPossibleTimestamp(), block.timestamp); // already in the past
         assertEq(will.cumulatedVotePowerS(), 3);
     }
 
