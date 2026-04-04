@@ -1,6 +1,7 @@
-import { Router } from 'express';
-import * as contactsController from '../controllers/contactsController';
-import { verifyToken } from '../middlewares/authMiddleware';
+import { Router } from "express";
+import * as contactsController from "../controllers/contactsController";
+import { verifyToken } from "../middlewares/authMiddleware";
+import { authorizeContactOwner } from "../middlewares/authorizationMiddleware";
 
 const router = Router();
 
@@ -12,28 +13,35 @@ router.use(verifyToken);
  * @desc    Get all contacts for a user
  * @access  Private
  */
-router.get('/', contactsController.handleGetContacts);
+router.get("/", contactsController.handleGetContacts);
 
 /**
  * @route   POST /contacts
  * @desc    Add new contact
  * @access  Private
  */
-router.post('/', contactsController.handleAddContact);
+router.post("/", contactsController.handleAddContact);
 
 /**
  * @route   DELETE /contacts/:contactId
  * @desc    Delete a contact
  * @access  Private
  */
-router.delete('/:contactId', contactsController.handleDeleteContact);
+router.delete(
+  "/:contactId",
+  authorizeContactOwner,
+  contactsController.handleDeleteContact,
+);
 
 /**
  * @route   PATCH /contacts/:contactId
  * @desc    Update a contact
  * @access  Private
  */
-router.patch('/:contactId', contactsController.handleUpdateContact);
-
+router.patch(
+  "/:contactId",
+  authorizeContactOwner,
+  contactsController.handleUpdateContact,
+);
 
 export default router;

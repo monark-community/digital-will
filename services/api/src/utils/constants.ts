@@ -23,6 +23,7 @@ export const ROUTES = {
     SIGNIN: "/signin",
     ME: "/me",
     LOGOUT: "/logout",
+    REFRESH: "/refresh",
     WALLET_CHECK: "/wallet/check",
     WALLET_SIGNIN: "/wallet/signin",
     WALLET_CREATE: "/wallet/create",

@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
-import { 
-  handleSignUp, 
-  handleSignIn, 
-  handleCheckWallet, 
+import {
+  handleSignUp,
+  handleSignIn,
+  handleCheckWallet,
   handleWalletSignIn,
-  handleCreateAccountWithWallet 
+  handleCreateAccountWithWallet,
+  handleRefreshToken,
+  handleGetMe,
 } from "../controllers/authController";
 import { verifyToken } from "../middlewares/authMiddleware";
 import {
@@ -57,15 +59,7 @@ router.post(ROUTES.AUTH.WALLET_CREATE, handleCreateAccountWithWallet);
  * @desc    Get current user info (protected route example)
  * @access  Private
  */
-router.get(ROUTES.AUTH.ME, verifyToken, (req, res) => {
-  res.status(StatusCodes.OK).json({
-    success: true,
-    message: "Authenticated user",
-    data: {
-      user: req.user,
-    },
-  });
-});
+router.get(ROUTES.AUTH.ME, verifyToken, handleGetMe);
 
 /**
  * @route   POST /auth/logout
@@ -78,5 +72,12 @@ router.post(ROUTES.AUTH.LOGOUT, verifyToken, (req, res) => {
     message: "Logged out successfully",
   });
 });
+
+/**
+ * @route   POST /auth/refresh
+ * @desc    Refresh JWT token (returns a new token with fresh expiry)
+ * @access  Private
+ */
+router.post(ROUTES.AUTH.REFRESH, verifyToken, handleRefreshToken);
 
 export default router;
