@@ -211,8 +211,8 @@ export default function PrimaryMemberContent() {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
+      <div className="grid lg:grid-cols-2 gap-8 items-stretch">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-full bg-[var(--bg-section)] border border-[var(--border-section)] flex items-center justify-center flex-shrink-0">
@@ -257,7 +257,7 @@ export default function PrimaryMemberContent() {
               </svg>
             </Link>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-510px)] pr-1">
             {loadingWills ? (
               <div className="text-center py-8">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent)]"></div>
@@ -527,7 +527,7 @@ export default function PrimaryMemberContent() {
 
                   <div className="mt-3">
                     <Link
-                      href="/wills"
+                      href={`/wills?openEdit=${will.willId}`}
                       className="block w-full px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors text-center"
                     >
                       Manage Will
@@ -538,32 +538,30 @@ export default function PrimaryMemberContent() {
             )}
           </div>
 
-          {!loadingWills && (
-            <div className="text-center mt-4">
-              <Link
-                href="/wills?openCreate=true"
-                className="group relative inline-flex justify-center items-center space-x-2 py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-[var(--accent)] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)] transition-all cursor-pointer active:scale-[0.97]"
+          <div className="text-center mt-4 flex-shrink-0">
+            <Link
+              href="/wills?openCreate=true"
+              className="group relative inline-flex justify-center items-center space-x-2 py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-[var(--accent)] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)] transition-all cursor-pointer active:scale-[0.97]"
+            >
+              <span>Create Will</span>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <span>Create Will</span>
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-              </Link>
-            </div>
-          )}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+            </Link>
+          </div>
         </div>
 
-        <div className="space-y-8">
+        <div className="flex flex-col gap-8">
           {/* Total Assets */}
           <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
             <div className="flex items-center gap-2 mb-6">
@@ -613,7 +611,7 @@ export default function PrimaryMemberContent() {
           </div>
 
           {/* Assets Overview */}
-          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6 flex-1">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-10 h-10 rounded-full bg-[var(--bg-section)] border border-[var(--border-section)] flex items-center justify-center flex-shrink-0">
                 <svg

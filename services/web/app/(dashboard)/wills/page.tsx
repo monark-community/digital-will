@@ -284,6 +284,18 @@ export default function WillsPage() {
     });
   }, [pathname, router, searchParams]);
 
+  const clearOpenEditParam = useCallback(() => {
+    if (!searchParams.has("openEdit")) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("openEdit");
+    const queryString = params.toString();
+
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+  }, [pathname, router, searchParams]);
+
   useEffect(() => {
     if (searchParams.get("openCreate") === "true") {
       setShowCreateForm(true);
@@ -1821,6 +1833,16 @@ export default function WillsPage() {
 
     return () => window.clearTimeout(timeoutId);
   }, [clearTargetWillParam, displayedWills, isLoadingWills, searchParams]);
+
+  useEffect(() => {
+    const openEditId = searchParams.get("openEdit");
+    if (!openEditId || isLoadingWills || realWills.length === 0) return;
+    const will = realWills.find((w) => w.willId === openEditId);
+    if (!will) return;
+    handleOpenEditWill(will);
+    clearOpenEditParam();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realWills, isLoadingWills, searchParams]);
 
   useEffect(() => {
     if (!deleteDraftToastName) return;
