@@ -15,7 +15,7 @@ Substreams has all the benefits of StreamingFast Firehose, like low-cost caching
 Full documentation for installing, running and working with Substreams is available at: https://docs.substreams.dev.
 
 ## How to repackage for a new factory address (make sure it is all lowercase)
-1. Update WILLFACTORY_TRACKED_CONTRACT in lib.rs:16 
+1. Update WILLFACTORY_TRACKED_CONTRACT in lib.rs:16 (remove the 0x in the beginning)
 2. Update the blockFilter address + initialBlock in substreams.yaml:34
 3. Run Substreams build in packages/substreams/willchain_events directory to generate new spkg. If you are on Windows, you may need WSL to run this command since the Substreams CLI is only available on Linux or MacOS.
 
