@@ -37,6 +37,18 @@ export default function PrimaryMemberContent() {
   const [loadingWills, setLoadingWills] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
+  const hasLockedWill = (() => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    return realWills.some((will) => {
+      const execTs = will.executionTimestampOnChain ?? 0;
+      const badgeState =
+        will.state === "ACTIVE" && execTs > 0 && nowSec >= execTs
+          ? "EXECUTABLE"
+          : will.state;
+      return badgeState === "EXECUTABLE" || badgeState === "EXECUTED";
+    });
+  })();
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -274,7 +286,29 @@ export default function PrimaryMemberContent() {
                 </div>
               </div>
             ) : (
-              realWills.map((will) => (
+              realWills.map((will) => {
+                const execTs = will.executionTimestampOnChain ?? 0;
+                const nowSec = Math.floor(Date.now() / 1000);
+                const badgeState =
+                  will.state === "ACTIVE" && execTs > 0 && nowSec >= execTs
+                    ? "EXECUTABLE"
+                    : will.state;
+                const isWillLocked =
+                  badgeState === "EXECUTABLE" || badgeState === "EXECUTED";
+                const badgeClass =
+                  badgeState === "ACTIVE"
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : badgeState === "EXECUTABLE"
+                      ? "bg-purple-500/20 text-purple-400"
+                      : badgeState === "INACTIVE"
+                        ? "bg-blue-500/20 text-blue-400"
+                        : badgeState === "CANCELED"
+                          ? "bg-red-500/20 text-red-400"
+                          : badgeState === "EXECUTED"
+                            ? "bg-blue-500/20 text-blue-400"
+                            : "bg-gray-500/20 text-gray-400";
+
+                return (
                 <div
                   key={will.willId}
                   className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors"
@@ -288,35 +322,11 @@ export default function PrimaryMemberContent() {
                         {will.contractAddressInBlockchain}
                       </p>
                     </div>
-                    {(() => {
-                      const execTs = will.executionTimestampOnChain ?? 0;
-                      const nowSec = Math.floor(Date.now() / 1000);
-                      const badgeState =
-                        will.state === "ACTIVE" &&
-                        execTs > 0 &&
-                        nowSec >= execTs
-                          ? "EXECUTABLE"
-                          : will.state;
-                      const badgeClass =
-                        badgeState === "ACTIVE"
-                          ? "bg-emerald-500/20 text-emerald-400"
-                          : badgeState === "EXECUTABLE"
-                            ? "bg-purple-500/20 text-purple-400"
-                            : badgeState === "INACTIVE"
-                              ? "bg-blue-500/20 text-blue-400"
-                              : badgeState === "CANCELED"
-                                ? "bg-red-500/20 text-red-400"
-                                : badgeState === "EXECUTED"
-                                  ? "bg-blue-500/20 text-blue-400"
-                                  : "bg-gray-500/20 text-gray-400";
-                      return (
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ml-2 flex-shrink-0 ${badgeClass}`}
-                        >
-                          {badgeState}
-                        </span>
-                      );
-                    })()}
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ml-2 flex-shrink-0 ${badgeClass}`}
+                    >
+                      {badgeState}
+                    </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
@@ -526,38 +536,72 @@ export default function PrimaryMemberContent() {
                   </div>
 
                   <div className="mt-3">
-                    <Link
-                      href={`/wills?openEdit=${will.willId}`}
-                      className="block w-full px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors text-center"
-                    >
-                      Manage Will
-                    </Link>
+                    {isWillLocked ? (
+                      <div
+                        aria-disabled="true"
+                        className="block w-full px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-muted-alt)] opacity-40 cursor-not-allowed transition-colors text-center"
+                      >
+                        Manage Will
+                      </div>
+                    ) : (
+                      <Link
+                        href={`/wills?openEdit=${will.willId}`}
+                        className="block w-full px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors text-center"
+                      >
+                        Manage Will
+                      </Link>
+                    )}
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
 
           <div className="text-center mt-4 flex-shrink-0">
-            <Link
-              href="/wills?openCreate=true"
-              className="group relative inline-flex justify-center items-center space-x-2 py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-[var(--accent)] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)] transition-all cursor-pointer active:scale-[0.97]"
-            >
-              <span>Create Will</span>
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            {hasLockedWill || loadingWills ? (
+              <div
+                aria-disabled="true"
+                className={`group relative inline-flex justify-center items-center space-x-2 py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-[var(--accent)] opacity-40 ${
+                  loadingWills ? "cursor-wait" : "cursor-not-allowed"
+                }`}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-            </Link>
+                <span>Create Will</span>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </div>
+            ) : (
+              <Link
+                href="/wills?openCreate=true"
+                className="group relative inline-flex justify-center items-center space-x-2 py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-[var(--accent)] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)] transition-all cursor-pointer active:scale-[0.97]"
+              >
+                <span>Create Will</span>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </Link>
+            )}
           </div>
         </div>
 

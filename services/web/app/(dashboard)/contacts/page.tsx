@@ -25,6 +25,33 @@ export default function ContactsPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const CONTACT_DUPLICATE_WALLET_MESSAGE =
+    "A contact with the same wallet address already exists.";
+
+  const normalizeWalletAddress = (value?: string | null) =>
+    (value || "").trim().toLowerCase();
+
+  const walletAlreadyExistsInContacts = (walletAddress: string) => {
+    const normalized = normalizeWalletAddress(walletAddress);
+    if (!normalized) return false;
+
+    return (contacts ?? []).some((contact) => {
+      if (editingContact && contact.contactId === editingContact.contactId) {
+        return false;
+      }
+      return normalizeWalletAddress(contact.walletAddress) === normalized;
+    });
+  };
+
+  const showDuplicateWalletToast = () => {
+    setErrorMessage(CONTACT_DUPLICATE_WALLET_MESSAGE);
+    setTimeout(() => {
+      setErrorMessage((prev) =>
+        prev === CONTACT_DUPLICATE_WALLET_MESSAGE ? null : prev,
+      );
+    }, 3000);
+  };
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -46,7 +73,7 @@ export default function ContactsPage() {
   useEffect(() => {
     const { errors } = validateContactForm();
     setFormErrors(errors);
-  }, [formData]);
+  }, [formData, contacts, editingContact]);
 
   const [formErrors, setFormErrors] = useState<string[]>([]);
 
@@ -97,6 +124,10 @@ export default function ContactsPage() {
         // ethers.getAddress(formData.walletAddress);
       } catch (error) {
         errors.push("Invalid wallet address format");
+      }
+
+      if (walletAlreadyExistsInContacts(formData.walletAddress)) {
+        errors.push(CONTACT_DUPLICATE_WALLET_MESSAGE);
       }
     }
 
@@ -166,6 +197,11 @@ export default function ContactsPage() {
       return;
     }
 
+    if (walletAlreadyExistsInContacts(formData.walletAddress)) {
+      showDuplicateWalletToast();
+      return;
+    }
+
     const contactData = {
       firstName: formData.firstName,
       lastName: formData.lastName,
@@ -186,9 +222,18 @@ export default function ContactsPage() {
             setTimeout(() => setSuccessMessage(null), 3000);
           },
           onError: (error: any) => {
-            const msg =
-              error?.response?.data?.message || "Failed to update contact";
-            setErrorMessage(msg);
+            const status = error?.response?.status;
+            const apiMsg = error?.response?.data?.message;
+            if (
+              status === 409 &&
+              typeof apiMsg === "string" &&
+              /wallet address/i.test(apiMsg) &&
+              /already exists/i.test(apiMsg)
+            ) {
+              showDuplicateWalletToast();
+              return;
+            }
+            setErrorMessage(apiMsg || "Failed to update contact");
           },
         },
       );
@@ -200,8 +245,18 @@ export default function ContactsPage() {
           setTimeout(() => setSuccessMessage(null), 3000);
         },
         onError: (error: any) => {
-          const msg = error?.response?.data?.message || "Failed to add contact";
-          setErrorMessage(msg);
+          const status = error?.response?.status;
+          const apiMsg = error?.response?.data?.message;
+          if (
+            status === 409 &&
+            typeof apiMsg === "string" &&
+            /wallet address/i.test(apiMsg) &&
+            /already exists/i.test(apiMsg)
+          ) {
+            showDuplicateWalletToast();
+            return;
+          }
+          setErrorMessage(apiMsg || "Failed to add contact");
         },
       });
     }

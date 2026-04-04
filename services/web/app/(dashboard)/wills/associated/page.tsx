@@ -44,6 +44,8 @@ const SM_ACTIONS: ActionDef[] = [
     label: "Refuse",
     description: "Refuse to participate.",
     disabledReason: (w) => {
+      if (w.myMembership.state === "DECLARED_DEATH")
+        return "You already declared death";
       if (w.state === "CANCELED") return "Will is canceled";
       if (w.state === "EXECUTED") return "Will is already executed";
       if (w.state === "DRAFT") return "Will is not yet deployed";
