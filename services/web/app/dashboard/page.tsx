@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Header from "../components/ui/Header";
 import DashboardView from "../components/dashboard-view";
@@ -11,6 +11,9 @@ export default function DashboardPage() {
   const router = useRouter();
   const pathname = usePathname();
   const { data: user, isPending } = useCurrentUser();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!authService.isAuthenticated()) {
@@ -20,7 +23,7 @@ export default function DashboardPage() {
     }
   }, [router, pathname]);
 
-  if (isPending || !user) {
+  if (!mounted || isPending || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
         <div className="text-[var(--text-primary)]">Loading...</div>
