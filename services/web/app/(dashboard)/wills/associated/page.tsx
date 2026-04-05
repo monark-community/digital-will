@@ -533,7 +533,7 @@ export default function AssociatedWillsPage() {
                   }`}
                 >
                   {/* Will header */}
-                  <div className="flex items-center justify-end px-6 py-4 border-b border-[var(--border-section)]">
+                  <div className="flex items-start justify-between px-6 py-4 border-b border-[var(--border-section)]">
                     {(() => {
                       const execTs = will.executionTimestampOnChain ?? 0;
                       const badgeState =
@@ -544,11 +544,81 @@ export default function AssociatedWillsPage() {
                           : will.state;
 
                       return (
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${STATE_COLORS[badgeState] ?? "bg-gray-100 text-gray-700"}`}
-                        >
-                          {badgeState}
-                        </span>
+                        <>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-[var(--text-primary)]">
+                                {will.willName}
+                              </h3>
+
+                              {will.state !== "DRAFT" &&
+                                will.contractAddressInBlockchain && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-500">
+                                    <svg
+                                      className="w-3 h-3"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth={2}
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M4.5 12.75l6 6 9-13.5"
+                                      />
+                                    </svg>
+                                    Deployed
+                                  </span>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              <p className="text-xs text-[var(--text-muted-alt)] font-mono truncate max-w-xs">
+                                {will.contractAddressInBlockchain}
+                              </p>
+                              {will.contractAddressInBlockchain && (
+                                <div className="relative flex-shrink-0">
+                                  <button
+                                    onClick={() =>
+                                      copyToClipboard(
+                                        will.contractAddressInBlockchain!,
+                                        `contract-header-${will.willId}`,
+                                      )
+                                    }
+                                    className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                                    title="Copy contract address"
+                                  >
+                                    <svg
+                                      className="w-3.5 h-3.5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                      />
+                                    </svg>
+                                  </button>
+                                  {copiedAddress ===
+                                    `contract-header-${will.willId}` && (
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                                      Copied!
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold flex-shrink-0 ${STATE_COLORS[badgeState] ?? "bg-gray-100 text-gray-700"}`}
+                          >
+                            {badgeState}
+                          </span>
+                        </>
                       );
                     })()}
                   </div>
