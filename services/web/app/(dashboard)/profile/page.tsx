@@ -230,15 +230,6 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   )}
-
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-muted)] mb-1">
-                      User ID
-                    </label>
-                    <div className="px-4 py-3 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-muted)] text-sm font-mono">
-                      {user.userId}
-                    </div>
-                  </div>
                 </div>
               </div>
               <div className="pt-6 border-t border-[var(--border-section)]">
