@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCreateAccountWithWallet } from "@/lib/hooks";
+import PhoneInput from "@/app/components/ui/PhoneInput";
 
 function WalletSignupContent() {
   const router = useRouter();
@@ -186,21 +187,19 @@ function WalletSignupContent() {
             </div>
 
             <div>
-              <label
-                htmlFor="phoneNo"
-                className="block text-sm font-medium text-[var(--text-primary)] mb-1"
-              >
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
                 Phone Number (Optional)
               </label>
-              <input
-                id="phoneNo"
-                name="phoneNo"
-                type="tel"
-                autoComplete="tel"
-                className="appearance-none relative block w-full px-4 py-3 border border-[var(--border-section)] bg-[var(--bg-section)] placeholder-[var(--text-muted)] text-[var(--text-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent sm:text-sm"
-                placeholder="Enter your phone number"
+              <PhoneInput
                 value={formData.phoneNo}
-                onChange={handleChange}
+                onChange={(e164) => {
+                  setFormData((prev) => ({ ...prev, phoneNo: e164 }));
+                  if (errorMessage) {
+                    setErrorMessage(null);
+                    reset();
+                  }
+                }}
+                className="w-full"
               />
             </div>
 

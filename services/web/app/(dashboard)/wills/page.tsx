@@ -26,6 +26,7 @@ import {
   SecurityPeriodCountdown,
   CooldownCountdown,
 } from "@/app/components/ui/SecurityPeriodCountdown";
+import PhoneInput from "@/app/components/ui/PhoneInput";
 import { getErrorMessage } from "@/lib/contract-errors";
 
 const WILL_STATE_COLORS: Record<string, string> = {
@@ -75,6 +76,7 @@ interface EditWillMember {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber?: string;
   relationship: string;
 }
 
@@ -1440,12 +1442,9 @@ export default function WillsPage() {
         }
 
         if (member.phoneNumber && member.phoneNumber.trim() !== "") {
-          // Regex pour 10 chiffres (format 3-3-4)
-          const phoneRegex = /^\d{10}$/;
-          if (!phoneRegex.test(member.phoneNumber)) {
-            errors.push(
-              `Member ${i + 1}: Phone number must be 10 digits (e.g., 5141234567)`,
-            );
+          const e164Regex = /^\+\d{7,15}$/; // E.164 format
+          if (!e164Regex.test(member.phoneNumber)) {
+            errors.push(`Member ${i + 1}: Invalid phone number`);
           }
         }
 
@@ -1785,6 +1784,7 @@ export default function WillsPage() {
         firstName: m.firstName,
         lastName: m.lastName,
         email: m.email,
+        phoneNumber: m.phoneNumber || "",
         relationship: m.relationship ?? "",
       })),
     );
@@ -1816,6 +1816,7 @@ export default function WillsPage() {
           firstName: m.firstName,
           lastName: m.lastName,
           email: m.email,
+          phoneNumber: m.phoneNumber ?? "",
           relationship: m.relationship ?? "",
         },
       ]),
@@ -1895,6 +1896,7 @@ export default function WillsPage() {
           m.firstName !== orig.firstName ||
           m.lastName !== orig.lastName ||
           m.email !== orig.email ||
+          (m.phoneNumber ?? "") !== orig.phoneNumber ||
           m.relationship !== orig.relationship
         );
       })
@@ -1903,6 +1905,7 @@ export default function WillsPage() {
         firstName: m.firstName,
         lastName: m.lastName,
         email: m.email,
+        phoneNumber: m.phoneNumber || undefined,
         relationship: m.relationship,
         walletAddress: m.address.trim(),
         votingPower: m.power,
@@ -1917,6 +1920,7 @@ export default function WillsPage() {
       firstName: m.firstName,
       lastName: m.lastName,
       email: m.email,
+      phoneNumber: m.phoneNumber || undefined,
       relationship: m.relationship || undefined,
     }));
 
@@ -2999,24 +3003,13 @@ export default function WillsPage() {
                                 maxLength={254}
                                 className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                               />
-                              <input
-                                type="tel"
-                                value={member.phoneNumber}
-                                onChange={(e) => {
-                                  // Ne garder que les chiffres
-                                  const onlyNumbers = e.target.value.replace(
-                                    /\D/g,
-                                    "",
-                                  );
-                                  updateSecondaryMember(
-                                    index,
-                                    "phoneNumber",
-                                    onlyNumbers,
-                                  );
-                                }}
-                                placeholder="Phone (514) 123-4567 - Optional"
-                                maxLength={10} // 10 chiffres sans espaces/tirets
-                                className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                              <PhoneInput
+                                value={member.phoneNumber || ""}
+                                onChange={(e164) =>
+                                  updateSecondaryMember(index, "phoneNumber", e164)
+                                }
+                                size="sm"
+                                placeholder="5141234567"
                               />
                             </div>
 
@@ -5357,6 +5350,25 @@ export default function WillsPage() {
                           />
                         </div>
 
+                        <div className="mb-3">
+                          <PhoneInput
+                            value={member.phoneNumber || ""}
+                            onChange={(e164) => {
+                              setEditWillMembers((prev) =>
+                                prev.map((m, i) =>
+                                  i === index
+                                    ? { ...m, phoneNumber: e164 }
+                                    : m,
+                                ),
+                              );
+                              setEditWillError(null);
+                            }}
+                            size="sm"
+                            placeholder="5141234567"
+                            className="w-full"
+                          />
+                        </div>
+
                         <div className="grid grid-cols-[1fr_auto] gap-3">
                           <input
                             type="text"
@@ -5473,6 +5485,7 @@ export default function WillsPage() {
                           firstName: "",
                           lastName: "",
                           email: "",
+                          phoneNumber: "",
                           relationship: "",
                         },
                       ])

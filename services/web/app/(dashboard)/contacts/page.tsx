@@ -9,6 +9,7 @@ import {
   useCurrentUser,
 } from "@/lib/hooks";
 import Header from "@/app/components/ui/Header";
+import PhoneInput from "@/app/components/ui/PhoneInput";
 import type { Contact } from "@/lib/types";
 
 export default function ContactsPage() {
@@ -136,10 +137,9 @@ export default function ContactsPage() {
 
     // Phone (optionnel mais valide si présent)
     if (formData.phoneNumber && formData.phoneNumber.trim() !== "") {
-      const phoneRegex = /^\d{10}$/; // 10 chiffres
-      const onlyNumbers = formData.phoneNumber.replace(/\D/g, "");
-      if (!phoneRegex.test(onlyNumbers)) {
-        errors.push("Phone number must be 10 digits");
+      const e164Regex = /^\+\d{7,15}$/; // E.164 format
+      if (!e164Regex.test(formData.phoneNumber)) {
+        errors.push("Invalid phone number");
       }
     }
 
@@ -535,14 +535,12 @@ export default function ContactsPage() {
                     >
                       Phone Number <span className="text-[var(--text-muted-alt)] text-xs">(Optional)</span>
                     </label>
-                    <input
-                      type="tel"
-                      id="phoneNumber"
-                      name="phoneNumber"
+                    <PhoneInput
                       value={formData.phoneNumber}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="+1 (555) 123-4567"
+                      onChange={(e164) =>
+                        setFormData((prev) => ({ ...prev, phoneNumber: e164 }))
+                      }
+                      className="w-full"
                     />
                   </div>
 

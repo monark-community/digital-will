@@ -162,9 +162,9 @@ export function validateDraftForm(data: {
       }
 
       if (member.phoneNumber && member.phoneNumber.trim()) {
-        const phoneRegex = /^\d{10}$/;
+        const phoneRegex = /^\+\d{7,15}$/; // E.164 format
         if (!phoneRegex.test(member.phoneNumber)) {
-          errors.push(`Member ${i + 1}: Phone number must be 10 digits`);
+          errors.push(`Member ${i + 1}: Invalid phone number format (e.g. +15141234567)`);
         }
       }
 
