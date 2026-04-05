@@ -52,7 +52,13 @@ export interface WillFromDB {
   chainId?: number | null;
   minSecurityPeriod: number;
   maxSecurityPeriod: number;
-  state: "DRAFT" | "INACTIVE" | "ACTIVE" | "CANCELED" | "EXECUTED";
+  state:
+    | "DRAFT"
+    | "INACTIVE"
+    | "ACTIVE"
+    | "EXECUTABLE"
+    | "CANCELED"
+    | "EXECUTED";
   executionTimestampOnChain?: number;
   deathDeclarationTimestampOnChain?: number;
   cooldownTimestampOnChain?: number;

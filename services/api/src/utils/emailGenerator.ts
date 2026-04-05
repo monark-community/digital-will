@@ -113,8 +113,7 @@ function buildEmail(
           <tr>
             <td style="background-color:#0a192f;padding:28px 48px;margin-top:32px;border-top:1px solid #2d4a6f;">
               <p style="margin:0;color:#9ca3af;font-size:11px;line-height:1.7;text-align:center;">
-                This message was sent to you because you hold an active account on WillChain or are
-                a designated participant in a registered digital will. If you believe you have received
+                This message was sent to you because you hold an active account on WillChain. If you believe you have received
                 this email in error, please disregard it or contact our support team.<br /><br />
                 &copy; ${CURRENT_YEAR} WillChain &mdash; All rights reserved.<br />
                 WillChain is a secure blockchain-based platform for digital legacy management.
@@ -199,10 +198,9 @@ const templates: Record<
       recipientName,
       `<p>You have been designated as a <strong>secondary member</strong> of the digital will
       <strong>"${willName}"</strong> on WillChain.</p>
-      <p>As a secondary member, you play an important role in the execution of this digital legacy.
-      Your participation must be formally validated before the will can become active on the blockchain.</p>
+      <p>As a secondary member, you play an important role in the execution of this digital legacy.</p>
       <p><strong>Action required:</strong> Please log in to your WillChain account to review the full
-      details of your participation — including your designated assets and responsibilities — and confirm
+      details of your participation — including your responsibilities — and confirm
       your involvement. The will cannot be activated until all secondary members have completed this step.</p>
       <p>If you do not have a WillChain account yet, you will be prompted to create one upon following
       the link below.</p>`,
@@ -248,8 +246,7 @@ const templates: Record<
             recipientName,
             `<p>We are writing to inform you that the details of your participation in the digital will
             <strong>"${willName}"</strong> have been <strong>updated by the will owner</strong>.</p>
-            <p>This may include changes to your designated asset allocations, your role within the will,
-            or other participation parameters. We recommend reviewing these changes carefully to ensure
+            <p>This may include your principal information or your voting power. We recommend reviewing these changes carefully to ensure
             you are fully aware of your current responsibilities.</p>
             <p>Please log in to your WillChain account to consult the updated terms of your participation.</p>`,
             "Review My Updated Participation",
@@ -281,9 +278,7 @@ const templates: Record<
             recipientName,
             `<p>We are writing to inform you that you have been <strong>removed from the digital will
             <strong>"${willName}"</strong></strong> by its owner.</p>
-            <p>Effective immediately, you are no longer a designated participant in this will, and your
-            associated asset allocations have been revoked. You will not receive any further notifications
-            related to this will.</p>
+            <p>Effective immediately, you are no longer a designated participant in this will. You will not receive any further notifications related to this will.</p>
             <p>If you believe this removal was made in error, please contact the will owner directly or
             reach out to our support team for assistance.</p>`,
             "Go to My Account",
@@ -316,9 +311,7 @@ const templates: Record<
             recipientName,
             `<p><strong>${name}</strong> has <strong>withdrawn their participation</strong>
             from your digital will <strong>"${willName}"</strong>.</p>
-            <p>As a result, the will cannot be activated until the vacant position is filled by a new
-            secondary member. We recommend logging in to your WillChain account promptly to review the
-            current status and, if necessary, designate a replacement participant.</p>
+            <p>Please log in to your WillChain account to review the current status. If you wish to add another secondary member, you can do so at any time.</p>
             <p>Your will remains saved and accessible. No data has been lost — only this secondary member's
             participation has been removed.</p>`,
             "Manage My Will",
@@ -330,8 +323,7 @@ const templates: Record<
             recipientName,
             `<p><strong>${name}</strong> has withdrawn their participation from
             the digital will <strong>"${willName}"</strong>.</p>
-            <p>The will owner has been notified and may take steps to designate a replacement. The
-            activation of the will may be temporarily delayed as a result.</p>
+            <p>The will owner has been notified and may take steps to designate a replacement if necessary.</p>
             <p>You can log in to your WillChain account to review the updated status of the will.</p>`,
             "View Will Status",
           ),
@@ -383,8 +375,8 @@ const templates: Record<
             ${amountText}
             <p><strong>If you are still alive</strong>, you must log in to your WillChain account
             <strong>immediately</strong> and exercise your veto right before the security period expires.
-            Failure to do so will result in the death declaration being confirmed, triggering the
-            automatic execution of your will on the blockchain.</p>
+            Failure to do so will result in the death declaration being confirmed, and your secondary members
+            will be able to execute your will on the blockchain once the protection period ends.</p>
             <p>Please treat this notification with the utmost urgency. If you did not expect this
             declaration and believe it was submitted in error or maliciously, do not delay in logging
             in to contest it.</p>`,
@@ -401,7 +393,7 @@ const templates: Record<
             <p>The security period has now begun. During this period, the primary member of the will has
             the opportunity to exercise their veto right if they believe the declaration is erroneous.</p>
             <p>If no veto is exercised before the security period expires, the death declaration will be
-            confirmed and the will execution process will automatically commence on the blockchain. You
+            confirmed and the secondary members will be able to execute the will on the blockchain. You
             will receive further notifications as the situation progresses.</p>
             <p>You can log in to your WillChain account to monitor the status of the security period
             in real time.</p>`,
@@ -419,31 +411,30 @@ const templates: Record<
     const name = smName ?? "A secondary member";
     return role === NotificationRecipientRole.PM
       ? {
-          subject: `WillChain — Death declaration confirmed for will "${willName}"`,
+          subject: `WillChain — Death confirmation received for will "${willName}"`,
           body: buildEmail(
             recipientName,
-            `<p>We are writing to inform you that the death declaration submitted by <strong>${name}</strong>
-            for your digital will <strong>"${willName}"</strong> has been <strong>officially confirmed</strong>.</p>
-            <p>The security period has elapsed without a veto being exercised. As a result, the
-            will execution process has been automatically initiated on the blockchain, in accordance
-            with the terms you defined.</p>
-            <p>All designated secondary members will be notified separately. The asset allocation
-            process is now underway.</p>`,
-            "View Will Execution Status",
+            `<p>We are writing to inform you that a <strong>death confirmation</strong> has been submitted by
+            <strong>${name}</strong> for your digital will <strong>"${willName}"</strong>.</p>
+            <p>Multiple confirmations
+            can be submitted by different secondary members. If you are still alive, you can exercise your
+            veto right to contest these declarations.</p>
+            <p>Please log in to your WillChain account to review all submitted confirmations and manage
+            the protection period.</p>`,
+            "View My Will Status",
           ),
         }
       : {
-          subject: `WillChain — Will execution started for "${willName}"`,
+          subject: `WillChain — Death confirmation received for "${willName}"`,
           body: buildEmail(
             recipientName,
-            `<p><strong>${name}</strong> has confirmed the death declaration for the digital will
-            <strong>"${willName}"</strong>, which is now <strong>officially confirmed</strong>.</p>
-            <p>The security period has elapsed and no veto was exercised. The will execution process
-            has now been automatically initiated on the blockchain. Asset allocations will be processed
-            in accordance with the terms defined by the will owner.</p>
-            <p>Please log in to your WillChain account to monitor the execution status and review
-            your designated asset allocation.</p>`,
-            "View My Asset Allocation",
+            `<p>A <strong>death confirmation</strong> has been submitted by <strong>${name}</strong> for the digital will
+            <strong>"${willName}"</strong>, in which you are a designated participant.</p>
+            <p>The primary member has the
+            opportunity to exercise their veto right if they believe these confirmations are erroneous.</p>
+            <p>You will receive further notifications as the situation progresses. Please log in to your
+            WillChain account to monitor the current status.</p>`,
+            "Monitor Will Status",
           ),
         };
   },
@@ -470,8 +461,7 @@ const templates: Record<
             `<p><strong>${name}</strong> has executed an <strong>asset swap</strong>
             within your digital will <strong>"${willName}"</strong>.</p>
             ${amountText}
-            <p>The asset allocations defined in your will have been adjusted as part of this operation.
-            The updated allocation is now recorded on the blockchain.</p>
+            <p>Your assets have been swapped to <strong>USDC stable coins</strong> as part of this operation.</p>
             <p>Please log in to your WillChain account to review the new asset distribution and ensure
             it accurately reflects your intentions.</p>`,
             "Review Asset Allocation",
@@ -484,8 +474,7 @@ const templates: Record<
             `<p><strong>${name}</strong> has executed an <strong>asset swap</strong>
             in the digital will <strong>"${willName}"</strong>, in which you are a designated participant.</p>
             ${amountText}
-            <p>The asset allocations within the will have been updated accordingly. The new distribution
-            is now recorded on the blockchain.</p>
+            <p>Assets have been swapped to <strong>USDC stable coins</strong> as part of this operation.</p>
             <p>You can log in to your WillChain account to review the updated allocation that pertains
             to your participation.</p>`,
             "View My Allocation",
@@ -513,9 +502,9 @@ const templates: Record<
     body: buildEmail(
       recipientName,
       `<p>The <strong>protection period</strong> for the digital will
-      <strong>"${willName}"</strong> has <strong>expired</strong>.</p>
-      <p>The security waiting period has elapsed and no veto was exercised by the primary member.
-      As a designated secondary member, you may now proceed with the <strong>execution of the will</strong>
+      <strong>"${willName}"</strong> has <strong>expired</strong>.
+      and no veto was exercised by the primary member.</p>
+      <p>As a designated secondary member, you may now proceed with the <strong>execution of the will</strong>
       on the blockchain.</p>
       <p>Please log in to your WillChain account to initiate the execution process.</p>`,
       "Execute Will",
@@ -536,9 +525,8 @@ const templates: Record<
             recipientName,
             `<p><strong>${name}</strong> has <strong>refused the signature request</strong>
             for your digital will <strong>"${willName}"</strong>.</p>
-            <p>This means they have declined to participate as a secondary member. The will cannot be
-            activated until all designated positions are filled. We recommend logging in to your WillChain
-            account to designate a replacement participant.</p>
+            <p>This means they have declined to participate as a secondary member. 
+            If you wish to add another secondary member, you can log in to your WillChain account to do so at any time.</p>
             <p>Your will remains saved and accessible. No data has been lost — only this member's
             participation request has been declined.</p>`,
             "Manage My Will",
@@ -573,9 +561,9 @@ const templates: Record<
             </p>
             <p>This is a periodic reminder that the <strong>protection period</strong> for your digital will
             <strong>"${willName}"</strong> is currently <strong>in progress</strong>.</p>
-            <p>A death declaration has been submitted against your will. If you are still alive, you must
+            <p>One or more death declarations have been submitted against your will. If you are still alive, you must
             log in to your WillChain account and <strong>exercise your veto right</strong> before the
-            protection period expires. Failure to do so will result in the automatic execution of your will.</p>
+            protection period expires. Failure to do so will allow your secondary members to execute your will once the protection period ends.</p>
             <p>If you have already exercised your veto, you may disregard this message.</p>`,
             "🚨 Exercise My Veto Right Now",
           ),
@@ -588,7 +576,7 @@ const templates: Record<
             <strong>"${willName}"</strong>, in which you are a designated participant, is currently
             <strong>in progress</strong>.</p>
             <p>The primary member has not yet exercised their veto right. If the protection period expires
-            without a veto, the will execution process will automatically commence on the blockchain.</p>
+            without a veto, the secondary members will be able to execute the will on the blockchain.</p>
             <p>You can log in to your WillChain account to monitor the current status.</p>`,
             "Monitor Will Status",
           ),

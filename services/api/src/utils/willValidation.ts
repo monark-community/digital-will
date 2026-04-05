@@ -70,7 +70,7 @@ export function validateForDeployment(will: {
   // 5. Validate security periods (received in seconds from frontend)
   const isLocalOrDev = process.env.NODE_ENV !== "production";
   const minLimitSeconds = isLocalOrDev ? 1 * 60 : 28 * 86400; // 1 min or 28 days
-  const maxLimitSeconds = isLocalOrDev ? 10000 * 60 : 154 * 86400; // 10000 min or 154 days
+  const maxLimitSeconds = isLocalOrDev ? 166 * 60 : 154 * 86400; // 166 min or 154 days
 
   if (
     will.minSecurityPeriod < minLimitSeconds ||
@@ -83,7 +83,7 @@ export function validateForDeployment(will: {
     will.minSecurityPeriod > maxLimitSeconds ||
     will.maxSecurityPeriod > maxLimitSeconds
   ) {
-    const maxLabel = isLocalOrDev ? "10000 minutes" : "154 days";
+    const maxLabel = isLocalOrDev ? "166 minutes" : "154 days";
     errors.push(`Security periods cannot exceed ${maxLabel}`);
   }
   if (will.minSecurityPeriod > will.maxSecurityPeriod) {

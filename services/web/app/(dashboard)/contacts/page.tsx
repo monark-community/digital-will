@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useContacts, useAddContact, useRemoveContact, useUpdateContact, useCurrentUser } from "@/lib/hooks";
+import {
+  useContacts,
+  useAddContact,
+  useRemoveContact,
+  useUpdateContact,
+  useCurrentUser,
+} from "@/lib/hooks";
 import Header from "@/app/components/ui/Header";
 import type { Contact } from "@/lib/types";
 
@@ -18,7 +24,34 @@ export default function ContactsPage() {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
+
+  const CONTACT_DUPLICATE_WALLET_MESSAGE =
+    "A contact with the same wallet address already exists.";
+
+  const normalizeWalletAddress = (value?: string | null) =>
+    (value || "").trim().toLowerCase();
+
+  const walletAlreadyExistsInContacts = (walletAddress: string) => {
+    const normalized = normalizeWalletAddress(walletAddress);
+    if (!normalized) return false;
+
+    return (contacts ?? []).some((contact) => {
+      if (editingContact && contact.contactId === editingContact.contactId) {
+        return false;
+      }
+      return normalizeWalletAddress(contact.walletAddress) === normalized;
+    });
+  };
+
+  const showDuplicateWalletToast = () => {
+    setErrorMessage(CONTACT_DUPLICATE_WALLET_MESSAGE);
+    setTimeout(() => {
+      setErrorMessage((prev) =>
+        prev === CONTACT_DUPLICATE_WALLET_MESSAGE ? null : prev,
+      );
+    }, 3000);
+  };
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -40,7 +73,7 @@ export default function ContactsPage() {
   useEffect(() => {
     const { errors } = validateContactForm();
     setFormErrors(errors);
-  }, [formData]);
+  }, [formData, contacts, editingContact]);
 
   const [formErrors, setFormErrors] = useState<string[]>([]);
 
@@ -81,21 +114,30 @@ export default function ContactsPage() {
       // Validation plus robuste avec ethers (si disponible)
       try {
         // Option 1: Validation simple
-        if (!formData.walletAddress.startsWith("0x") || formData.walletAddress.length !== 42) {
-          errors.push("Wallet address must start with 0x and be 42 characters long");
+        if (
+          !formData.walletAddress.startsWith("0x") ||
+          formData.walletAddress.length !== 42
+        ) {
+          errors.push(
+            "Wallet address must start with 0x and be 42 characters long",
+          );
         }
-        
+
         // Option 2: Si ethers est disponible (recommandé)
         // ethers.getAddress(formData.walletAddress);
       } catch (error) {
         errors.push("Invalid wallet address format");
       }
+
+      if (walletAlreadyExistsInContacts(formData.walletAddress)) {
+        errors.push(CONTACT_DUPLICATE_WALLET_MESSAGE);
+      }
     }
 
     // Phone (optionnel mais valide si présent)
-    if (formData.phoneNumber && formData.phoneNumber.trim() !== '') {
+    if (formData.phoneNumber && formData.phoneNumber.trim() !== "") {
       const phoneRegex = /^\d{10}$/; // 10 chiffres
-      const onlyNumbers = formData.phoneNumber.replace(/\D/g, '');
+      const onlyNumbers = formData.phoneNumber.replace(/\D/g, "");
       if (!phoneRegex.test(onlyNumbers)) {
         errors.push("Phone number must be 10 digits");
       }
@@ -108,10 +150,10 @@ export default function ContactsPage() {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   };
-  const hasChanges = 
+  const hasChanges =
     formData.firstName !== initialFormData.firstName ||
     formData.lastName !== initialFormData.lastName ||
     formData.email !== initialFormData.email ||
@@ -132,7 +174,12 @@ export default function ContactsPage() {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.walletAddress) {
+    if (
+      !formData.firstName ||
+      !formData.lastName ||
+      !formData.email ||
+      !formData.walletAddress
+    ) {
       setErrorMessage("Please fill in all required fields");
       return;
     }
@@ -143,8 +190,18 @@ export default function ContactsPage() {
       return;
     }
 
-    if (!formData.walletAddress.startsWith("0x") || formData.walletAddress.length !== 42) {
-      setErrorMessage("Please enter a valid wallet address (must start with 0x and be 42 characters)");
+    if (
+      !formData.walletAddress.startsWith("0x") ||
+      formData.walletAddress.length !== 42
+    ) {
+      setErrorMessage(
+        "Please enter a valid wallet address (must start with 0x and be 42 characters)",
+      );
+      return;
+    }
+
+    if (walletAlreadyExistsInContacts(formData.walletAddress)) {
+      showDuplicateWalletToast();
       return;
     }
 
@@ -168,10 +225,20 @@ export default function ContactsPage() {
             setTimeout(() => setSuccessMessage(null), 3000);
           },
           onError: (error: any) => {
-            const msg = error?.response?.data?.message || "Failed to update contact";
-            setErrorMessage(msg);
+            const status = error?.response?.status;
+            const apiMsg = error?.response?.data?.message;
+            if (
+              status === 409 &&
+              typeof apiMsg === "string" &&
+              /wallet address/i.test(apiMsg) &&
+              /already exists/i.test(apiMsg)
+            ) {
+              showDuplicateWalletToast();
+              return;
+            }
+            setErrorMessage(apiMsg || "Failed to update contact");
           },
-        }
+        },
       );
     } else {
       addContact(contactData, {
@@ -181,8 +248,18 @@ export default function ContactsPage() {
           setTimeout(() => setSuccessMessage(null), 3000);
         },
         onError: (error: any) => {
-          const msg = error?.response?.data?.message || "Failed to add contact";
-          setErrorMessage(msg);
+          const status = error?.response?.status;
+          const apiMsg = error?.response?.data?.message;
+          if (
+            status === 409 &&
+            typeof apiMsg === "string" &&
+            /wallet address/i.test(apiMsg) &&
+            /already exists/i.test(apiMsg)
+          ) {
+            showDuplicateWalletToast();
+            return;
+          }
+          setErrorMessage(apiMsg || "Failed to add contact");
         },
       });
     }
@@ -194,7 +271,7 @@ export default function ContactsPage() {
 
   const confirmDeleteContact = () => {
     if (!contactToDelete) return;
-    
+
     setErrorMessage(null);
     removeContact(contactToDelete.contactId, {
       onSuccess: () => {
@@ -203,7 +280,8 @@ export default function ContactsPage() {
         setTimeout(() => setSuccessMessage(null), 3000);
       },
       onError: (error: any) => {
-        const msg = error?.response?.data?.message || "Failed to remove contact";
+        const msg =
+          error?.response?.data?.message || "Failed to remove contact";
         setErrorMessage(msg);
       },
     });
@@ -219,7 +297,7 @@ export default function ContactsPage() {
       setCopiedAddress(contactId);
       setTimeout(() => setCopiedAddress(null), 2000);
     } catch (err) {
-      console.error('Failed to copy address:', err);
+      console.error("Failed to copy address:", err);
     }
   };
 
@@ -270,142 +348,252 @@ export default function ContactsPage() {
       <Header isAuthenticated={true} user={user || undefined} />
       <div className="min-h-screen bg-[var(--bg-page)] py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
-            My Contacts
-          </h1>
-          <p className="text-[var(--text-muted)]">
-            Manage your trusted contacts who can be added as secondary members in your digital wills.
-          </p>
-        </div>
-
-        {errorMessage && (
-          <div className="mb-6 rounded-md bg-red-500/10 border border-red-500/20 p-4">
-            <p className="text-sm text-red-400">{errorMessage}</p>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
+              My Contacts
+            </h1>
+            <p className="text-[var(--text-muted)]">
+              Manage your trusted contacts who can be added as secondary members
+              in your digital wills.
+            </p>
           </div>
-        )}
 
-        {successMessage && (
-          <div className="mb-6 rounded-md bg-green-500/10 border border-green-500/20 p-4">
-            <p className="text-sm text-green-400">{successMessage}</p>
+          {errorMessage && (
+            <div className="mb-6 rounded-md bg-red-500/10 border border-red-500/20 p-4">
+              <p className="text-sm text-red-400">{errorMessage}</p>
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="mb-6 rounded-md bg-green-500/10 border border-green-500/20 p-4">
+              <p className="text-sm text-green-400">{successMessage}</p>
+            </div>
+          )}
+
+          <div className="mb-6">
+            <button
+              onClick={() => {
+                setEditingContact(null);
+                setFormData({
+                  firstName: "",
+                  lastName: "",
+                  email: "",
+                  phoneNumber: "",
+                  walletAddress: "",
+                  relationship: "",
+                });
+                setInitialFormData({
+                  firstName: "",
+                  lastName: "",
+                  email: "",
+                  phoneNumber: "",
+                  walletAddress: "",
+                  relationship: "",
+                });
+                setShowForm(true);
+              }}
+              className="flex items-center space-x-2 bg-[var(--accent)] hover:opacity-90 text-white px-6 py-3 rounded-lg font-semibold transition-all cursor-pointer active:scale-[0.97]"
+            >
+              <span>Add Contact</span>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+            </button>
           </div>
-        )}
 
-        <div className="mb-6">
-        <button
-          onClick={() => {
-            setEditingContact(null);
-            setFormData({
-              firstName: "",
-              lastName: "",
-              email: "",
-              phoneNumber: "",
-              walletAddress: "",
-              relationship: "",
-            });
-            setInitialFormData({
-              firstName: "",
-              lastName: "",
-              email: "",
-              phoneNumber: "",
-              walletAddress: "",
-              relationship: "",
-            });
-            setShowForm(true);
-          }}
-          className="flex items-center space-x-2 bg-[var(--accent)] hover:opacity-90 text-white px-6 py-3 rounded-lg font-semibold transition-opacity"
-        >
-          <span>Add Contact</span>
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-        </div>
+          {showForm && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                {/* Modal Header */}
+                <div className="sticky top-0 bg-[var(--bg-card)] border-b border-[var(--border-section)] px-6 py-4 flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+                    {editingContact ? "Edit Contact" : "Add New Contact"}
+                  </h2>
+                  <button
+                    onClick={handleCancelForm}
+                    className="text-[var(--text-muted-alt)] hover:text-[var(--text-primary)] transition-colors"
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
 
-        {showForm && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              {/* Modal Header */}
-              <div className="sticky top-0 bg-[var(--bg-card)] border-b border-[var(--border-section)] px-6 py-4 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-                  {editingContact ? "Edit Contact" : "Add New Contact"}
-                </h2>
-                <button
-                  onClick={handleCancelForm}
-                  className="text-[var(--text-muted-alt)] hover:text-[var(--text-primary)] transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+                <div className="p-6">
+                  {errorMessage && (
+                    <div className="mb-6 px-4 py-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-500 text-sm">
+                      {errorMessage}
+                    </div>
+                  )}
 
-              <div className="p-6">
-                {errorMessage && (
-                  <div className="mb-6 px-4 py-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-500 text-sm">
-                    {errorMessage}
-                  </div>
-                )}
+                  {successMessage && (
+                    <div className="mb-6 px-4 py-3 bg-green-500/10 border border-green-500/50 rounded-lg text-green-500 text-sm">
+                      {successMessage}
+                    </div>
+                  )}
 
-                {successMessage && (
-                  <div className="mb-6 px-4 py-3 bg-green-500/10 border border-green-500/50 rounded-lg text-green-500 text-sm">
-                    {successMessage}
-                  </div>
-                )}
+                  {formErrors.length > 0 && (
+                    <div className="mb-6 px-4 py-3 bg-yellow-500/10 border border-yellow-500/50 rounded-lg">
+                      <p className="text-yellow-500 text-sm font-medium mb-1">
+                        Please fix the following:
+                      </p>
+                      <ul className="list-disc list-inside text-yellow-500/80 text-xs space-y-1">
+                        {formErrors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
-                {formErrors.length > 0 && (
-                  <div className="mb-6 px-4 py-3 bg-yellow-500/10 border border-yellow-500/50 rounded-lg">
-                    <p className="text-yellow-500 text-sm font-medium mb-1">Please fix the following:</p>
-                    <ul className="list-disc list-inside text-yellow-500/80 text-xs space-y-1">
-                      {formErrors.map((error, index) => (
-                        <li key={index}>{error}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label
+                          htmlFor="firstName"
+                          className="block text-sm font-medium text-[var(--text-primary)] mb-2"
+                        >
+                          First Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="firstName"
+                          name="firstName"
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                          required
+                          className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
+                          placeholder="John"
+                        />
+                      </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label
+                          htmlFor="lastName"
+                          className="block text-sm font-medium text-[var(--text-primary)] mb-2"
+                        >
+                          Last Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="lastName"
+                          name="lastName"
+                          value={formData.lastName}
+                          onChange={handleInputChange}
+                          required
+                          className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
+                          placeholder="Doe"
+                        />
+                      </div>
+                    </div>
+
                     <div>
-                      <label 
-                        htmlFor="firstName" 
+                      <label
+                        htmlFor="email"
                         className="block text-sm font-medium text-[var(--text-primary)] mb-2"
                       >
-                        First Name <span className="text-red-500">*</span>
+                        Email Address <span className="text-red-500">*</span>
                       </label>
                       <input
-                        type="text"
-                        id="firstName"
-                        name="firstName"
-                        value={formData.firstName}
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
                         onChange={handleInputChange}
                         required
                         maxLength={30}
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
-                        placeholder="John"
+                        placeholder="john.doe@example.com"
                       />
                     </div>
 
                     <div>
-                      <label 
-                        htmlFor="lastName" 
+                      <label
+                        htmlFor="phoneNumber"
                         className="block text-sm font-medium text-[var(--text-primary)] mb-2"
                       >
-                        Last Name <span className="text-red-500">*</span>
+                        Phone Number{" "}
+                        <span className="text-[var(--text-muted-alt)] text-xs">
+                          (Optional)
+                        </span>
+                      </label>
+                      <input
+                        type="tel"
+                        id="phoneNumber"
+                        name="phoneNumber"
+                        value={formData.phoneNumber}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
+                        placeholder="+1 (555) 123-4567"
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="walletAddress"
+                        className="block text-sm font-medium text-[var(--text-primary)] mb-2"
+                      >
+                        Wallet Address <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
-                        id="lastName"
-                        name="lastName"
-                        value={formData.lastName}
+                        id="walletAddress"
+                        name="walletAddress"
+                        value={formData.walletAddress}
                         onChange={handleInputChange}
                         required
                         maxLength={30}
                         className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
                         placeholder="Doe"
                       />
+                      <p className="mt-1 text-xs text-[var(--text-muted-alt)]">
+                        Ethereum wallet address (starts with 0x)
+                      </p>
                     </div>
-                  </div>
+                    <div>
+                      <label
+                        htmlFor="relationship"
+                        className="block text-sm font-medium text-[var(--text-primary)] mb-2"
+                      >
+                        Relationship{" "}
+                        <span className="text-[var(--text-muted-alt)] text-xs">
+                          (Optional)
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        id="relationship"
+                        name="relationship"
+                        value={formData.relationship || ""}
+                        onChange={handleInputChange}
+                        maxLength={30} // ← Limite à 30 caractères
+                        placeholder="e.g., spouse, child, friend, colleague"
+                        className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                      <p className="mt-1 text-xs text-[var(--text-muted-alt)]">
+                        Optional: How is this person related to you? (max 30
+                        characters)
+                      </p>
+                    </div>
 
                   <div>
                     <label 
@@ -503,286 +691,364 @@ export default function ContactsPage() {
                         : "Add Contact"}
                     </button>
                     {editingContact && (
+                    <div className="flex gap-4 pt-4">
+                      <button
+                        type="submit"
+                        disabled={
+                          isAdding ||
+                          isUpdating ||
+                          (editingContact !== null && !hasChanges) ||
+                          !validateContactForm().isValid
+                        }
+                        className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
+                      >
+                        {isAdding || isUpdating
+                          ? editingContact
+                            ? "Updating..."
+                            : "Adding..."
+                          : editingContact
+                            ? "Save Changes"
+                            : "Add Contact"}
+                      </button>
+                      {editingContact && (
+                        <button
+                          type="button"
+                          onClick={handleResetForm}
+                          disabled={!hasChanges}
+                          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
+                        >
+                          Reset
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={handleResetForm}
-                        disabled={!hasChanges}
-                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
+                        onClick={handleCancelForm}
+                        className="px-6 py-2 bg-[var(--bg-section)] hover:bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] font-semibold rounded-lg transition-colors"
                       >
-                        Reset
+                        Cancel
                       </button>
-                    )}
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {contactToDelete && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl max-w-md w-full">
+                <div className="p-6">
+                  <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">
+                    Delete Contact
+                  </h2>
+                  <p className="text-[var(--text-muted)] mb-6">
+                    Are you sure you want to remove{" "}
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      {contactToDelete.firstName} {contactToDelete.lastName}
+                    </span>
+                    ? This action cannot be undone.
+                  </p>
+                  <div className="flex gap-4">
                     <button
-                      type="button"
-                      onClick={handleCancelForm}
-                      className="px-6 py-2 bg-[var(--bg-section)] hover:bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] font-semibold rounded-lg transition-colors"
+                      onClick={confirmDeleteContact}
+                      className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={cancelDeleteContact}
+                      className="flex-1 px-4 py-2 bg-[var(--bg-section)] hover:bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] font-semibold rounded-lg transition-colors"
                     >
                       Cancel
                     </button>
                   </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        )
-        }
-
-        {contactToDelete && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl max-w-md w-full">
-              <div className="p-6">
-                <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">
-                  Delete Contact
-                </h2>
-                <p className="text-[var(--text-muted)] mb-6">
-                  Are you sure you want to remove <span className="font-semibold text-[var(--text-primary)]">{contactToDelete.firstName} {contactToDelete.lastName}</span>? This action cannot be undone.
-                </p>
-                <div className="flex gap-4">
-                  <button
-                    onClick={confirmDeleteContact}
-                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
-                  >
-                    Delete
-                  </button>
-                  <button
-                    onClick={cancelDeleteContact}
-                    className="flex-1 px-4 py-2 bg-[var(--bg-section)] hover:bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] font-semibold rounded-lg transition-colors"
-                  >
-                    Cancel
-                  </button>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-
-        <div className="space-y-4">
-          {isLoading && (
-            <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-lg p-8 text-center">
-              <p className="text-[var(--text-muted)]">Loading contacts...</p>
-            </div>
           )}
 
-          {error && (
-            <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-lg p-8 text-center">
-              <p className="text-red-400">Failed to load contacts. Please try again.</p>
-            </div>
-          )}
-
-          {!isLoading && !error && contacts && contacts.length === 0 && (
-            <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-lg p-8 text-center">
-              <p className="text-[var(--text-muted)]">
-                No contacts yet. Add your first contact to get started.
-              </p>
-            </div>
-          )}
-
-        {!isLoading && !error && contacts && contacts.length > 0 && (
-        <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-lg">
-          <div className="p-6">
-            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">
-              All Contacts ({contacts?.length || 0})
-            </h2>
-
-              <div className="relative">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-[var(--border-section)]">
-                    <tr>
-                      <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)] inline-flex items-center gap-2">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth={1.5}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                          <circle cx="12" cy="7" r="4"></circle>
-                        </svg>
-                        <span>Name</span>
-                      </th>
-                      <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)] hidden md:table-cell">
-                        <div className="flex items-center gap-2">
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={1.5}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            viewBox="0 0 24 24"
-                          >
-                            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-                            <path d="M22 6l-10 7-10-7"></path>
-                          </svg>
-                          <span>Email</span>
-                        </div>
-                      </th>
-                      <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)] hidden lg:table-cell">
-                        <div className="flex items-center gap-2">
-                          <svg 
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={1.5}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            viewBox="0 0 24 24"
-                            >
-                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-                            <line x1="12" y1="18" x2="12.01" y2="18"></line>
-                          </svg>
-                          <span>Phone</span>
-                        </div>
-                      </th>
-                      <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)] hidden lg:table-cell">
-                        <div className="flex items-center gap-2">
-                          <svg 
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={1.5}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            viewBox="0 0 24 24">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="9" cy="7" r="4"></circle>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                          </svg>
-                          <span>Relationship</span>
-                        </div>
-                      </th>
-                      <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)]">
-                        <div className="flex items-center gap-2">
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={1.5}
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M15 12h3"
-                            />
-                          </svg>
-                          <span>Wallet</span>
-                        </div>
-                      </th>
-                      <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)]">
-                        <div className="flex items-center gap-2">
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={1.5}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path>
-                          </svg>
-                          <span>Actions</span>
-                        </div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {contacts.map((contact: Contact) => (
-                      <tr
-                        key={contact.contactId}
-                        className="border-b border-[var(--border-section)] hover:bg-[var(--bg-section)] transition-colors"
-                      >
-                        <td className="py-3 px-3 text-[var(--text-primary)] font-medium">
-                          {contact.firstName} {contact.lastName}
-                        </td>
-                        <td className="py-3 px-3 text-[var(--text-secondary)] text-xs hidden md:table-cell truncate">
-                          {contact.email}
-                        </td>
-                        <td className="py-3 px-3 text-[var(--text-secondary)] text-xs hidden lg:table-cell">
-                          {contact.phoneNumber || "-"}
-                        </td>
-                        <td className="py-3 px-3 text-[var(--text-secondary)] text-xs hidden lg:table-cell">
-                          {contact.relationship || "-"}
-                        </td>
-                        <td className="py-3 px-3 text-[var(--text-secondary)] font-mono text-xs">
-                          <div className="flex items-center gap-1">
-                            <span className="truncate">
-                              {contact.walletAddress.substring(0, 6)}...{contact.walletAddress.substring(contact.walletAddress.length - 4)}
-                            </span>
-                            <div className="relative flex-shrink-0 group">
-                              <button
-                                onClick={() => copyToClipboard(contact.walletAddress, contact.contactId)}
-                                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                              </button>
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                                Copy address
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
-                              </div>
-                              {copiedAddress === contact.contactId && (
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap z-50 shadow-lg">
-                                  Address copied!
-                                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-3">
-                          <div className="flex items-center gap-1">
-                            <div className="relative flex-shrink-0 group">
-                              <button
-                                onClick={() => handleEditContact(contact)}
-                                className="p-2 text-[var(--text-muted)] hover:bg-[var(--bg-section)] rounded transition-colors cursor-pointer"
-                              >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                              </button>
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                                Edit contact
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
-                              </div>
-                            </div>
-                            <div className="relative flex-shrink-0 group">
-                              <button
-                                onClick={() => handleRemoveContact(contact)}
-                                className="p-2 text-red-400 hover:bg-[var(--bg-section)] rounded transition-colors cursor-pointer"
-                              >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                                Remove contact
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <div className="space-y-4">
+            {isLoading && (
+              <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-lg p-8 text-center">
+                <p className="text-[var(--text-muted)]">Loading contacts...</p>
               </div>
+            )}
+
+            {error && (
+              <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-lg p-8 text-center">
+                <p className="text-red-400">
+                  Failed to load contacts. Please try again.
+                </p>
+              </div>
+            )}
+
+            {!isLoading && !error && contacts && contacts.length === 0 && (
+              <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-lg p-8 text-center">
+                <p className="text-[var(--text-muted)]">
+                  No contacts yet. Add your first contact to get started.
+                </p>
+              </div>
+            )}
+
+            {!isLoading && !error && contacts && contacts.length > 0 && (
+              <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-lg">
+                <div className="p-6">
+                  <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">
+                    All Contacts ({contacts?.length || 0})
+                  </h2>
+
+                  <div className="relative">
+                    <table className="w-full text-sm">
+                      <thead className="border-b border-[var(--border-section)]">
+                        <tr>
+                          <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)] inline-flex items-center gap-2">
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                              <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            <span>Name</span>
+                          </th>
+                          <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)] hidden md:table-cell">
+                            <div className="flex items-center gap-2">
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={1.5}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                viewBox="0 0 24 24"
+                              >
+                                <rect
+                                  x="2"
+                                  y="4"
+                                  width="20"
+                                  height="16"
+                                  rx="2"
+                                ></rect>
+                                <path d="M22 6l-10 7-10-7"></path>
+                              </svg>
+                              <span>Email</span>
+                            </div>
+                          </th>
+                          <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)] hidden lg:table-cell">
+                            <div className="flex items-center gap-2">
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={1.5}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                viewBox="0 0 24 24"
+                              >
+                                <rect
+                                  x="5"
+                                  y="2"
+                                  width="14"
+                                  height="20"
+                                  rx="2"
+                                  ry="2"
+                                ></rect>
+                                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                              </svg>
+                              <span>Phone</span>
+                            </div>
+                          </th>
+                          <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)] hidden lg:table-cell">
+                            <div className="flex items-center gap-2">
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={1.5}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                              </svg>
+                              <span>Relationship</span>
+                            </div>
+                          </th>
+                          <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)]">
+                            <div className="flex items-center gap-2">
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={1.5}
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M15 12h3"
+                                />
+                              </svg>
+                              <span>Wallet</span>
+                            </div>
+                          </th>
+                          <th className="text-left py-3 px-3 font-semibold text-[var(--text-primary)]">
+                            <div className="flex items-center gap-2">
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={1.5}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
+                                <path d="M13 13l6 6"></path>
+                              </svg>
+                              <span>Actions</span>
+                            </div>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {contacts.map((contact: Contact) => (
+                          <tr
+                            key={contact.contactId}
+                            className="border-b border-[var(--border-section)] hover:bg-[var(--bg-section)] transition-colors"
+                          >
+                            <td className="py-3 px-3 text-[var(--text-primary)] font-medium">
+                              {contact.firstName} {contact.lastName}
+                            </td>
+                            <td className="py-3 px-3 text-[var(--text-secondary)] text-xs hidden md:table-cell truncate">
+                              {contact.email}
+                            </td>
+                            <td className="py-3 px-3 text-[var(--text-secondary)] text-xs hidden lg:table-cell">
+                              {contact.phoneNumber || "-"}
+                            </td>
+                            <td className="py-3 px-3 text-[var(--text-secondary)] text-xs hidden lg:table-cell">
+                              {contact.relationship || "-"}
+                            </td>
+                            <td className="py-3 px-3 text-[var(--text-secondary)] font-mono text-xs">
+                              <div className="flex items-center gap-1">
+                                <span className="truncate">
+                                  {contact.walletAddress.substring(0, 6)}...
+                                  {contact.walletAddress.substring(
+                                    contact.walletAddress.length - 4,
+                                  )}
+                                </span>
+                                <div className="relative flex-shrink-0 group">
+                                  <button
+                                    onClick={() =>
+                                      copyToClipboard(
+                                        contact.walletAddress,
+                                        contact.contactId,
+                                      )
+                                    }
+                                    className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                                  >
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                      />
+                                    </svg>
+                                  </button>
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                    Copy address
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+                                  </div>
+                                  {copiedAddress === contact.contactId && (
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap z-50 shadow-lg">
+                                      Address copied!
+                                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="flex items-center gap-1">
+                                <div className="relative flex-shrink-0 group">
+                                  <button
+                                    onClick={() => handleEditContact(contact)}
+                                    className="p-2 text-[var(--text-muted)] hover:bg-[var(--bg-section)] rounded transition-colors cursor-pointer"
+                                  >
+                                    <svg
+                                      className="w-5 h-5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                      />
+                                    </svg>
+                                  </button>
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                    Edit contact
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+                                  </div>
+                                </div>
+                                <div className="relative flex-shrink-0 group">
+                                  <button
+                                    onClick={() => handleRemoveContact(contact)}
+                                    className="p-2 text-red-400 hover:bg-[var(--bg-section)] rounded transition-colors cursor-pointer"
+                                  >
+                                    <svg
+                                      className="w-5 h-5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                      />
+                                    </svg>
+                                  </button>
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                    Remove contact
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[var(--border-section)]"></div>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-        )}
-        </div>
-      </div>
       </div>
     </>
   );

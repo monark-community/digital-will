@@ -31,8 +31,10 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear token and redirect to login with current path
-      if (typeof window !== "undefined") {
+      // Skip auto-redirect if the session manager is handling the token lifecycle
+      const sessionManaged =
+        typeof window !== "undefined" && (window as any).__sessionManaged;
+      if (!sessionManaged && typeof window !== "undefined") {
         localStorage.removeItem("token");
         const currentPath = window.location.pathname;
         const redirectTo =

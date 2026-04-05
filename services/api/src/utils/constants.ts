@@ -23,6 +23,7 @@ export const ROUTES = {
     SIGNIN: "/signin",
     ME: "/me",
     LOGOUT: "/logout",
+    REFRESH: "/refresh",
     WALLET_CHECK: "/wallet/check",
     WALLET_SIGNIN: "/wallet/signin",
     WALLET_CREATE: "/wallet/create",
@@ -66,9 +67,14 @@ export const AWAIT_DELAYS_MS = [
 export const PROTECTION_PERIOD_POLLER_INTERVAL_MS =
   process.env.NODE_ENV === "production" ? 60 * 60 * 1_000 : 0.1 * 60 * 1_000;
 
-// Protection period reminder: 7 days in production, 1 minute in other environments
+// Protection period reminder: each will gets reminded every 7 days (prod) / 1 minute (other)
 export const PROTECTION_PERIOD_REMINDER_INTERVAL_MS =
   process.env.NODE_ENV === "production" ? 7 * 24 * 60 * 60 * 1_000 : 60 * 1_000;
+
+// How often the reminder poller checks for wills that need a reminder
+// Must be shorter than the reminder interval so each will gets notified on time
+export const REMINDER_POLLER_CHECK_INTERVAL_MS =
+  process.env.NODE_ENV === "production" ? 60 * 60 * 1_000 : 0.1 * 60 * 1_000;
 
 // Delay before the first reminder run after server startup
 export const REMINDER_POLLER_STARTUP_DELAY_MS = 5_000;

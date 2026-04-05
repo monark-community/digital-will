@@ -37,6 +37,18 @@ export default function PrimaryMemberContent() {
   const [loadingWills, setLoadingWills] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
+  const hasLockedWill = (() => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    return realWills.some((will) => {
+      const execTs = will.executionTimestampOnChain ?? 0;
+      const badgeState =
+        will.state === "ACTIVE" && execTs > 0 && nowSec >= execTs
+          ? "EXECUTABLE"
+          : will.state;
+      return badgeState === "EXECUTABLE" || badgeState === "EXECUTED";
+    });
+  })();
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -105,7 +117,7 @@ export default function PrimaryMemberContent() {
         <div className="mb-8 relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="w-full bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-between hover:border-[var(--accent)] transition-colors"
+            className="w-full bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-between hover:border-[var(--accent)] transition-all cursor-pointer active:scale-[0.99]"
           >
             <div className="flex items-center gap-3 flex-1">
               <div className="w-10 h-10 rounded-full bg-[var(--bg-section)] border border-[var(--border-section)] flex items-center justify-center flex-shrink-0">
@@ -211,8 +223,8 @@ export default function PrimaryMemberContent() {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
+      <div className="grid lg:grid-cols-2 gap-8 items-stretch">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-full bg-[var(--bg-section)] border border-[var(--border-section)] flex items-center justify-center flex-shrink-0">
@@ -257,7 +269,7 @@ export default function PrimaryMemberContent() {
               </svg>
             </Link>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-510px)] pr-1">
             {loadingWills ? (
               <div className="text-center py-8">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent)]"></div>
@@ -274,7 +286,29 @@ export default function PrimaryMemberContent() {
                 </div>
               </div>
             ) : (
-              realWills.map((will) => (
+              realWills.map((will) => {
+                const execTs = will.executionTimestampOnChain ?? 0;
+                const nowSec = Math.floor(Date.now() / 1000);
+                const badgeState =
+                  will.state === "ACTIVE" && execTs > 0 && nowSec >= execTs
+                    ? "EXECUTABLE"
+                    : will.state;
+                const isWillLocked =
+                  badgeState === "EXECUTABLE" || badgeState === "EXECUTED";
+                const badgeClass =
+                  badgeState === "ACTIVE"
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : badgeState === "EXECUTABLE"
+                      ? "bg-purple-500/20 text-purple-400"
+                      : badgeState === "INACTIVE"
+                        ? "bg-blue-500/20 text-blue-400"
+                        : badgeState === "CANCELED"
+                          ? "bg-red-500/20 text-red-400"
+                          : badgeState === "EXECUTED"
+                            ? "bg-blue-500/20 text-blue-400"
+                            : "bg-gray-500/20 text-gray-400";
+
+                return (
                 <div
                   key={will.willId}
                   className="border border-[var(--border-section)] rounded-lg p-4 bg-[var(--bg-section)]/30 hover:bg-[var(--bg-section)]/50 transition-colors"
@@ -289,17 +323,9 @@ export default function PrimaryMemberContent() {
                       </p>
                     </div>
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ml-2 flex-shrink-0 ${
-                        will.state === "ACTIVE"
-                          ? "bg-emerald-500/20 text-emerald-400"
-                          : will.state === "INACTIVE"
-                            ? "bg-blue-500/20 text-blue-400"
-                            : will.state === "CANCELED"
-                              ? "bg-red-500/20 text-red-400"
-                              : "bg-gray-500/20 text-gray-400"
-                      }`}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ml-2 flex-shrink-0 ${badgeClass}`}
                     >
-                      {will.state}
+                      {badgeState}
                     </span>
                   </div>
 
@@ -459,7 +485,10 @@ export default function PrimaryMemberContent() {
                                     onClick={() => {
                                       navigator.clipboard.writeText(addr);
                                       setCopiedAddress(addr);
-                                      setTimeout(() => setCopiedAddress(null), 2000);
+                                      setTimeout(
+                                        () => setCopiedAddress(null),
+                                        2000,
+                                      );
                                     }}
                                     className="p-1 hover:bg-[var(--bg-card)] rounded transition-colors"
                                   >
@@ -507,26 +536,58 @@ export default function PrimaryMemberContent() {
                   </div>
 
                   <div className="mt-3">
-                    <Link
-                      href="/wills"
-                      className="block w-full px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors text-center"
-                    >
-                      Manage Will
-                    </Link>
+                    {isWillLocked ? (
+                      <div
+                        aria-disabled="true"
+                        className="block w-full px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-muted-alt)] opacity-40 cursor-not-allowed transition-colors text-center"
+                      >
+                        Manage Will
+                      </div>
+                    ) : (
+                      <Link
+                        href={`/wills?openEdit=${will.willId}`}
+                        className="block w-full px-3 py-2 text-xs font-medium rounded-lg border border-[var(--border-section)] text-[var(--text-primary)] hover:bg-[var(--bg-section)] transition-colors text-center"
+                      >
+                        Manage Will
+                      </Link>
+                    )}
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
 
-          {!loadingWills && (
-            <div className="text-center mt-4">
-              <Link
-                href="/wills?openCreate=true"
-                className="group relative inline-flex justify-center items-center space-x-2 py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-[var(--accent)] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)] transition-opacity"
+          <div className="text-center mt-4 flex-shrink-0">
+            {hasLockedWill || loadingWills ? (
+              <div
+                aria-disabled="true"
+                className={`group relative inline-flex justify-center items-center space-x-2 py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-[var(--accent)] opacity-40 ${
+                  loadingWills ? "cursor-wait" : "cursor-not-allowed"
+                }`}
               >
                 <span>Create Will</span>
-                             <svg
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </div>
+            ) : (
+              <Link
+                href="/wills?openCreate=true"
+                className="group relative inline-flex justify-center items-center space-x-2 py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-[var(--accent)] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)] transition-all cursor-pointer active:scale-[0.97]"
+              >
+                <span>Create Will</span>
+                <svg
                   className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
@@ -540,11 +601,11 @@ export default function PrimaryMemberContent() {
                   />
                 </svg>
               </Link>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        <div className="space-y-8">
+        <div className="flex flex-col gap-8">
           {/* Total Assets */}
           <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
             <div className="flex items-center gap-2 mb-6">
@@ -594,7 +655,7 @@ export default function PrimaryMemberContent() {
           </div>
 
           {/* Assets Overview */}
-          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-6 flex-1">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-10 h-10 rounded-full bg-[var(--bg-section)] border border-[var(--border-section)] flex items-center justify-center flex-shrink-0">
                 <svg

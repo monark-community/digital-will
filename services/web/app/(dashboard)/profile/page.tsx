@@ -10,9 +10,9 @@ import type { User } from "@/lib/types";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(authService.getUser());
+  const [user, setUser] = useState<User | null>(null);
   const [mounted, setMounted] = useState(false);
-  const { mutate: getUser, isPending } = useCurrentUser();
+  const { data: queryUser, isPending } = useCurrentUser();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteEligibility, setDeleteEligibility] = useState<{
     canDelete: boolean;
@@ -20,6 +20,7 @@ export default function ProfilePage() {
   } | null>(null);
   const [isUpdatingPreferences, setIsUpdatingPreferences] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -28,24 +29,14 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
+    if (queryUser) setUser(queryUser);
+  }, [queryUser]);
+
+  useEffect(() => {
     if (!authService.isAuthenticated()) {
       router.push(`/login?redirectTo=${encodeURIComponent("/profile")}`);
-      return;
     }
-
-    // Only fetch from API if we don't have cached user data
-    if (!user) {
-      getUser(undefined, {
-        onSuccess: (data) => {
-          setUser(data);
-          authService.setUser(data);
-        },
-        onError: () => {
-          router.push(`/login?redirectTo=${encodeURIComponent("/profile")}`);
-        },
-      });
-    }
-  }, [getUser, router, user]);
+  }, [router]);
 
   const handleToggleEmailNotifications = async () => {
     if (!user) return;
@@ -84,14 +75,14 @@ export default function ProfilePage() {
       return;
     }
 
-    setIsLoading(true);
+    setIsDeletingAccount(true);
     try {
       await userService.deleteAccount();
-      router.push("/");
+      authService.removeToken();
+      router.push("/login");
     } catch (error: any) {
       setDeleteError(error.message);
-    } finally {
-      setIsLoading(false);
+      setIsDeletingAccount(false);
     }
   };
 
@@ -259,7 +250,7 @@ export default function ProfilePage() {
                   <button
                     onClick={handleToggleEmailNotifications}
                     disabled={isUpdatingPreferences}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 ${
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 cursor-pointer active:scale-[0.97] ${
                       user?.wantToReceiveMails
                         ? "bg-[var(--accent)]"
                         : "bg-gray-600"
@@ -286,7 +277,7 @@ export default function ProfilePage() {
                   <button
                     onClick={handleCheckDeleteEligibility}
                     disabled={isLoading}
-                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-opacity disabled:opacity-50 flex items-center gap-2"
+                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer active:scale-[0.97]"
                   >
                     {isLoading ? "Checking..." : "Delete Account"}
                     <svg
@@ -305,7 +296,7 @@ export default function ProfilePage() {
                   </button>
                   <button
                     onClick={() => router.push("/dashboard")}
-                    className="px-6 py-3 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg font-semibold transition-opacity flex items-center gap-2"
+                    className="px-6 py-3 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg font-semibold transition-all flex items-center gap-2 cursor-pointer active:scale-[0.97]"
                   >
                     Back to Dashboard
                     <svg
@@ -448,10 +439,31 @@ export default function ProfilePage() {
                 {deleteEligibility.canDelete && (
                   <button
                     onClick={handleDeleteAccount}
-                    disabled={isLoading}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                    disabled={isDeletingAccount}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {isLoading ? "Deleting..." : "Delete Account"}
+                    {isDeletingAccount && (
+                      <svg
+                        className="animate-spin h-4 w-4 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        />
+                      </svg>
+                    )}
+                    {isDeletingAccount ? "Deleting..." : "Delete Account"}
                   </button>
                 )}
               </div>

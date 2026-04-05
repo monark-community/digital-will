@@ -63,7 +63,7 @@ export function initGateway(httpServer: HttpServer): void {
           const role =
             pmUserId === userId
               ? NotificationRecipientRole.PM
-              : NotificationRecipientRole.SM;
+              : NotificationRecipientRole.SM_TARGET;
           const { title, message } = generateUserNotification(
             n.notifType as NotificationType,
             willName,

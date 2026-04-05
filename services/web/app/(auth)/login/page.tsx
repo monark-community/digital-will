@@ -13,8 +13,8 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [walletConnecting, setWalletConnecting] = useState(false);
 
-  const { mutate: checkWallet } = useCheckWallet();
-  const { mutate: walletSignIn } = useWalletSignIn();
+  const { mutateAsync: checkWallet } = useCheckWallet();
+  const { mutateAsync: walletSignIn } = useWalletSignIn();
 
   useEffect(() => {
     if (authService.isAuthenticated()) {
@@ -23,6 +23,8 @@ export default function LoginPage() {
   }, [router]);
 
   const handleMetaMaskConnect = async () => {
+    let keepConnecting = false;
+
     try {
       setWalletConnecting(true);
       setErrorMessage(null);
@@ -36,43 +38,36 @@ export default function LoginPage() {
 
       const { address, signature, message } = await connectWallet();
 
-      checkWallet(address, {
-        onSuccess: (data) => {
-          if (data.exists) {
-            walletSignIn(
-              { walletAddress: address, signature, message },
-              {
-                onError: (error: any) => {
-                  const message =
-                    error?.response?.data?.message ||
-                    "Failed to sign in with wallet";
-                  setErrorMessage(message);
-                },
-              },
-            );
-          } else {
-            const params = new URLSearchParams({
-              address,
-              signature,
-              message,
-            });
-            const redirectTo = searchParams.get("redirectTo");
-            if (redirectTo) {
-              params.set("redirectTo", redirectTo);
-            }
-            router.push(`/signup/wallet?${params.toString()}`);
-          }
-        },
-        onError: (error: any) => {
-          const message =
-            error?.response?.data?.message || "Failed to check wallet";
-          setErrorMessage(message);
-        },
+      const data = await checkWallet(address);
+
+      if (data.exists) {
+        await walletSignIn({ walletAddress: address, signature, message });
+        // On success, the mutation redirects; keep the button in the
+        // "Connecting..." state until navigation/unmount.
+        keepConnecting = true;
+        return;
+      }
+
+      const params = new URLSearchParams({
+        address,
+        signature,
+        message,
       });
+      const redirectTo = searchParams.get("redirectTo");
+      if (redirectTo) {
+        params.set("redirectTo", redirectTo);
+      }
+
+      // Keep the button disabled/loading until navigation completes.
+      keepConnecting = true;
+      router.push(`/signup/wallet?${params.toString()}`);
+      return;
     } catch (error: any) {
       setErrorMessage(error.message || "Failed to connect to MetaMask");
     } finally {
-      setWalletConnecting(false);
+      if (!keepConnecting) {
+        setWalletConnecting(false);
+      }
     }
   };
 

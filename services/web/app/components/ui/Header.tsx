@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
-import { useLogout, useNotifications } from "@/lib/hooks";
+import { useLogout, useNotifications, useCurrentUser } from "@/lib/hooks";
 import NotificationPanel from "./NotificationPanel";
 import type { AppNotification, User } from "@/lib/types";
 
@@ -13,7 +13,27 @@ interface HeaderProps {
   user?: User;
 }
 
-const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
+const Header: React.FC<HeaderProps> = ({
+  isAuthenticated = false,
+  user: userProp,
+}) => {
+  const { data: currentUser } = useCurrentUser();
+  const user = userProp?.firstName ? userProp : currentUser;
+
+  let avatarLetter = "U";
+  if (user?.firstName) {
+    avatarLetter = user.firstName.charAt(0).toUpperCase();
+  } else if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.firstName)
+          avatarLetter = parsed.firstName.charAt(0).toUpperCase();
+      }
+    } catch {}
+  }
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -141,30 +161,30 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
                 </>
               ) : (
                 <>
-                  <a
+                  <Link
                     href="/wills"
                     className="text-[var(--text-muted)] hover:text-[var(--accent)] px-3 py-2 text-sm font-medium transition-colors"
                   >
                     Wills
-                  </a>
-                  <a
+                  </Link>
+                  <Link
                     href="/wills/associated"
                     className="text-[var(--text-muted)] hover:text-[var(--accent)] px-3 py-2 text-sm font-medium transition-colors"
                   >
                     Associated Wills
-                  </a>
-                  <a
+                  </Link>
+                  <Link
                     href="/wallets"
                     className="text-[var(--text-muted)] hover:text-[var(--accent)] px-3 py-2 text-sm font-medium transition-colors"
                   >
                     Wallets
-                  </a>
-                  <a
+                  </Link>
+                  <Link
                     href="/contacts"
                     className="text-[var(--text-muted)] hover:text-[var(--accent)] px-3 py-2 text-sm font-medium transition-colors"
                   >
                     Contacts
-                  </a>
+                  </Link>
                 </>
               )}
             </div>
@@ -192,7 +212,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
                 <div className="relative">
                   <button
                     onClick={() => setIsNotifOpen((prev) => !prev)}
-                    className="relative text-[var(--text-primary)] hover:text-[var(--accent)] p-2 rounded-lg transition-colors"
+                    className="relative text-[var(--text-primary)] hover:text-[var(--accent)] hover:bg-[var(--bg-card)] active:scale-95 p-2 rounded-lg transition-all cursor-pointer"
                     aria-label="Notifications"
                   >
                     <svg
@@ -230,13 +250,14 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated = false, user }) => {
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="flex items-center space-x-2 text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                    className="flex items-center space-x-2 text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--bg-card)] active:scale-95 p-2 rounded-lg transition-all cursor-pointer"
                   >
                     <div className="w-10 h-10 bg-[var(--accent)] rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-bold">
-                        {user?.firstName
-                          ? user.firstName.charAt(0).toUpperCase()
-                          : "U"}
+                      <span
+                        className="text-white text-sm font-bold"
+                        suppressHydrationWarning
+                      >
+                        {avatarLetter}
                       </span>
                     </div>
                     <svg

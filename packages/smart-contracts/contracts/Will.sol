@@ -225,8 +225,7 @@ contract Will is WillEvents, ReentrancyGuard {
             securityPeriodConfigS.minSecurityPeriod;
 
         if (
-            executionTimeStampS >=
-            securityPeriodConfigS.minSecurityPeriod + block.timestamp ||
+            newExecutionTimestamp < executionTimeStampS ||
             executionTimeStampS == 0
         ) {
             executionTimeStampS = newExecutionTimestamp;
