@@ -247,6 +247,7 @@ export default function WalletsPage() {
                               handleCancelEdit();
                             }
                           }}
+                          maxLength={50}
                           className="px-2 py-1 border border-[var(--border-section)] bg-[var(--bg-section)] text-[var(--text-primary)] rounded text-sm"
                           placeholder="Wallet label"
                           autoFocus
