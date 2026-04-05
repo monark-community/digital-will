@@ -281,25 +281,33 @@ export async function getMultiNetworkBalances(address: string): Promise<{
   totalCAD: number;
 }> {
   try {
-    const [sepoliaBalance, bnbBalance, avaxBalance, prices] = await Promise.all([
+    const [sepoliaBalance, prices] = await Promise.all([
       getBalanceFromRPC(address, NETWORKS.SEPOLIA.rpcUrl),
-      getBalanceFromRPC(address, NETWORKS.BNB.rpcUrl),
-      getBalanceFromRPC(address, NETWORKS.AVAX.rpcUrl),
       getCryptoPrices(),
     ]);
 
-    const mainnetBalance = "0.000000";
+    const emptyBalance = "0.000000";
 
-    const total = parseFloat(sepoliaBalance) + parseFloat(mainnetBalance) + parseFloat(bnbBalance) + parseFloat(avaxBalance);
+    // TODO: To enable BNB balance fetching, add the following to the Promise.all above:
+    // getBalanceFromRPC(address, NETWORKS.BNB.rpcUrl),
+    // Then update destructuring to: const [sepoliaBalance, bnbBalance, prices] = await Promise.all([...])
+    const bnbBalance = emptyBalance;
+
+    // TODO: To enable AVAX balance fetching, add the following to the Promise.all above:
+    // getBalanceFromRPC(address, NETWORKS.AVAX.rpcUrl),
+    // Then update destructuring to include avaxBalance
+    const avaxBalance = emptyBalance;
+
+    const total = parseFloat(sepoliaBalance) + parseFloat(emptyBalance) + parseFloat(bnbBalance) + parseFloat(avaxBalance);
     // For testing purposes, let's assume that 1 sepolia ETH is worth the same as 1 mainnet ETH, even though in reality it has no value.
-    const ethCAD = (parseFloat(sepoliaBalance) + parseFloat(mainnetBalance)) * prices.ethereum;
+    const ethCAD = (parseFloat(sepoliaBalance) + parseFloat(emptyBalance)) * prices.ethereum;
     const bnbCAD = parseFloat(bnbBalance) * prices.binancecoin;
     const avaxCAD = parseFloat(avaxBalance) * prices.avalanche;
     const totalCAD = ethCAD + bnbCAD + avaxCAD;
 
     return {
       sepolia: sepoliaBalance,
-      mainnet: mainnetBalance,
+      mainnet: emptyBalance,
       bnb: bnbBalance,
       avax: avaxBalance,
       total,
