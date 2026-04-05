@@ -70,6 +70,13 @@ body {
   font-family: Inter, system-ui, sans-serif;
 }
 
+/* Clickable affordance (dropdown options are usually <button>s) */
+button:not(:disabled),
+a[href],
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
 /* Dotted grid overlay (theme-aware) */
 .bg-dotted-grid {
   background-image: radial-gradient(circle, rgba(34, 197, 94, var(--dotted-opacity)) 1px, transparent 1px);
