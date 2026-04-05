@@ -62,6 +62,12 @@ function WalletSignupContent() {
       return;
     }
 
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(formData.email)) {
+      setErrorMessage("Please enter a valid email address (e.g., user@example.com)");
+      return;
+    }
+
     createAccount({
       ...formData,
       wantToReceiveMails,
@@ -130,6 +136,7 @@ function WalletSignupContent() {
                 name="firstName"
                 type="text"
                 required
+                maxLength={30}
                 className="appearance-none relative block w-full px-4 py-3 border border-[var(--border-section)] bg-[var(--bg-section)] placeholder-[var(--text-muted)] text-[var(--text-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent sm:text-sm"
                 placeholder="Enter your first name"
                 value={formData.firstName}
@@ -149,6 +156,7 @@ function WalletSignupContent() {
                 name="lastName"
                 type="text"
                 required
+                maxLength={30}
                 className="appearance-none relative block w-full px-4 py-3 border border-[var(--border-section)] bg-[var(--bg-section)] placeholder-[var(--text-muted)] text-[var(--text-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent sm:text-sm"
                 placeholder="Enter your last name"
                 value={formData.lastName}
@@ -169,6 +177,7 @@ function WalletSignupContent() {
                 type="email"
                 autoComplete="email"
                 required
+                maxLength={254}
                 className="appearance-none relative block w-full px-4 py-3 border border-[var(--border-section)] bg-[var(--bg-section)] placeholder-[var(--text-muted)] text-[var(--text-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent sm:text-sm"
                 placeholder="Enter your email"
                 value={formData.email}

@@ -83,24 +83,27 @@ export default function ContactsPage() {
     // Prénom
     if (!formData.firstName.trim()) {
       errors.push("First name is required");
-    } else if (formData.firstName.length > 50) {
-      errors.push("First name must be less than 50 characters");
+    } else if (formData.firstName.length > 30) {
+      errors.push("First name must not exceed 30 characters");
     }
 
     // Nom
     if (!formData.lastName.trim()) {
       errors.push("Last name is required");
-    } else if (formData.lastName.length > 50) {
-      errors.push("Last name must be less than 50 characters");
+    } else if (formData.lastName.length > 30) {
+      errors.push("Last name must not exceed 30 characters");
     }
 
     // Email
     if (!formData.email.trim()) {
       errors.push("Email is required");
     } else {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       if (!emailRegex.test(formData.email)) {
         errors.push("Please enter a valid email address");
+      }
+      if (formData.email.length > 254) {
+        errors.push("Email address must not exceed 254 characters");
       }
     }
 
@@ -181,7 +184,7 @@ export default function ContactsPage() {
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(formData.email)) {
       setErrorMessage("Please enter a valid email address");
       return;
@@ -478,6 +481,7 @@ export default function ContactsPage() {
                           value={formData.firstName}
                           onChange={handleInputChange}
                           required
+                          maxLength={30}
                           className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
                           placeholder="John"
                         />
@@ -497,137 +501,128 @@ export default function ContactsPage() {
                           value={formData.lastName}
                           onChange={handleInputChange}
                           required
+                          maxLength={30}
                           className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
                           placeholder="Doe"
                         />
                       </div>
                     </div>
 
-                    <div>
-                      <label
-                        htmlFor="email"
-                        className="block text-sm font-medium text-[var(--text-primary)] mb-2"
-                      >
-                        Email Address <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
-                        placeholder="john.doe@example.com"
-                      />
-                    </div>
+                  <div>
+                    <label 
+                      htmlFor="email" 
+                      className="block text-sm font-medium text-[var(--text-primary)] mb-2"
+                    >
+                      Email Address <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
+                      maxLength={254}
+                      className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="john.doe@example.com"
+                    />
+                  </div>
 
-                    <div>
-                      <label
-                        htmlFor="phoneNumber"
-                        className="block text-sm font-medium text-[var(--text-primary)] mb-2"
-                      >
-                        Phone Number{" "}
-                        <span className="text-[var(--text-muted-alt)] text-xs">
-                          (Optional)
-                        </span>
-                      </label>
-                      <input
-                        type="tel"
-                        id="phoneNumber"
-                        name="phoneNumber"
-                        value={formData.phoneNumber}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
-                        placeholder="+1 (555) 123-4567"
-                      />
-                    </div>
+                  <div>
+                    <label 
+                      htmlFor="phoneNumber" 
+                      className="block text-sm font-medium text-[var(--text-primary)] mb-2"
+                    >
+                      Phone Number <span className="text-[var(--text-muted-alt)] text-xs">(Optional)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      id="phoneNumber"
+                      name="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="+1 (555) 123-4567"
+                    />
+                  </div>
 
-                    <div>
-                      <label
-                        htmlFor="walletAddress"
-                        className="block text-sm font-medium text-[var(--text-primary)] mb-2"
-                      >
-                        Wallet Address <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        id="walletAddress"
-                        name="walletAddress"
-                        value={formData.walletAddress}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"
-                        placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
-                      />
-                      <p className="mt-1 text-xs text-[var(--text-muted-alt)]">
-                        Ethereum wallet address (starts with 0x)
-                      </p>
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="relationship"
-                        className="block text-sm font-medium text-[var(--text-primary)] mb-2"
-                      >
-                        Relationship{" "}
-                        <span className="text-[var(--text-muted-alt)] text-xs">
-                          (Optional)
-                        </span>
-                      </label>
-                      <input
-                        type="text"
-                        id="relationship"
-                        name="relationship"
-                        value={formData.relationship || ""}
-                        onChange={handleInputChange}
-                        maxLength={30} // ← Limite à 30 caractères
-                        placeholder="e.g., spouse, child, friend, colleague"
-                        className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
-                      />
-                      <p className="mt-1 text-xs text-[var(--text-muted-alt)]">
-                        Optional: How is this person related to you? (max 30
-                        characters)
-                      </p>
-                    </div>
+                  <div>
+                    <label 
+                      htmlFor="walletAddress" 
+                      className="block text-sm font-medium text-[var(--text-primary)] mb-2"
+                    >
+                      Wallet Address <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="walletAddress"
+                      name="walletAddress"
+                      value={formData.walletAddress}
+                      onChange={handleInputChange}
+                      required
+                      maxLength={42}
+                      className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"
+                      placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+                    />
+                    <p className="mt-1 text-xs text-[var(--text-muted-alt)]">
+                      Ethereum wallet address (starts with 0x)
+                    </p>
+                  </div>
+                  <div>
+                    <label 
+                      htmlFor="relationship" 
+                      className="block text-sm font-medium text-[var(--text-primary)] mb-2"
+                    >
+                      Relationship <span className="text-[var(--text-muted-alt)] text-xs">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="relationship"
+                      name="relationship"
+                      value={formData.relationship || ""}
+                      onChange={handleInputChange}
+                      maxLength={30}  // ← Limite à 30 caractères
+                      placeholder="e.g., spouse, child, friend, colleague"
+                      className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    <p className="mt-1 text-xs text-[var(--text-muted-alt)]">
+                      Optional: How is this person related to you? (max 30 characters)
+                    </p>
+                  </div>
 
-                    <div className="flex gap-4 pt-4">
-                      <button
-                        type="submit"
-                        disabled={
-                          isAdding ||
-                          isUpdating ||
-                          (editingContact !== null && !hasChanges) ||
-                          !validateContactForm().isValid
-                        }
-                        className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
-                      >
-                        {isAdding || isUpdating
-                          ? editingContact
-                            ? "Updating..."
-                            : "Adding..."
-                          : editingContact
-                            ? "Save Changes"
-                            : "Add Contact"}
-                      </button>
-                      {editingContact && (
-                        <button
-                          type="button"
-                          onClick={handleResetForm}
-                          disabled={!hasChanges}
-                          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
-                        >
-                          Reset
-                        </button>
-                      )}
+                  <div className="flex gap-4 pt-4">
+                    <button
+                      type="submit"
+                      disabled={isAdding || isUpdating || (editingContact !== null && !hasChanges) || !validateContactForm().isValid}
+                      className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
+                    >
+                      {isAdding || isUpdating
+                        ? editingContact
+                          ? "Updating..."
+                          : "Adding..."
+                        : editingContact
+                        ? "Save Changes"
+                        : "Add Contact"}
+                    </button>
+                    {editingContact && (
                       <button
                         type="button"
-                        onClick={handleCancelForm}
-                        className="px-6 py-2 bg-[var(--bg-section)] hover:bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] font-semibold rounded-lg transition-colors"
+                        onClick={handleResetForm}
+                        disabled={!hasChanges}
+                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
                       >
-                        Cancel
+                        Reset
                       </button>
-                    </div>
-                  </form>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleCancelForm}
+                      className="px-6 py-2 bg-[var(--bg-section)] hover:bg-[var(--bg-card)] border border-[var(--border-section)] text-[var(--text-primary)] font-semibold rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
                 </div>
               </div>
             </div>

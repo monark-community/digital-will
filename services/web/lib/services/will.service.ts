@@ -108,7 +108,7 @@ class WillService {
     params: CreateWillParams,
   ): Promise<CreateWillResult> {
     try {
-      const signer = await getSigner();
+      const signer = await getSigner(params.ownerAddress);
 
       const checksummedFactoryAddress = ethers.getAddress(params.factoryAddress);
 
@@ -203,6 +203,7 @@ class WillService {
       // 1. Préparer les paramètres pour la blockchain
       const blockchainParams = this.prepareCreateWillParams(
         params.factoryAddress,
+        params.ownerAddress,
         params.secondaryMembers.map((m) => ({
           address: m.address,
           power: m.power,
@@ -238,6 +239,7 @@ class WillService {
    */
   prepareCreateWillParams(
     factoryAddress: string,
+    ownerAddress: string,
     secondaryMembers: Array<{ address: string; power: number }>,
     minSecurityPeriodSeconds: number,
     maxSecurityPeriodSeconds: number,
@@ -245,6 +247,7 @@ class WillService {
   ): CreateWillParams {
     return {
       factoryAddress,
+      ownerAddress,
       secondaryMembers: secondaryMembers.map((sm) => ({
         smAddress: sm.address,
         votePower: sm.power,

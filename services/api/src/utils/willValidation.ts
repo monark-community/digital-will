@@ -17,6 +17,7 @@ export interface WillMember {
   walletAddress?: string | null;
   tempWalletAddress?: string | null;
   votingPower: number;
+  relationship?: string | null;
 }
 
 /**
@@ -109,8 +110,8 @@ export function validateDraftForm(data: {
   // Will name validation
   if (!data.willName.trim()) {
     errors.push("Will name is required");
-  } else if (data.willName.length > 100) {
-    errors.push("Will name must be less than 100 characters");
+  } else if (data.willName.length > 50) {
+    errors.push("Will name must not exceed 50 characters");
   }
 
   // Filter members with any data
@@ -138,18 +139,25 @@ export function validateDraftForm(data: {
       // If any field is filled, require essential fields
       if (!member.firstName?.trim()) {
         errors.push(`Member ${i + 1}: First name is required`);
+      } else if (member.firstName.length > 30) {
+        errors.push(`Member ${i + 1}: First name must not exceed 30 characters`);
       }
 
       if (!member.lastName?.trim()) {
         errors.push(`Member ${i + 1}: Last name is required`);
+      } else if (member.lastName.length > 30) {
+        errors.push(`Member ${i + 1}: Last name must not exceed 30 characters`);
       }
 
       if (!member.email?.trim()) {
         errors.push(`Member ${i + 1}: Email is required`);
       } else {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(member.email)) {
           errors.push(`Member ${i + 1}: Invalid email format`);
+        }
+        if (member.email.length > 254) {
+          errors.push(`Member ${i + 1}: Email address must not exceed 254 characters`);
         }
       }
 
@@ -172,6 +180,10 @@ export function validateDraftForm(data: {
         (member.votingPower < 1 || member.votingPower > 255)
       ) {
         errors.push(`Member ${i + 1}: Power must be between 1 and 255`);
+      }
+
+      if (member.relationship && member.relationship.length > 30) {
+        errors.push(`Member ${i + 1}: Relationship must not exceed 30 characters`);
       }
     }
   }

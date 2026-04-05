@@ -87,6 +87,23 @@ export default function WillsPage() {
   const wallets = walletsQuery.data;
   const { data: contacts } = useContacts();
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
+  const [isTransactionInProgress, setIsTransactionInProgress] = useState(false); // Pour bloquer la navigation pendant les transactions
+
+  useEffect(() => {
+    if (!isTransactionInProgress) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+      return "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isTransactionInProgress]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const walletDropdownRef = useRef<HTMLDivElement>(null);
   const networkDropdownRef = useRef<HTMLDivElement>(null);
@@ -340,10 +357,15 @@ export default function WillsPage() {
     }
     const fetch = async () => {
       try {
+        const will = realWills.find((w) => w.willId === fundModal.willId);
+        if (!will) {
+          setFundWalletBalance(null);
+          return;
+        }
+        
         if (typeof window !== "undefined" && (window as any).ethereum) {
           const provider = new ethers.BrowserProvider((window as any).ethereum);
-          const signer = await provider.getSigner();
-          const balance = await provider.getBalance(await signer.getAddress());
+          const balance = await provider.getBalance(will.walletAddress);
           setFundWalletBalance(ethers.formatEther(balance));
         }
       } catch {
@@ -351,7 +373,7 @@ export default function WillsPage() {
       }
     };
     fetch();
-  }, [fundModal]);
+  }, [fundModal, realWills]);
 
   useEffect(() => {
     if (!withdrawModal) {
@@ -360,10 +382,15 @@ export default function WillsPage() {
     }
     const fetch = async () => {
       try {
+        const will = realWills.find((w) => w.willId === withdrawModal.willId);
+        if (!will) {
+          setWithdrawWalletBalance(null);
+          return;
+        }
+        
         if (typeof window !== "undefined" && (window as any).ethereum) {
           const provider = new ethers.BrowserProvider((window as any).ethereum);
-          const signer = await provider.getSigner();
-          const balance = await provider.getBalance(await signer.getAddress());
+          const balance = await provider.getBalance(will.walletAddress);
           setWithdrawWalletBalance(ethers.formatEther(balance));
         }
       } catch {
@@ -371,7 +398,7 @@ export default function WillsPage() {
       }
     };
     fetch();
-  }, [withdrawModal]);
+  }, [withdrawModal, realWills]);
 
   useEffect(() => {
     if (!deployModal) {
@@ -382,9 +409,8 @@ export default function WillsPage() {
       try {
         if (typeof window !== "undefined" && (window as any).ethereum) {
           const provider = new ethers.BrowserProvider((window as any).ethereum);
-          const signer = await provider.getSigner();
-          const address = await signer.getAddress();
-          const balance = await provider.getBalance(address);
+          // Fetch balance for the will's owner wallet, not the currently connected wallet
+          const balance = await provider.getBalance(deployModal.walletAddress);
           setDeployWalletBalance(ethers.formatEther(balance));
         }
       } catch {
@@ -502,7 +528,7 @@ export default function WillsPage() {
   ]);
 
   useEffect(() => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
     const canAdd = editWillMembers.map((member) => {
       const hasAnyField =
@@ -907,7 +933,14 @@ export default function WillsPage() {
     setFundError(null);
     setIsFunding(true);
     try {
-      await fundWillContract(fundModal.contractAddress, amount);
+      const will = realWills.find((w) => w.willId === fundModal.willId);
+      if (!will) {
+        setFundError("Will not found");
+        setIsFunding(false);
+        return;
+      }
+      
+      await fundWillContract(fundModal.contractAddress, amount, will.walletAddress);
       await refreshBalance(fundModal.willId, fundModal.contractAddress);
       setFundModal(null);
       setFundAmount("");
@@ -938,7 +971,15 @@ export default function WillsPage() {
     setWithdrawError(null);
     setIsWithdrawing(true);
     try {
-      await withdrawWillContract(withdrawModal.contractAddress, amount);
+      // Get the will to obtain the owner's wallet address
+      const will = realWills.find((w) => w.willId === withdrawModal.willId);
+      if (!will) {
+        setWithdrawError("Will not found");
+        setIsWithdrawing(false);
+        return;
+      }
+      
+      await withdrawWillContract(withdrawModal.contractAddress, amount, will.walletAddress);
       await refreshBalance(withdrawModal.willId, withdrawModal.contractAddress);
       setWithdrawModal(null);
       setWithdrawAmount("");
@@ -963,7 +1004,7 @@ export default function WillsPage() {
       }
 
       // Call blockchain cancel
-      await cancelWillContract(cancelModal.contractAddress);
+      await cancelWillContract(cancelModal.contractAddress, will.walletAddress);
 
       // Prepare voting powers map from secondary members
       const secondaryMembersVotingPowers = will.secondaryMembers.reduce(
@@ -1003,7 +1044,15 @@ export default function WillsPage() {
     setVetoError(null);
     setIsVetoing(true);
     try {
-      await vetoDeathContract(vetoModal.contractAddress);
+      // Get the will to obtain the owner's wallet address
+      const will = realWills.find((w) => w.willId === vetoModal.willId);
+      if (!will) {
+        setVetoError("Will not found");
+        setIsVetoing(false);
+        return;
+      }
+      
+      await vetoDeathContract(vetoModal.contractAddress, will.walletAddress);
       setVetoModal(null);
       await fetchWills();
     } catch (err: any) {
@@ -1343,8 +1392,8 @@ export default function WillsPage() {
 
     if (!willName.trim()) {
       errors.push("Will name is required");
-    } else if (willName.length > 100) {
-      errors.push("Will name must be less than 100 characters");
+    } else if (willName.length > 50) {
+      errors.push("Will name must not exceed 50 characters");
     }
 
     // Filtrer les membres qui ont au moins un champ rempli
@@ -1385,7 +1434,7 @@ export default function WillsPage() {
         if (!member.email.trim()) {
           errors.push(`Member ${i + 1}: Email is required`);
         }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(member.email)) {
           errors.push(`Member ${i + 1}: Invalid email format`);
         }
@@ -1416,7 +1465,7 @@ export default function WillsPage() {
         else if (!member.lastName.trim()) contactValid = false;
         else if (!member.email.trim()) contactValid = false;
         else {
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
           if (!emailRegex.test(member.email)) contactValid = false;
         }
 
@@ -1537,6 +1586,16 @@ export default function WillsPage() {
       errors.push("Duplicate secondary member addresses are not allowed");
     }
 
+    // VÃ©rifier que l'adresse du wallet principal ne correspond Ã  aucune adresse secondaire
+    if (selectedWallet?.address) {
+      const primaryAddress = selectedWallet.address.trim().toLowerCase();
+      if (primaryAddress !== "" && addresses.includes(primaryAddress)) {
+        errors.push(
+          "Primary wallet address cannot be the same as a secondary member address",
+        );
+      }
+    }
+
     return {
       isValid:
         errors.length === 0 &&
@@ -1589,6 +1648,7 @@ export default function WillsPage() {
     setSuccessMessage(null);
     setDeployingWillId(will.willId);
     setDeployFundError(null);
+    setIsTransactionInProgress(true); // Block navigation during transaction
 
     try {
       const blockchainMembers = will.secondaryMembers.map((m) => ({
@@ -1618,6 +1678,7 @@ export default function WillsPage() {
       setDeployFundError(errorMsg);
     } finally {
       setDeployingWillId(null);
+      setIsTransactionInProgress(false); // Unblock navigation
     }
   };
 
@@ -1950,6 +2011,7 @@ export default function WillsPage() {
 
     setEditWillError(null);
     setIsUpdatingWill(true);
+    setIsTransactionInProgress(true); // Block navigation during transaction
     try {
       // 1. Blockchain â€” only if address/power/membership/period changed
       if (
@@ -1962,6 +2024,7 @@ export default function WillsPage() {
           diffs.addedSmList,
           diffs.deletedSmList,
           diffs.periodConfig,
+          editWillModal.walletAddress,
         );
       }
       // 2. DB â€” update names, addresses, power, add/remove members
@@ -1988,6 +2051,7 @@ export default function WillsPage() {
       setEditWillError(getErrorMessage(err, "Update failed."));
     } finally {
       setIsUpdatingWill(false);
+      setIsTransactionInProgress(false); // Unblock navigation
     }
   };
 
@@ -2903,6 +2967,7 @@ export default function WillsPage() {
                                   );
                                 }}
                                 placeholder="First Name *"
+                                maxLength={30}
                                 className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                               />
                               <input
@@ -2917,6 +2982,7 @@ export default function WillsPage() {
                                   );
                                 }}
                                 placeholder="Last Name *"
+                                maxLength={30}
                                 className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                               />
                             </div>
@@ -2926,10 +2992,11 @@ export default function WillsPage() {
                                 type="email"
                                 value={member.email}
                                 onChange={(e) => {
-                                  const value = e.target.value.slice(0, 50);
+                                  const value = e.target.value.slice(0, 254);
                                   updateSecondaryMember(index, "email", value);
                                 }}
                                 placeholder="Email *"
+                                maxLength={254}
                                 className="px-3 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted-alt)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                               />
                               <input
@@ -5236,6 +5303,7 @@ export default function WillsPage() {
                           <input
                             type="text"
                             value={member.firstName}
+                              maxLength={30}
                             onChange={(e) => {
                               setEditWillMembers((prev) =>
                                 prev.map((m, i) =>
@@ -5252,6 +5320,7 @@ export default function WillsPage() {
                           <input
                             type="text"
                             value={member.lastName}
+                              maxLength={30}
                             onChange={(e) => {
                               setEditWillMembers((prev) =>
                                 prev.map((m, i) =>
@@ -5271,6 +5340,7 @@ export default function WillsPage() {
                           <input
                             type="email"
                             value={member.email}
+                              maxLength={254}
                             onChange={(e) => {
                               setEditWillMembers((prev) =>
                                 prev.map((m, i) =>
@@ -5683,6 +5753,58 @@ export default function WillsPage() {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isTransactionInProgress && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
+          <div className="bg-[var(--bg-card)] border-2 border-[var(--accent)] rounded-2xl p-8 w-full max-w-md shadow-2xl">
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative w-16 h-16">
+                <div className="absolute inset-0 rounded-full border-4 border-[var(--accent)]/20"></div>
+                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[var(--accent)] animate-spin"></div>
+              </div>
+
+              <div className="text-center space-y-2">
+                <h2 className="text-xl font-bold text-[var(--text-primary)]">
+                  Transaction in Progress
+                </h2>
+                <p className="text-sm text-[var(--text-muted-alt)]">
+                  Please complete the MetaMask transaction
+                </p>
+              </div>
+
+              <div className="w-full rounded-lg border-2 border-yellow-500/50 bg-yellow-500/10 p-4">
+                <div className="flex items-start gap-3">
+                  <svg
+                    className="w-6 h-6 text-yellow-500 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-semibold text-yellow-200">
+                      DO NOT close or refresh this page
+                    </p>
+                    <p className="text-xs text-yellow-300/80">
+                      Closing or refreshing the page during the transaction may cause the backend update to fail, even if the blockchain transaction succeeds.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-[var(--text-muted-alt)] text-center">
+                This overlay will automatically close when the transaction completes
+              </p>
             </div>
           </div>
         </div>
