@@ -301,11 +301,6 @@ export default function AssociatedWillsPage() {
         }
         const receipt = await tx.wait();
 
-        /*
-      2 seconds delay added instead of waiting 2 block confirmation
-      */
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
         if (action.id === "refuse") {
           try {
             await willService.removeSecondaryMember(will.willId);
@@ -318,6 +313,12 @@ export default function AssociatedWillsPage() {
             return;
           }
         }
+        
+        /*
+      3 seconds delay added instead of waiting 2 block confirmation
+      */
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
         setActionSuccess((prev) => ({
           ...prev,
           [id]: `"${action.label}" confirmed!`,

@@ -10,6 +10,16 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Check if an EventsCalls message contains any actual data
+ */
+function hasEventOrCallData(message: EventsCalls): boolean {
+  return (
+    Object.keys(message.events ?? {}).length > 0 ||
+    Object.keys(message.calls ?? {}).length > 0
+  );
+}
+
 // Inspired by https://www.npmjs.com/package/@substreams/node
 export async function stream(
   pkg: Awaited<ReturnType<typeof readPackage>>,
@@ -45,33 +55,36 @@ export async function stream(
 
   // Stream Blocks — forward each EventsCalls payload to the event service
   emitter.on("anyMessage", async (message, cursor, clock) => {
-    console.log("\n==================== RAW MESSAGE ====================");
-    console.dir(message, { depth: null, colors: true });
-    console.log("=================================================\n");
-    try {
-      await onMessage(message as unknown as EventsCalls, chainId);
-      /*
-       * In case the server crashes before the "close" event is emitted,
-       * we want to have the last cursor updated in the DB to avoid
-       * reprocessing too many blocks when restarting the listener.
-       */
-      await updateLastCursorInDB(chainId, cursor);
-    } catch (error) {
-      console.error("[Substreams] Error processing message:", error);
+    const eventsCallsMessage = message as unknown as EventsCalls;
+    if (hasEventOrCallData(eventsCallsMessage)) {
+      console.log("\n==================== RAW MESSAGE ====================");
+      console.dir(eventsCallsMessage, { depth: null, colors: true });
+      console.log("=================================================\n");
+      try {
+        await onMessage(eventsCallsMessage, chainId);
+        /*
+         * In case the server crashes before the "close" event is emitted,
+         * we want to have the last cursor updated in the DB to avoid
+         * reprocessing too many blocks when restarting the listener.
+         */
+        await updateLastCursorInDB(chainId, cursor);
+      } catch (error) {
+        console.error("[Substreams] Error processing message:", error);
+      }
     }
     lastCursor = cursor;
   });
 
   // Progress — fired each 5 mins with module processing stats (useful for monitoring sync progress)
-  let lastProgressLog = 0;
-  emitter.on("progress", (progress: any) => {
-    const now = Date.now();
-    if (now - lastProgressLog >= 300_000) {
-      lastProgressLog = now;
-      console.dir(`[Substreams] Progress:`);
-      console.dir(progress, { depth: null, colors: true });
-    }
-  });
+  // let lastProgressLog = 0;
+  // emitter.on("progress", (progress: any) => {
+  //   const now = Date.now();
+  //   if (now - lastProgressLog >= 300_000) {
+  //     lastProgressLog = now;
+  //     console.dir(`[Substreams] Progress:`);
+  //     console.dir(progress, { depth: null, colors: true });
+  //   }
+  // });
 
   return new Promise<{ cursor: string | undefined }>((resolve, reject) => {
     (emitter as any).on("close", (error: any) => {

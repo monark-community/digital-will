@@ -18,6 +18,29 @@ import { linkSecondaryMembersByTempAddress } from "./secondaryMemberService";
 
 const prisma = new PrismaClient();
 
+/** Generate a signed JWT for the given user. */
+function generateToken(userId: string, email: string): string {
+  return jwt.sign({ userId, email }, String(config.jwt.secret), {
+    expiresIn: config.jwt.expiresIn as any,
+  });
+}
+
+export async function getMe(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { userId },
+    select: {
+      userId: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      phoneNo: true,
+      wantToReceiveMails: true,
+    },
+  });
+  if (!user) throw new NotFoundError("User not found");
+  return user;
+}
+
 interface SignUpData {
   firstName: string;
   lastName: string;
@@ -68,10 +91,7 @@ export async function signUp(data: SignUpData): Promise<AuthResponse> {
   });
 
   // Generate JWT token
-  const token = jwt.sign(
-    { userId: user.userId, email: user.email },
-    String(config.jwt.secret),
-  );
+  const token = generateToken(user.userId, user.email);
 
   return {
     user: {
@@ -109,10 +129,7 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
   }
 
   // Generate JWT token
-  const token = jwt.sign(
-    { userId: user.userId, email: user.email },
-    String(config.jwt.secret),
-  );
+  const token = generateToken(user.userId, user.email);
 
   return {
     user: {
@@ -173,10 +190,7 @@ export async function walletSignIn(
   const user = wallet.user;
 
   // Generate JWT token
-  const token = jwt.sign(
-    { userId: user.userId, email: user.email },
-    String(config.jwt.secret),
-  );
+  const token = generateToken(user.userId, user.email);
 
   return {
     user: {
@@ -301,10 +315,7 @@ export async function createAccountWithWallet(data: {
   // before the user had an account (tempWalletAddress → walletAddress)
   await linkSecondaryMembersByTempAddress(walletAddress);
 
-  const token = jwt.sign(
-    { userId: user.userId, email: user.email },
-    String(config.jwt.secret),
-  );
+  const token = generateToken(user.userId, user.email);
 
   return {
     user: {
@@ -318,6 +329,25 @@ export async function createAccountWithWallet(data: {
     },
     token,
   };
+}
+
+/**
+ * Refresh an existing valid token — issues a new token with a fresh expiry.
+ * The caller must already be authenticated (verifyToken middleware).
+ */
+export async function refreshToken(userId: string): Promise<{ token: string }> {
+  const user = await prisma.user.findUnique({
+    where: { userId },
+    select: { userId: true, email: true },
+  });
+
+  if (!user) {
+    throw new UnauthorizedError("User not found");
+  }
+
+  const token = generateToken(user.userId, user.email);
+
+  return { token };
 }
 
 export { prisma };

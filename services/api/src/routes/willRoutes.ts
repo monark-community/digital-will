@@ -1,19 +1,24 @@
 import { Router } from "express";
-import { 
-  handleGetWills, 
-  handleGetAssociatedWills, 
-  handleCreateDraft, 
-  handleUpdateDraft, 
-  handleDeployWill, 
-  handleDeleteDraft, 
-  handleCancelWillOnChain, 
+import {
+  handleGetWills,
+  handleGetAssociatedWills,
+  handleCreateDraft,
+  handleUpdateDraft,
+  handleDeployWill,
+  handleDeleteDraft,
+  handleCancelWillOnChain,
   handleUpdateDeployedWill,
   handleValidateForDeployment,
   handleGetContractBalance,
   handleGetEnrichedWills,
-  handleRemoveSecondaryMember
+  handleRemoveSecondaryMember,
 } from "../controllers/willController";
 import { verifyToken } from "../middlewares/authMiddleware";
+import {
+  authorizeWillOwner,
+  authorizeDraftWillOwner,
+  authorizeWalletOwner,
+} from "../middlewares/authorizationMiddleware";
 
 const router = Router();
 // Toutes les routes sont protégées par le token
@@ -31,21 +36,29 @@ router.get("/associated", handleGetAssociatedWills);
  * @desc    Get all wills (drafts and deployed) by wallet address
  * @access  Private
  */
-router.get("/:walletAddress", handleGetWills);
+router.get("/:walletAddress", authorizeWalletOwner, handleGetWills);
 
 /**
  * @route   GET /wills/:walletAddress/enriched
  * @desc    Get all wills enriched with blockchain state
  * @access  Private
  */
-router.get("/:walletAddress/enriched", handleGetEnrichedWills);
+router.get(
+  "/:walletAddress/enriched",
+  authorizeWalletOwner,
+  handleGetEnrichedWills,
+);
 
 /**
  * @route   GET /wills/validate/:willId
  * @desc    Validate a will for deployment readiness
  * @access  Private
  */
-router.get("/validate/:willId", handleValidateForDeployment);
+router.get(
+  "/validate/:willId",
+  authorizeDraftWillOwner,
+  handleValidateForDeployment,
+);
 
 /**
  * @route   GET /wills/balance/:contractAddress
@@ -59,42 +72,42 @@ router.get("/balance/:contractAddress", handleGetContractBalance);
  * @desc    Create a new draft will (off-chain only)
  * @access  Private
  */
-router.post("/draft", handleCreateDraft);
+router.post("/draft", authorizeWalletOwner, handleCreateDraft);
 
 /**
  * @route   PUT /wills/draft/:willId
  * @desc    Update an existing draft will
  * @access  Private
  */
-router.put("/draft/:willId", handleUpdateDraft);
+router.put("/draft/:willId", authorizeDraftWillOwner, handleUpdateDraft);
 
 /**
  * @route   POST /wills/:willId/deploy
  * @desc    Deploy a will to blockchain, delete draft and create will
  * @access  Private
  */
-router.post("/:willId/deploy", handleDeployWill);
+router.post("/:willId/deploy", authorizeDraftWillOwner, handleDeployWill);
 
 /**
  * @route   DELETE /wills/draft/:willId
  * @desc    Delete a draft will
  * @access  Private
  */
-router.delete("/draft/:willId", handleDeleteDraft);
+router.delete("/draft/:willId", authorizeDraftWillOwner, handleDeleteDraft);
 
 /**
  * @route   POST /wills/:willId/cancel
  * @desc    Revert a canceled on-chain will back to DRAFT in the DB
  * @access  Private
  */
-router.post("/:willId/cancel", handleCancelWillOnChain);
+router.post("/:willId/cancel", authorizeWillOwner, handleCancelWillOnChain);
 
 /**
  * @route   PUT /wills/:willId/members
  * @desc    Update members of a deployed (INACTIVE/ACTIVE) will
  * @access  Private
  */
-router.put("/:willId/members", handleUpdateDeployedWill);
+router.put("/:willId/members", authorizeWillOwner, handleUpdateDeployedWill);
 
 /**
  * @route   DELETE /wills/:willId/secondary-member

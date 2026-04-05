@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { verifyToken } from "../middlewares/authMiddleware";
+import { authorizeNotificationOwner } from "../middlewares/authorizationMiddleware";
 import { ROUTES } from "../utils/constants";
 import {
   handleToggleRead,
@@ -12,9 +13,17 @@ const router = Router();
 
 router.use(verifyToken);
 
-router.patch(ROUTES.NOTIFICATIONS.MARK_READ, handleToggleRead);
+router.patch(
+  ROUTES.NOTIFICATIONS.MARK_READ,
+  authorizeNotificationOwner,
+  handleToggleRead,
+);
 router.patch(ROUTES.NOTIFICATIONS.MARK_ALL_READ, handleMarkAllRead);
-router.delete(ROUTES.NOTIFICATIONS.DELETE_ONE, handleDeleteNotification);
+router.delete(
+  ROUTES.NOTIFICATIONS.DELETE_ONE,
+  authorizeNotificationOwner,
+  handleDeleteNotification,
+);
 router.delete(ROUTES.NOTIFICATIONS.DELETE_ALL, handleDeleteAllNotifications);
 
 export default router;

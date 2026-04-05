@@ -6,6 +6,8 @@ import {
   checkWalletExists,
   walletSignIn,
   createAccountWithWallet,
+  refreshToken,
+  getMe,
 } from "../services/authService";
 import { asyncHandler } from "../middlewares/errorMiddleware";
 
@@ -118,3 +120,30 @@ export const handleCreateAccountWithWallet = asyncHandler(
     });
   },
 );
+
+/**
+ * Refresh token controller — issues a new JWT with fresh expiry
+ */
+export const handleRefreshToken = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const result = await refreshToken(userId);
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: result,
+    });
+  },
+);
+
+/**
+ * Get current user from DB (full profile)
+ */
+export const handleGetMe = asyncHandler(async (req: Request, res: Response) => {
+  const user = await getMe(req.user!.userId);
+  res.status(StatusCodes.OK).json({
+    success: true,
+    message: "Authenticated user",
+    data: { user },
+  });
+});

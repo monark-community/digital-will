@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import Footer from "./components/ui/Footer";
+import SessionManager from "./components/SessionManager";
 import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -34,6 +35,7 @@ export default function RootLayout({
         />
         <Providers>
           <Suspense>
+            <SessionManager />
             <main className="flex-1">{children}</main>
           </Suspense>
           <Footer />
