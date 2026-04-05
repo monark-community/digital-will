@@ -327,12 +327,13 @@ export function isContractAddressError(error: any): boolean {
 
   // CALL_EXCEPTION with no data typically means contract not deployed or wrong address
   if (error.code === 'CALL_EXCEPTION') {
-    const hasNoData = 
-      error.data === '0x' || 
+    const hasNoData =
+      error.data === null ||
+      error.data === '0x' ||
       error.transaction?.data === '0x' ||
       error.message?.includes('no data present') ||
       error.message?.includes('require(false)');
-    
+
     if (hasNoData) return true;
   }
 
