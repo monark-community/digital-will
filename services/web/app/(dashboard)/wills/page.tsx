@@ -89,6 +89,7 @@ export default function WillsPage() {
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
   const [showCreateForm, setShowCreateForm] = useState(false);
   const walletDropdownRef = useRef<HTMLDivElement>(null);
+  const networkDropdownRef = useRef<HTMLDivElement>(null);
   const filterWalletDropdownRef = useRef<HTMLDivElement>(null);
   const [realWills, setRealWills] = useState<WillFromDB[]>([]);
   const [isLoadingWills, setIsLoadingWills] = useState(false);
@@ -129,6 +130,8 @@ export default function WillsPage() {
     config.securityPeriod.max.toString(),
   );
   const [showWalletDropdown, setShowWalletDropdown] = useState(false);
+  const [showNetworkDropdown, setShowNetworkDropdown] = useState(false);
+  const [selectedNetwork, setSelectedNetwork] = useState("");
   const [showContactDropdown, setShowContactDropdown] = useState<number | null>(
     null,
   );
@@ -400,6 +403,12 @@ export default function WillsPage() {
         setShowWalletDropdown(false);
       }
       if (
+        networkDropdownRef.current &&
+        !networkDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowNetworkDropdown(false);
+      }
+      if (
         filterWalletDropdownRef.current &&
         !filterWalletDropdownRef.current.contains(event.target as Node)
       ) {
@@ -407,13 +416,13 @@ export default function WillsPage() {
       }
     };
 
-    if (showWalletDropdown || showFilterWalletDropdown) {
+    if (showWalletDropdown || showNetworkDropdown || showFilterWalletDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => {
         document.removeEventListener("mousedown", handleClickOutside);
       };
     }
-  }, [showWalletDropdown, showFilterWalletDropdown]);
+  }, [showWalletDropdown, showNetworkDropdown, showFilterWalletDropdown]);
 
   const fetchWills = useCallback(async () => {
     if (!wallets || wallets.length === 0) return;
@@ -483,6 +492,7 @@ export default function WillsPage() {
     setMemberPowerErrorsByIndex(memberPowerErrorsByIndex);
   }, [
     selectedWalletId,
+    selectedNetwork,
     secondaryMembers,
     minSecurityPeriod,
     maxSecurityPeriod,
@@ -1277,17 +1287,19 @@ export default function WillsPage() {
     }
 
     // 5. VÃ©rifier les pÃ©riodes de sÃ©curitÃ©
+    const minAllowedSeconds = Number(periodToSeconds(config.securityPeriod.min));
+    const maxAllowedSeconds = Number(periodToSeconds(config.securityPeriod.max));
     if (
-      will.minSecurityPeriod < config.securityPeriod.min ||
-      will.maxSecurityPeriod < config.securityPeriod.min
+      will.minSecurityPeriod < minAllowedSeconds ||
+      will.maxSecurityPeriod < minAllowedSeconds
     ) {
       errors.push(
         `Security periods must be at least ${config.securityPeriod.min} ${config.securityPeriod.unit}`,
       );
     }
     if (
-      will.minSecurityPeriod > config.securityPeriod.max ||
-      will.maxSecurityPeriod > config.securityPeriod.max
+      will.minSecurityPeriod > maxAllowedSeconds ||
+      will.maxSecurityPeriod > maxAllowedSeconds
     ) {
       errors.push(
         `Security periods cannot exceed ${config.securityPeriod.max} ${config.securityPeriod.unit}`,
@@ -1322,6 +1334,11 @@ export default function WillsPage() {
     // VÃ©rifier qu'un wallet est sÃ©lectionnÃ©
     if (!selectedWalletId) {
       errors.push("Please select a wallet");
+    }
+
+    // VÃ©rifier qu'un network est sÃ©lectionnÃ©
+    if (!selectedNetwork) {
+      errors.push("Please select a network");
     }
 
     if (!willName.trim()) {
@@ -1609,6 +1626,10 @@ export default function WillsPage() {
     setSelectedWalletId(
       wallets?.find((w) => w.address === will.walletAddress)?.walletId || "",
     );
+    // Network was already chosen when the draft was created; since we only
+    // support Sepolia on this flow, preselect it when editing.
+    setSelectedNetwork("sepolia");
+    setShowNetworkDropdown(false);
     setWillName(will.willName);
     setSecondaryMembers(
       will.secondaryMembers.map((m) => ({
@@ -1972,6 +1993,7 @@ export default function WillsPage() {
 
   const resetForm = () => {
     setSelectedWalletId("");
+    setSelectedNetwork("");
     setWillName("");
     setSecondaryMembers([
       {
@@ -1995,6 +2017,7 @@ export default function WillsPage() {
     setMaxSecurityPeriod(config.securityPeriod.max.toString());
     setShowCreateForm(false);
     setShowWalletDropdown(false);
+    setShowNetworkDropdown(false);
     setShowContactDropdown(null);
     setContactSuccessByIndex({});
     setAddedContactFingerprintByIndex({});
@@ -2485,6 +2508,96 @@ export default function WillsPage() {
                       )}
                     </div>
                   </div>
+
+                  <div ref={networkDropdownRef}>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                      Select Network
+                    </label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowNetworkDropdown(!showNetworkDropdown)
+                        }
+                        className="w-full px-4 py-2 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-left text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] flex items-center justify-between cursor-pointer hover:border-[var(--accent)] transition-all active:scale-[0.99]"
+                      >
+                        <div className="flex-1 min-w-0">
+                          {selectedNetwork ? (
+                            <div className="text-xs text-[var(--text-muted-alt)] inline-flex items-center gap-1">
+                              <svg
+                                className="w-3 h-3"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={1.5}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="2" y1="12" x2="22" y2="12"></line>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                              </svg>
+                              <div className="text-[var(--text-muted-alt)] font-medium">
+                                {selectedNetwork === "sepolia"
+                                  ? "Sepolia Testnet"
+                                  : "Sepolia Testnet"}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-[var(--text-muted-alt)]">
+                              Select Network
+                            </span>
+                          )}
+                        </div>
+                        <svg
+                          className="w-5 h-5 text-[var(--text-muted-alt)] ml-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
+
+                      {showNetworkDropdown && (
+                        <div className="absolute z-10 w-full mt-1 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedNetwork("sepolia");
+                              setShowNetworkDropdown(false);
+                            }}
+                            className="w-full px-4 py-3 text-left hover:bg-[var(--bg-card)] transition-colors border-b border-[var(--border-section)] last:border-b-0"
+                          >
+                            <div className="text-xs text-[var(--text-muted-alt)] inline-flex items-center gap-1">
+                              <svg
+                                className="w-3 h-3"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={1.5}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="2" y1="12" x2="22" y2="12"></line>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                              </svg>
+                              <div className="text-[var(--text-muted-alt)] font-medium">
+                                Sepolia Testnet
+                              </div>
+                            </div>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                       Will Name <span className="text-red-500">*</span>
@@ -3355,12 +3468,12 @@ export default function WillsPage() {
                               <line x1="2" y1="12" x2="22" y2="12"></line>
                               <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
                             </svg>
-                            <span>Network</span>
+                            <span>Selected Network</span>
                           </p>
                           <p className="text-sm font-medium text-[var(--text-primary)]">
                             {will.chainId
                               ? getChainName(will.chainId)
-                              : "Not deployed"}
+                              : "Sepolia Testnet (Not deployed yet)"}
                           </p>
                         </div>
                         <div>
