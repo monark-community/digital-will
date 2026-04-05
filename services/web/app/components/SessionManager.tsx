@@ -266,7 +266,7 @@ export default function SessionManager() {
         {/* Actions */}
         <div className="flex gap-3">
           <button
-            onClick={doLogout}
+            onClick={() => doLogout(false)}
             className="flex-1 px-4 py-3 rounded-lg border border-[var(--border-section)] text-[var(--text-muted-alt)] hover:bg-[var(--bg-section)] transition-colors font-medium"
           >
             Log out
