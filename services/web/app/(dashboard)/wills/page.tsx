@@ -86,6 +86,23 @@ export default function WillsPage() {
   const { data: wallets } = useWallets();
   const { data: contacts } = useContacts();
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
+  const [isTransactionInProgress, setIsTransactionInProgress] = useState(false); // Pour bloquer la navigation pendant les transactions
+
+  useEffect(() => {
+    if (!isTransactionInProgress) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+      return "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isTransactionInProgress]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const walletDropdownRef = useRef<HTMLDivElement>(null);
   const filterWalletDropdownRef = useRef<HTMLDivElement>(null);
@@ -1381,6 +1398,7 @@ export default function WillsPage() {
     setSuccessMessage(null);
     setDeployingWillId(will.willId);
     setDeployFundError(null);
+    setIsTransactionInProgress(true); // Block navigation during transaction
 
     try {
       const blockchainMembers = will.secondaryMembers.map((m) => ({
@@ -1410,6 +1428,7 @@ export default function WillsPage() {
       setDeployFundError(errorMsg);
     } finally {
       setDeployingWillId(null);
+      setIsTransactionInProgress(false); // Unblock navigation
     }
   };
 
@@ -1719,6 +1738,7 @@ export default function WillsPage() {
 
     setEditWillError(null);
     setIsUpdatingWill(true);
+    setIsTransactionInProgress(true); // Block navigation during transaction
     try {
       // 1. Blockchain â€” only if address/power/membership/period changed
       if (
@@ -1758,6 +1778,7 @@ export default function WillsPage() {
       setEditWillError(getErrorMessage(err, "Update failed."));
     } finally {
       setIsUpdatingWill(false);
+      setIsTransactionInProgress(false); // Unblock navigation
     }
   };
 
@@ -5823,6 +5844,58 @@ export default function WillsPage() {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isTransactionInProgress && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
+          <div className="bg-[var(--bg-card)] border-2 border-[var(--accent)] rounded-2xl p-8 w-full max-w-md shadow-2xl">
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative w-16 h-16">
+                <div className="absolute inset-0 rounded-full border-4 border-[var(--accent)]/20"></div>
+                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[var(--accent)] animate-spin"></div>
+              </div>
+
+              <div className="text-center space-y-2">
+                <h2 className="text-xl font-bold text-[var(--text-primary)]">
+                  Transaction in Progress
+                </h2>
+                <p className="text-sm text-[var(--text-muted-alt)]">
+                  Please complete the MetaMask transaction
+                </p>
+              </div>
+
+              <div className="w-full rounded-lg border-2 border-yellow-500/50 bg-yellow-500/10 p-4">
+                <div className="flex items-start gap-3">
+                  <svg
+                    className="w-6 h-6 text-yellow-500 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-semibold text-yellow-200">
+                      DO NOT close or refresh this page
+                    </p>
+                    <p className="text-xs text-yellow-300/80">
+                      Closing or refreshing the page during the transaction may cause the backend update to fail, even if the blockchain transaction succeeds.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-[var(--text-muted-alt)] text-center">
+                This overlay will automatically close when the transaction completes
+              </p>
             </div>
           </div>
         </div>
