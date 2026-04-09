@@ -26,26 +26,6 @@ const options: swaggerJsdoc.Options = {
       },
       schemas: {
         // ── Auth ────────────────────────────────────────────────────────────
-        SignUpRequest: {
-          type: "object",
-          required: ["firstName", "lastName", "email", "password", "confirmPassword"],
-          properties: {
-            firstName: { type: "string", example: "Alice" },
-            lastName: { type: "string", example: "Smith" },
-            email: { type: "string", format: "email", example: "alice@example.com" },
-            phoneNo: { type: "string", example: "+15141234567" },
-            password: { type: "string", format: "password", minLength: 8 },
-            confirmPassword: { type: "string", format: "password", minLength: 8 },
-          },
-        },
-        SignInRequest: {
-          type: "object",
-          required: ["email", "password"],
-          properties: {
-            email: { type: "string", format: "email", example: "alice@example.com" },
-            password: { type: "string", format: "password" },
-          },
-        },
         WalletCheckRequest: {
           type: "object",
           required: ["walletAddress"],

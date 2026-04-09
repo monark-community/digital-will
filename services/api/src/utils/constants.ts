@@ -20,8 +20,6 @@ export const ROUTES = {
   BASE: "/api",
   AUTH: {
     BASE: "/auth",
-    SIGNUP: "/signup",
-    SIGNIN: "/signin",
     ME: "/me",
     LOGOUT: "/logout",
     REFRESH: "/refresh",

@@ -1,8 +1,6 @@
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import {
-  handleSignUp,
-  handleSignIn,
   handleCheckWallet,
   handleWalletSignIn,
   handleCreateAccountWithWallet,
@@ -10,11 +8,6 @@ import {
   handleGetMe,
 } from "../controllers/authController";
 import { verifyToken } from "../middlewares/authMiddleware";
-import {
-  validateSignUp,
-  validateSignIn,
-} from "../middlewares/validationMiddleware";
-import { asyncHandler } from "../middlewares/errorMiddleware";
 import { ROUTES } from "../utils/constants";
 
 const router = Router();
@@ -25,80 +18,6 @@ const router = Router();
  *   name: Auth
  *   description: Authentication and account management
  */
-
-/**
- * @swagger
- * /auth/signup:
- *   post:
- *     summary: Register a new user
- *     tags: [Auth]
- *     security: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/SignUpRequest'
- *     responses:
- *       201:
- *         description: User created successfully
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/AuthResult'
- *       400:
- *         description: Validation error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       409:
- *         description: Email already in use
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
-router.post(ROUTES.AUTH.SIGNUP, asyncHandler(validateSignUp), handleSignUp);
-
-/**
- * @swagger
- * /auth/signin:
- *   post:
- *     summary: Sign in with email and password
- *     tags: [Auth]
- *     security: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/SignInRequest'
- *     responses:
- *       200:
- *         description: Sign in successful
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/AuthResult'
- *       401:
- *         description: Invalid credentials
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
-router.post(ROUTES.AUTH.SIGNIN, asyncHandler(validateSignIn), handleSignIn);
 
 /**
  * @swagger

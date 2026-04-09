@@ -5,58 +5,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authService } from "@/lib/services";
 import type {
-  SignInRequest,
-  SignUpRequest,
   CreateAccountWithWalletRequest,
   WalletAuthRequest,
 } from "@/lib/types";
 import { AxiosError } from "axios";
-
-/**
- * Hook for sign in mutation
- */
-export function useSignIn() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: SignInRequest) => authService.signIn(data),
-    onSuccess: (response) => {
-      authService.setToken(response.token);
-      authService.setUser(response.user);
-      queryClient.clear();
-      const redirectTo = searchParams.get("redirectTo");
-      router.push(redirectTo || "/dashboard");
-    },
-    onError: (error: AxiosError<{ message: string }>) => {
-      console.error("Sign in error:", error.response?.data?.message);
-    },
-  });
-}
-
-/**
- * Hook for sign up mutation
- */
-export function useSignUp() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: SignUpRequest) => authService.signUp(data),
-    onSuccess: (response) => {
-      authService.setToken(response.token);
-      authService.setUser(response.user);
-      queryClient.clear();
-      const redirectTo = searchParams.get("redirectTo");
-      router.push(redirectTo || "/dashboard");
-    },
-    onError: (error: AxiosError<{ message: string }>) => {
-      console.error("Sign up error:", error.response?.data?.message);
-    },
-  });
-}
 
 /**
  * Hook for logout
