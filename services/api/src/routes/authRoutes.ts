@@ -20,51 +20,244 @@ import { ROUTES } from "../utils/constants";
 const router = Router();
 
 /**
- * @route   POST /auth/signup
- * @desc    Register a new user
- * @access  Public
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: Authentication and account management
+ */
+
+/**
+ * @swagger
+ * /auth/signup:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/SignUpRequest'
+ *     responses:
+ *       201:
+ *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/AuthResult'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       409:
+ *         description: Email already in use
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post(ROUTES.AUTH.SIGNUP, asyncHandler(validateSignUp), handleSignUp);
 
 /**
- * @route   POST /auth/signin
- * @desc    Sign in user and return JWT token
- * @access  Public
+ * @swagger
+ * /auth/signin:
+ *   post:
+ *     summary: Sign in with email and password
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/SignInRequest'
+ *     responses:
+ *       200:
+ *         description: Sign in successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/AuthResult'
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post(ROUTES.AUTH.SIGNIN, asyncHandler(validateSignIn), handleSignIn);
 
 /**
- * @route   POST /auth/wallet/check
- * @desc    Check if wallet address exists
- * @access  Public
+ * @swagger
+ * /auth/wallet/check:
+ *   post:
+ *     summary: Check if a wallet address is already registered
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/WalletCheckRequest'
+ *     responses:
+ *       200:
+ *         description: Wallet existence check result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         exists:
+ *                           type: boolean
  */
 router.post(ROUTES.AUTH.WALLET_CHECK, handleCheckWallet);
 
 /**
- * @route   POST /auth/wallet/signin
- * @desc    Sign in with wallet address
- * @access  Public
+ * @swagger
+ * /auth/wallet/signin:
+ *   post:
+ *     summary: Sign in using a wallet signature
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/WalletSignInRequest'
+ *     responses:
+ *       200:
+ *         description: Wallet authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/AuthResult'
+ *       401:
+ *         description: Invalid signature or wallet not registered
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post(ROUTES.AUTH.WALLET_SIGNIN, handleWalletSignIn);
 
 /**
- * @route   POST /auth/wallet/create
- * @desc    Create account with wallet address
- * @access  Public
+ * @swagger
+ * /auth/wallet/create:
+ *   post:
+ *     summary: Create a new account linked to a wallet
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/WalletCreateAccountRequest'
+ *     responses:
+ *       201:
+ *         description: Account created and wallet linked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/AuthResult'
+ *       400:
+ *         description: Invalid signature or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       409:
+ *         description: Email or wallet already in use
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post(ROUTES.AUTH.WALLET_CREATE, handleCreateAccountWithWallet);
 
 /**
- * @route   GET /auth/me
- * @desc    Get current user info (protected route example)
- * @access  Private
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Get the authenticated user's profile
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Authenticated user profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         user:
+ *                           $ref: '#/components/schemas/UserProfile'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get(ROUTES.AUTH.ME, verifyToken, handleGetMe);
 
 /**
- * @route   POST /auth/logout
- * @desc    Logout user (client-side token removal)
- * @access  Private
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Logout (invalidates the session client-side)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post(ROUTES.AUTH.LOGOUT, verifyToken, (req, res) => {
   res.status(StatusCodes.OK).json({
@@ -74,9 +267,34 @@ router.post(ROUTES.AUTH.LOGOUT, verifyToken, (req, res) => {
 });
 
 /**
- * @route   POST /auth/refresh
- * @desc    Refresh JWT token (returns a new token with fresh expiry)
- * @access  Private
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Refresh JWT token
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: New token issued
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         token:
+ *                           type: string
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post(ROUTES.AUTH.REFRESH, verifyToken, handleRefreshToken);
 
