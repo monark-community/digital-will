@@ -107,15 +107,15 @@ export async function stream(
   });
 
   // Progress — fired each 5 mins with module processing stats (useful for monitoring sync progress)
-  // let lastProgressLog = 0;
-  // emitter.on("progress", (progress: any) => {
-  //   const now = Date.now();
-  //   if (now - lastProgressLog >= 300_000) {
-  //     lastProgressLog = now;
-  //     console.dir(`[Substreams] Progress:`);
-  //     console.dir(progress, { depth: null, colors: true });
-  //   }
-  // });
+  let lastProgressLog = 0;
+  emitter.on("progress", (progress: any) => {
+    const now = Date.now();
+    if (now - lastProgressLog >= 300_000) {
+      lastProgressLog = now;
+      console.dir(`[Substreams] Progress:`);
+      console.dir(progress, { depth: null, colors: true });
+    }
+  });
 
   return new Promise<{ cursor: string | undefined }>((resolve, reject) => {
     (emitter as any).on("close", (error: any) => {
