@@ -58,15 +58,16 @@ export async function stream(
   onMessage: (message: EventsCalls, chainId: string) => Promise<void>,
   chainId: string,
   cursor?: string,
+  lastProcessedBlock?: number,
 ): Promise<{ cursor: string | undefined }> {
   console.log(
-    `in stream function with cursor: ${cursor}`,
+    `in stream function with cursor: ${cursor} and lastProcessedBlock: ${lastProcessedBlock}`,
   );
 
   const request = createRequest({
     substreamPackage: pkg,
     outputModule,
-    ...(cursor ? { startCursor: cursor } : { startBlockNum: -1 }),
+    ...(lastProcessedBlock ? { startBlockNum: lastProcessedBlock } : { startBlockNum: -1 }),
   });
 
   // NodeJS Events
