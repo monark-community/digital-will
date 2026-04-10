@@ -4,7 +4,10 @@ Taken from here https://github.com/streamingfast/substreams-sink-examples/blob/m
 
 import { Code, ConnectError } from '@connectrpc/connect'
 
-const FATAL_ERRORS = [Code.Unauthenticated, Code.InvalidArgument, Code.Internal]
+// Code.InvalidArgument was removed from FATAL_ERRORS 
+// bc it is often a transient error caused by network issues or protocol errors, 
+// so we want to retry those
+const FATAL_ERRORS = [Code.Unauthenticated, Code.Internal]
 
 const isAppErrorRetryable = (e: Error) => {
     if (e.message === "COULD_NOT_READ_CURSOR" || e.message === "COULD_NOT_COMMIT_CURSOR") {
