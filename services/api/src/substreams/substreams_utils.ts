@@ -20,6 +20,34 @@ function hasEventOrCallData(message: EventsCalls): boolean {
   );
 }
 
+/**
+ * Extract block number from EventsCalls message.
+ * Looks through events first, then calls to find the block number.
+ */
+function extractBlockNumberFromMessage(message: EventsCalls): number | undefined {
+  if (message.events) {
+    for (const eventType of Object.values(message.events)) {
+      if (Array.isArray(eventType) && eventType.length > 0) {
+        const blockNum = (eventType[0] as any).evtBlockNumber;
+        const parsed = typeof blockNum === 'string' ? parseInt(blockNum) : undefined;
+        return parsed;
+      }
+    }
+  }
+
+  if (message.calls) {
+    for (const callType of Object.values(message.calls)) {
+      if (Array.isArray(callType) && callType.length > 0) {
+        const blockNum = (callType[0] as any).callBlockNumber;
+        const parsed = typeof blockNum === 'string' ? parseInt(blockNum) : undefined;
+        return parsed;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 // Inspired by https://www.npmjs.com/package/@substreams/node
 export async function stream(
   pkg: Awaited<ReturnType<typeof readPackage>>,
@@ -32,10 +60,8 @@ export async function stream(
   cursor?: string,
 ): Promise<{ cursor: string | undefined }> {
   console.log(
-    `in stream function with startBlockNum: ${startBlockNum} and cursor: ${cursor}`,
+    `in stream function with cursor: ${cursor}`,
   );
-
-  const startBlockNumParsed = parseInt(startBlockNum); // will be used for startBlockNum when we will deploy the server
 
   const request = createRequest({
     substreamPackage: pkg,
@@ -67,7 +93,12 @@ export async function stream(
          * we want to have the last cursor updated in the DB to avoid
          * reprocessing too many blocks when restarting the listener.
          */
-        await updateLastCursorInDB(chainId, cursor);
+        const blockNumber = extractBlockNumberFromMessage(eventsCallsMessage);
+        await updateLastCursorInDB(
+          chainId,
+          cursor,
+          blockNumber,
+        );
       } catch (error) {
         console.error("[Substreams] Error processing message:", error);
       }
