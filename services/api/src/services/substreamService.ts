@@ -20,7 +20,9 @@ export async function ensureWillFactoryExists(
 
   if (existing) {
     console.log(`[SubstreamsDB] WillFactory entry already exists for chainId ${chainId}.
-            returning existing cursor: ${existing.lastProcessedCursor ? existing.lastProcessedCursor : "undefined"}`);
+            returning existing cursor: ${existing.lastProcessedCursor ? existing.lastProcessedCursor : "undefined"}
+            lastProcessedBlock is: ${existing.lastProcessedBlock ? existing.lastProcessedBlock : "null"}
+            `);
     return existing.lastProcessedCursor || undefined;
   }
 
@@ -29,13 +31,15 @@ export async function ensureWillFactoryExists(
     update: {
       contractAddressInBlockchain,
       blockDeployed: blockDeployed_parsed,
-      lastProcessedCursor: "",
+      lastProcessedBlock: null,
+      lastProcessedCursor: null,
     },
     create: {
       contractAddressInBlockchain,
       chainId: chainId_parsed,
       blockDeployed: blockDeployed_parsed,
-      lastProcessedCursor: "",
+      lastProcessedBlock: null,
+      lastProcessedCursor: null,
     },
   });
 
@@ -52,6 +56,7 @@ export async function ensureWillFactoryExists(
 export async function updateLastCursorInDB(
   chainId: string,
   cursor: string,
+  blockNumber?: number,
 ): Promise<void> {
   const willFactory = await prisma.willFactory.findUnique({
     where: { chainId: parseInt(chainId) },
@@ -64,9 +69,9 @@ export async function updateLastCursorInDB(
   }
   await prisma.willFactory.update({
     where: { chainId: parseInt(chainId) },
-    data: { lastProcessedCursor: cursor },
+    data: { lastProcessedCursor: cursor, lastProcessedBlock: blockNumber ?? null },
   });
   console.log(
-    `[SubstreamsDB] Cursor persisted for chainId ${chainId}: ${cursor}`,
+    `[SubstreamsDB] Cursor persisted for chainId ${chainId}: ${cursor} and last processed block: ${blockNumber}`,
   );
 }
