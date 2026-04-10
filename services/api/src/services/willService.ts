@@ -1,10 +1,9 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { ethers } from "ethers";
 import { BadRequestError, NotFoundError } from "../utils/errors";
 import { WillFromDB } from "./chainStateService";
 import { getProvider } from "../utils/blockchain";
-
-const prisma = new PrismaClient();
+import prisma from "../lib/prisma";
 
 /**
  * Maps a draft will to the WillFromDB format expected by the frontend
@@ -65,7 +64,10 @@ export const getDeployedWillsByWalletAddress = async (
 
   // Get only deployed wills (exclude deleted)
   const deployedWills = await prisma.will.findMany({
-    where: { walletAddress: walletAddress.toLowerCase(), isDeletedByUser: false },
+    where: {
+      walletAddress: walletAddress.toLowerCase(),
+      isDeletedByUser: false,
+    },
     include: { secondaryMembers: true },
   });
 

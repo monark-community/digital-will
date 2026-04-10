@@ -7,9 +7,7 @@ import { BadRequestError } from "../utils/errors";
 import { validateForDeployment } from "../utils/willValidation";
 import { getContractBalance } from "../utils/blockchain";
 import { enrichWillsWithChainState } from "../services/chainStateService";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "../lib/prisma";
 
 /**
  * Get all wills (drafts and deployed) by wallet address
@@ -381,7 +379,7 @@ export const handleRemoveSecondaryMember = asyncHandler(
     // Remove the secondary member
     const result = await willService.removeSecondaryMemberByAddress(
       willId,
-      walletAddresses
+      walletAddresses,
     );
 
     res.status(StatusCodes.OK).json({

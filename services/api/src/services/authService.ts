@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { config } from "../config/config";
@@ -15,8 +14,7 @@ import {
   validateWalletAddress,
 } from "../utils/crypto";
 import { linkSecondaryMembersByTempAddress } from "./secondaryMemberService";
-
-const prisma = new PrismaClient();
+import prisma from "../lib/prisma";
 
 /** Generate a signed JWT for the given user. */
 function generateToken(userId: string, email: string): string {
@@ -261,5 +259,3 @@ export async function refreshToken(userId: string): Promise<{ token: string }> {
 
   return { token };
 }
-
-export { prisma };
