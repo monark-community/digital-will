@@ -13,8 +13,8 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [walletConnecting, setWalletConnecting] = useState(false);
 
-  const { mutate: checkWallet } = useCheckWallet();
-  const { mutate: walletSignIn } = useWalletSignIn();
+  const { mutateAsync: checkWallet } = useCheckWallet();
+  const { mutateAsync: walletSignIn } = useWalletSignIn();
 
   useEffect(() => {
     if (authService.isAuthenticated()) {
@@ -23,6 +23,8 @@ export default function LoginPage() {
   }, [router]);
 
   const handleMetaMaskConnect = async () => {
+    let keepConnecting = false;
+
     try {
       setWalletConnecting(true);
       setErrorMessage(null);
@@ -36,43 +38,36 @@ export default function LoginPage() {
 
       const { address, signature, message } = await connectWallet();
 
-      checkWallet(address, {
-        onSuccess: (data) => {
-          if (data.exists) {
-            walletSignIn(
-              { walletAddress: address, signature, message },
-              {
-                onError: (error: any) => {
-                  const message =
-                    error?.response?.data?.message ||
-                    "Failed to sign in with wallet";
-                  setErrorMessage(message);
-                },
-              },
-            );
-          } else {
-            const params = new URLSearchParams({
-              address,
-              signature,
-              message,
-            });
-            const redirectTo = searchParams.get("redirectTo");
-            if (redirectTo) {
-              params.set("redirectTo", redirectTo);
-            }
-            router.push(`/signup/wallet?${params.toString()}`);
-          }
-        },
-        onError: (error: any) => {
-          const message =
-            error?.response?.data?.message || "Failed to check wallet";
-          setErrorMessage(message);
-        },
+      const data = await checkWallet(address);
+
+      if (data.exists) {
+        await walletSignIn({ walletAddress: address, signature, message });
+        // On success, the mutation redirects; keep the button in the
+        // "Connecting..." state until navigation/unmount.
+        keepConnecting = true;
+        return;
+      }
+
+      const params = new URLSearchParams({
+        address,
+        signature,
+        message,
       });
+      const redirectTo = searchParams.get("redirectTo");
+      if (redirectTo) {
+        params.set("redirectTo", redirectTo);
+      }
+
+      // Keep the button disabled/loading until navigation completes.
+      keepConnecting = true;
+      router.push(`/signup/wallet?${params.toString()}`);
+      return;
     } catch (error: any) {
       setErrorMessage(error.message || "Failed to connect to MetaMask");
     } finally {
-      setWalletConnecting(false);
+      if (!keepConnecting) {
+        setWalletConnecting(false);
+      }
     }
   };
 
@@ -144,7 +139,8 @@ export default function LoginPage() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
+
                 />
               </svg>
             </div>
@@ -159,7 +155,7 @@ export default function LoginPage() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
             </div>

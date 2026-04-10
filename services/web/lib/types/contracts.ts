@@ -14,6 +14,7 @@ export interface SecurityPeriodConfig {
 
 export interface CreateWillParams {
   factoryAddress: string;
+  ownerAddress: string;
   secondaryMembers: SMPartialInfo[];
   securityPeriodConfig: SecurityPeriodConfig;
   fundEth?: string;

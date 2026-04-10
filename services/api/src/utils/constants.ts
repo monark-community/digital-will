@@ -4,8 +4,9 @@
 
 // Validation Regex Patterns
 export const REGEX = {
-  EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  PHONE: /^\+?[\d\s-()]+$/,
+  EMAIL: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+  // E.164 format: + followed by 7 to 15 digits (e.g. +15141234567)
+  PHONE: /^\+\d{7,15}$/,
 } as const;
 
 // Password constraints

@@ -27,7 +27,7 @@ export const config = {
   securityPeriod: {
     unit: _isNonProd ? ("minutes" as const) : ("days" as const),
     min: _isNonProd ? 1 : 28,
-    max: _isNonProd ? 10000 : 154,
+    max: _isNonProd ? 166 : 154,
   },
 } as const;
 

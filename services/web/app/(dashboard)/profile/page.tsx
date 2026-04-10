@@ -230,15 +230,6 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   )}
-
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-muted)] mb-1">
-                      User ID
-                    </label>
-                    <div className="px-4 py-3 bg-[var(--bg-section)] border border-[var(--border-section)] rounded-lg text-[var(--text-muted)] text-sm font-mono">
-                      {user.userId}
-                    </div>
-                  </div>
                 </div>
               </div>
               <div className="pt-6 border-t border-[var(--border-section)]">
@@ -259,7 +250,7 @@ export default function ProfilePage() {
                   <button
                     onClick={handleToggleEmailNotifications}
                     disabled={isUpdatingPreferences}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 ${
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 cursor-pointer active:scale-[0.97] ${
                       user?.wantToReceiveMails
                         ? "bg-[var(--accent)]"
                         : "bg-gray-600"
@@ -286,7 +277,7 @@ export default function ProfilePage() {
                   <button
                     onClick={handleCheckDeleteEligibility}
                     disabled={isLoading}
-                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-opacity disabled:opacity-50 flex items-center gap-2"
+                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer active:scale-[0.97]"
                   >
                     {isLoading ? "Checking..." : "Delete Account"}
                     <svg
@@ -305,7 +296,7 @@ export default function ProfilePage() {
                   </button>
                   <button
                     onClick={() => router.push("/dashboard")}
-                    className="px-6 py-3 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg font-semibold transition-opacity flex items-center gap-2"
+                    className="px-6 py-3 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg font-semibold transition-all flex items-center gap-2 cursor-pointer active:scale-[0.97]"
                   >
                     Back to Dashboard
                     <svg

@@ -44,6 +44,8 @@ const SM_ACTIONS: ActionDef[] = [
     label: "Refuse",
     description: "Refuse to participate.",
     disabledReason: (w) => {
+      if (w.myMembership.state === "DECLARED_DEATH")
+        return "You already declared death";
       if (w.state === "CANCELED") return "Will is canceled";
       if (w.state === "EXECUTED") return "Will is already executed";
       if (w.state === "DRAFT") return "Will is not yet deployed";
@@ -425,7 +427,7 @@ export default function AssociatedWillsPage() {
               onClick={() =>
                 setShowFilterWalletDropdown(!showFilterWalletDropdown)
               }
-              className="w-full bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-between hover:border-[var(--accent)] transition-colors"
+              className="w-full bg-[var(--bg-card)] border border-[var(--border-section)] rounded-xl p-5 flex items-center justify-between hover:border-[var(--accent)] transition-all cursor-pointer active:scale-[0.99]"
             >
               <div className="flex-1 text-left">
                 <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
@@ -531,15 +533,7 @@ export default function AssociatedWillsPage() {
                   }`}
                 >
                   {/* Will header */}
-                  <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-section)]">
-                    <div>
-                      <span className="text-xs text-[var(--text-muted)] font-mono">
-                        Will ID
-                      </span>
-                      <p className="font-mono text-sm text-[var(--text-primary)]">
-                        {will.willId}
-                      </p>
-                    </div>
+                  <div className="flex items-start justify-between px-6 py-4 border-b border-[var(--border-section)]">
                     {(() => {
                       const execTs = will.executionTimestampOnChain ?? 0;
                       const badgeState =
@@ -550,11 +544,81 @@ export default function AssociatedWillsPage() {
                           : will.state;
 
                       return (
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${STATE_COLORS[badgeState] ?? "bg-gray-100 text-gray-700"}`}
-                        >
-                          {badgeState}
-                        </span>
+                        <>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-[var(--text-primary)]">
+                                {will.willName}
+                              </h3>
+
+                              {will.state !== "DRAFT" &&
+                                will.contractAddressInBlockchain && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-500">
+                                    <svg
+                                      className="w-3 h-3"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth={2}
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M4.5 12.75l6 6 9-13.5"
+                                      />
+                                    </svg>
+                                    Deployed
+                                  </span>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              <p className="text-xs text-[var(--text-muted-alt)] font-mono truncate max-w-xs">
+                                {will.contractAddressInBlockchain}
+                              </p>
+                              {will.contractAddressInBlockchain && (
+                                <div className="relative flex-shrink-0">
+                                  <button
+                                    onClick={() =>
+                                      copyToClipboard(
+                                        will.contractAddressInBlockchain!,
+                                        `contract-header-${will.willId}`,
+                                      )
+                                    }
+                                    className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                                    title="Copy contract address"
+                                  >
+                                    <svg
+                                      className="w-3.5 h-3.5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                      />
+                                    </svg>
+                                  </button>
+                                  {copiedAddress ===
+                                    `contract-header-${will.willId}` && (
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                                      Copied!
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold flex-shrink-0 ${STATE_COLORS[badgeState] ?? "bg-gray-100 text-gray-700"}`}
+                          >
+                            {badgeState}
+                          </span>
+                        </>
                       );
                     })()}
                   </div>
@@ -662,9 +726,42 @@ export default function AssociatedWillsPage() {
                         <span className="text-xs text-[var(--text-muted)]">
                           Contract address
                         </span>
-                        <p className="font-mono text-sm text-[var(--text-primary)] break-all">
-                          {will.contractAddressInBlockchain}
-                        </p>
+                        <div className="flex items-start gap-1">
+                          <p className="font-mono text-sm text-[var(--text-primary)] break-all">
+                            {will.contractAddressInBlockchain}
+                          </p>
+                          <div className="relative flex-shrink-0">
+                            <button
+                              onClick={() =>
+                                copyToClipboard(
+                                  will.contractAddressInBlockchain!,
+                                  `contract-${will.willId}`,
+                                )
+                              }
+                              className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                              title="Copy address"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                />
+                              </svg>
+                            </button>
+                            {copiedAddress === `contract-${will.willId}` && (
+                              <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                                Copied!
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
                     {will.chainId && (
@@ -796,7 +893,12 @@ export default function AssociatedWillsPage() {
                                   </>
                                 ) : (
                                   <>
-                                    <span>{action.label}</span>
+                                    <span>
+                                      {action.id === "refuse" &&
+                                      will.myMembership.state !== "PENDING"
+                                        ? "Desist"
+                                        : action.label}
+                                    </span>
                                     {action.id === "validate" && (
                                       <svg
                                         className="w-3.5 h-3.5"
@@ -884,7 +986,10 @@ export default function AssociatedWillsPage() {
                               )}
                               {!isDisabled && (
                                 <p className="mt-1 text-xs text-[var(--text-muted-alt)] text-center leading-snug">
-                                  {action.description}
+                                  {action.id === "refuse" &&
+                                  will.myMembership.state !== "PENDING"
+                                    ? "Desist from the will."
+                                    : action.description}
                                 </p>
                               )}
                             </div>

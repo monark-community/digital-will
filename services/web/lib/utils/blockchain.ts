@@ -9,13 +9,48 @@ import { config } from "@/lib/config";
 
 /**
  * Get a signer from MetaMask
+ * @param expectedAddress - Optional expected wallet address to validate against
+ * @throws Error if MetaMask is not installed or if the user rejects wallet switch
  */
-export async function getSigner(): Promise<ethers.Signer> {
+export async function getSigner(expectedAddress?: string): Promise<ethers.Signer> {
   if (typeof window === "undefined" || !window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
 
   const provider = new ethers.BrowserProvider(window.ethereum);
+  
+  // If an expected address is provided, check and request switch if needed
+  if (expectedAddress) {
+    const accounts = await window.ethereum.request({ method: "eth_accounts" });
+    const currentAccount = accounts[0]?.toLowerCase();
+    const expectedLower = expectedAddress.toLowerCase();
+    
+    if (currentAccount !== expectedLower) {
+      // Prompt user to switch to the correct wallet
+      try {
+        await window.ethereum.request({
+          method: "wallet_requestPermissions",
+          params: [{ eth_accounts: {} }],
+        });
+        
+        // Get accounts again after permission request
+        const newAccounts = await window.ethereum.request({ method: "eth_accounts" });
+        const newAccount = newAccounts[0]?.toLowerCase();
+        
+        if (newAccount !== expectedLower) {
+          throw new Error(
+            `Please select wallet ${expectedAddress.slice(0, 6)}...${expectedAddress.slice(-4)} in MetaMask to continue this transaction.`
+          );
+        }
+      } catch (error: any) {
+        if (error.code === 4001) {
+          throw new Error("Wallet selection was cancelled. Please try again and select the correct wallet.");
+        }
+        throw error;
+      }
+    }
+  }
+  
   const signer = await provider.getSigner();
   return signer;
 }
@@ -73,12 +108,14 @@ export function displaySecurityPeriodRange(
  * Fund a will contract by calling deposit() via MetaMask.
  * Returns the transaction hash on success.
  * Throws if the user has insufficient balance.
+ * @param expectedOwnerAddress - Optional wallet address that should sign the transaction
  */
 export async function fundWillContract(
   contractAddress: string,
   amountEth: string,
+  expectedOwnerAddress?: string,
 ): Promise<string> {
-  const signer = await getSigner();
+  const signer = await getSigner(expectedOwnerAddress);
   const provider = new ethers.BrowserProvider(window.ethereum);
 
   const amountWei = ethers.parseEther(amountEth);
@@ -109,10 +146,12 @@ export async function fundWillContract(
  * Withdraw ETH from a will contract by calling withdraw(amount) via MetaMask.
  * Returns the transaction hash on success.
  * Throws if the requested amount exceeds the contract balance.
+ * @param expectedOwnerAddress - Optional wallet address that should sign the transaction
  */
 export async function withdrawWillContract(
   contractAddress: string,
   amountEth: string,
+  expectedOwnerAddress?: string,
 ): Promise<string> {
   const amountWei = ethers.parseEther(amountEth);
 
@@ -125,7 +164,7 @@ export async function withdrawWillContract(
     );
   }
 
-  const signer = await getSigner();
+  const signer = await getSigner(expectedOwnerAddress);
   const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
   const tx = await contract.withdraw(amountWei);
   await tx.wait();
@@ -142,11 +181,13 @@ export async function withdrawWillContract(
  * Cancel a will contract by calling cancelWill() via MetaMask.
  * The contract will auto-withdraw all ETH back to the PM.
  * Returns the transaction hash on success.
+ * @param expectedOwnerAddress - Optional wallet address that should sign the transaction
  */
 export async function cancelWillContract(
   contractAddress: string,
+  expectedOwnerAddress?: string,
 ): Promise<string> {
-  const signer = await getSigner();
+  const signer = await getSigner(expectedOwnerAddress);
   const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
   const tx = await contract.cancelWill();
   await tx.wait();
@@ -156,11 +197,13 @@ export async function cancelWillContract(
 /**
  * Veto a death declaration via MetaMask. Resets all DECLARED_DEATH SMs to VALIDATED
  * and starts a cooldown, preventing new declarations for COOLDOWN_PERIOD seconds.
+ * @param expectedOwnerAddress - Optional wallet address that should sign the transaction
  */
 export async function vetoDeathContract(
   contractAddress: string,
+  expectedOwnerAddress?: string,
 ): Promise<string> {
-  const signer = await getSigner();
+  const signer = await getSigner(expectedOwnerAddress);
   const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
   const tx = await contract.vetoDeath();
   await tx.wait();
@@ -176,6 +219,7 @@ export async function vetoDeathContract(
  * Update a deployed will's SM list and/or security period via MetaMask.
  * Pass empty arrays for lists that are unchanged.
  * Pass { minSecurityPeriod: 0n, maxSecurityPeriod: 0n } to skip period update.
+ * @param expectedOwnerAddress - Optional wallet address that should sign the transaction
  */
 export async function updateWillContract(
   contractAddress: string,
@@ -186,8 +230,9 @@ export async function updateWillContract(
     minSecurityPeriod: bigint;
     maxSecurityPeriod: bigint;
   },
+  expectedOwnerAddress?: string,
 ): Promise<string> {
-  const signer = await getSigner();
+  const signer = await getSigner(expectedOwnerAddress);
   const contract = new ethers.Contract(contractAddress, WILL_ABI, signer);
   const tx = await contract.updateWill(
     updatedSmList.map((m) => [ethers.getAddress(m.smAddress), m.votePower]),

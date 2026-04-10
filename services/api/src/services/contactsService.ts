@@ -83,12 +83,28 @@ export async function createContact(data: {
   phoneNumber?: string;
   relationship?: string;
 }): Promise<ContactResponse> {
+  if (data.firstName.length > 30) {
+    throw new BadRequestError("First name must not exceed 30 characters");
+  }
+
+  if (data.lastName.length > 30) {
+    throw new BadRequestError("Last name must not exceed 30 characters");
+  }
+
   if (!REGEX.EMAIL.test(data.email)) {
     throw new BadRequestError("Invalid email format");
   }
 
+  if (data.email.length > 254) {
+    throw new BadRequestError("Email address must not exceed 254 characters");
+  }
+
   if (data.phoneNumber && !REGEX.PHONE.test(data.phoneNumber)) {
     throw new BadRequestError("Invalid phone number format");
+  }
+
+  if (data.relationship && data.relationship.length > 30) {
+    throw new BadRequestError("Relationship must not exceed 30 characters");
   }
 
   validateWalletAddress(data.walletAddress);
@@ -132,11 +148,24 @@ export async function updateContact(data: {
 
   // Only include fields that were actually provided
   const updateData: Partial<typeof updateFields> = {};
-  if (updateFields.firstName) updateData.firstName = updateFields.firstName;
-  if (updateFields.lastName) updateData.lastName = updateFields.lastName;
+  if (updateFields.firstName) {
+    if (updateFields.firstName.length > 30) {
+      throw new BadRequestError("First name must not exceed 30 characters");
+    }
+    updateData.firstName = updateFields.firstName;
+  }
+  if (updateFields.lastName) {
+    if (updateFields.lastName.length > 30) {
+      throw new BadRequestError("Last name must not exceed 30 characters");
+    }
+    updateData.lastName = updateFields.lastName;
+  }
   if (updateFields.email) {
     if (!REGEX.EMAIL.test(updateFields.email)) {
       throw new BadRequestError("Invalid email format");
+    }
+    if (updateFields.email.length > 254) {
+      throw new BadRequestError("Email address must not exceed 254 characters");
     }
     updateData.email = updateFields.email;
   }
@@ -159,6 +188,9 @@ export async function updateContact(data: {
     updateData.phoneNumber = updateFields.phoneNumber || null;
   }
   if (updateFields.relationship !== undefined) {
+    if (updateFields.relationship && updateFields.relationship.length > 30) {
+      throw new BadRequestError("Relationship must not exceed 30 characters");
+    }
     updateData.relationship = updateFields.relationship || null;
   }
 

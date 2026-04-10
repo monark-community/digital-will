@@ -13,6 +13,14 @@ interface WalletResponse {
   createdAt: Date;
 }
 
+interface WalletRemovalEligibilityResponse {
+  canRemove: boolean;
+  obstacles: {
+    ownedDeployedWills: string[];
+    secondaryMemberWills: string[];
+  };
+}
+
 /**
  * Get all wallets for a user
  */
@@ -74,6 +82,74 @@ export async function addWallet(data: {
     address: wallet.address,
     label: wallet.label,
     createdAt: wallet.createdAt,
+  };
+}
+
+/**
+ * Check if a wallet can be removed from user account
+ * A wallet can be removed only if:
+ * - It is not associated with any deployed wills (as owner)
+ * - It is not associated with any deployed wills (as secondary member)
+ */
+export async function checkWalletRemovalEligibility(
+  userId: string,
+  walletId: string,
+): Promise<WalletRemovalEligibilityResponse> {
+  const wallet = await prisma.wallet.findUnique({
+    where: { walletId },
+  });
+
+  if (!wallet) {
+    throw new NotFoundError('Wallet not found');
+  }
+
+  if (wallet.userId !== userId) {
+    throw new NotFoundError('Wallet not found');
+  }
+
+  const walletAddress = wallet.address.toLowerCase();
+
+  // 1. Find all deployed wills owned by this wallet
+  const ownedDeployedWills = await prisma.will.findMany({
+    where: {
+      walletAddress: walletAddress,
+      isDeletedByUser: false,
+    },
+    select: { willName: true },
+  });
+
+  // 2. Find all deployed wills where this wallet is a secondary member
+  const secondaryMemberWills = await prisma.secondaryMember.findMany({
+    where: {
+      AND: [
+        {
+          OR: [
+            { walletAddress: walletAddress },
+            { tempWalletAddress: walletAddress },
+          ],
+        },
+        {
+          will: {
+            isDeletedByUser: false,
+          },
+        },
+      ],
+    },
+    include: {
+      will: {
+        select: { willName: true },
+      },
+    },
+  });
+
+  const canRemove = ownedDeployedWills.length === 0 && secondaryMemberWills.length === 0;
+
+  return {
+    canRemove,
+    obstacles: {
+      ownedDeployedWills: ownedDeployedWills.map((w) => w.willName),
+      secondaryMemberWills: secondaryMemberWills.map((sm) => sm.will.willName),
+    },
   };
 }
 

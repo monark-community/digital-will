@@ -40,109 +40,50 @@ const LandingPage = () => {
       {/* Features Grid Section */}
       <section className="py-20 bg-[var(--bg-section)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
-            {/* Secure & Immutable */}
+          <div className="grid md:grid-cols-3 gap-8">
+            
+            {/* 1. Peace of Mind */}
             <div className="text-center p-6 rounded-lg bg-[var(--bg-card)] border border-[var(--border-section)]">
               <div className="w-16 h-16 bg-[var(--accent)]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-8 h-8 text-[var(--accent)]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
+                <svg className="w-8 h-8 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
-                Secure & Immutable
+                Peace of Mind
               </h3>
               <p className="text-[var(--text-muted-alt)] text-sm">
-                Blockchain-based smart contracts ensure your digital assets are
-                protected and tamper-proof.
+                Your digital assets are protected by blockchain technology — secure, transparent, and verifiable.              
               </p>
             </div>
 
-            {/* Automated Transfer */}
+            {/* 2. Choose Your Guardians */}
             <div className="text-center p-6 rounded-lg bg-[var(--bg-card)] border border-[var(--border-section)]">
               <div className="w-16 h-16 bg-[var(--accent)]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-8 h-8 text-[var(--accent)]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
+                <svg className="w-8 h-8 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}  d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
-                Automated Transfer
+                Choose Your Guardians
               </h3>
               <p className="text-[var(--text-muted-alt)] text-sm">
-                Set conditions for asset transfer based on inactivity, time
-                delays, or multi-sig validation.
+                Select trusted people to oversee your will — they work together to validate and execute your wishes.
               </p>
             </div>
 
-            {/* Multiple Beneficiaries */}
+            {/* 3. Protection Against False Claims */}
             <div className="text-center p-6 rounded-lg bg-[var(--bg-card)] border border-[var(--border-section)]">
               <div className="w-16 h-16 bg-[var(--accent)]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-8 h-8 text-[var(--accent)]"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                <svg className="w-8 h-8 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
-                Multiple Beneficiaries
+                Protection Against False Claims
               </h3>
               <p className="text-[var(--text-muted-alt)] text-sm">
-                Easily designate and manage multiple beneficiaries with
-                customizable asset allocation.
-              </p>
-            </div>
-
-            {/* Document Storage */}
-            <div className="text-center p-6 rounded-lg bg-[var(--bg-card)] border border-[var(--border-section)]">
-              <div className="w-16 h-16 bg-[var(--accent)]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-8 h-8 text-[var(--accent)]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
-                Document Storage
-              </h3>
-              <p className="text-[var(--text-muted-alt)] text-sm">
-                Store important documents and instructions securely using IPFS
-                technology.
+                A built-in security window gives you time to react and stop any wrongful declaration.
               </p>
             </div>
           </div>

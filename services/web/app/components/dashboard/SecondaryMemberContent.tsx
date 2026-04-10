@@ -11,8 +11,9 @@ function stateBadge(state: string) {
   const map: Record<string, string> = {
     INACTIVE: "bg-blue-500/20 text-blue-400",
     ACTIVE: "bg-emerald-500/20 text-emerald-400",
+    EXECUTABLE: "bg-purple-500/20 text-purple-400",
     CANCELED: "bg-red-500/20 text-red-400",
-    EXECUTED: "bg-purple-500/20 text-purple-400",
+    EXECUTED: "bg-blue-500/20 text-blue-400",
     DRAFT: "bg-gray-500/20 text-gray-400",
   };
   return map[state] ?? "bg-gray-500/20 text-gray-400";
@@ -41,7 +42,7 @@ async function getWillContract(contractAddress: string) {
 }
 
 interface ActionDef {
-  id: 'validate' | 'refuse' | 'declareDeath' | 'swapAssets';
+  id: "validate" | "refuse" | "declareDeath" | "swapAssets";
   label: string;
   description: string;
   disabledReason: (will: AssociatedWill) => string | null;
@@ -63,13 +64,13 @@ const ACTIONS: ActionDef[] = [
     color: "green",
   },
   {
-    id: 'refuse',
-    label: 'Refuse',
-    description: 'Refuse to participate in this will.',
+    id: "refuse",
+    label: "Refuse",
+    description: "Refuse to participate in this will.",
     disabledReason: (will) => {
-      if (will.state === 'CANCELED') return 'Will is canceled';
-      if (will.state === 'EXECUTED') return 'Will is already executed';
-      if (will.state === 'DRAFT')    return 'Will is not yet deployed';
+      if (will.state === "CANCELED") return "Will is canceled";
+      if (will.state === "EXECUTED") return "Will is already executed";
+      if (will.state === "DRAFT") return "Will is not yet deployed";
       return null;
     },
     color: "yellow",
@@ -136,22 +137,22 @@ function WillCard({ will, onRefresh }: WillCardProps) {
         );
         let tx: ethers.TransactionResponse;
 
-      switch (action.id) {
-        case 'validate':
-          tx = await contract.validateSm();
-          break;
-        case 'refuse':
-          tx = await contract.desistSm();
-          break;
-        case 'declareDeath':
-          tx = await contract.declareDeath();
-          break;
-        case 'swapAssets':
-          tx = await contract.swapAssets();
-          break;
-        default:
-          throw new Error(`Unknown action: ${action.id}`);
-      }
+        switch (action.id) {
+          case "validate":
+            tx = await contract.validateSm();
+            break;
+          case "refuse":
+            tx = await contract.desistSm();
+            break;
+          case "declareDeath":
+            tx = await contract.declareDeath();
+            break;
+          case "swapAssets":
+            tx = await contract.swapAssets();
+            break;
+          default:
+            throw new Error(`Unknown action: ${action.id}`);
+        }
 
         console.log("Transaction sent:", tx.hash);
         const receipt = await tx.wait();
@@ -206,11 +207,21 @@ function WillCard({ will, onRefresh }: WillCardProps) {
         </div>
 
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
-          <span
-            className={`px-2.5 py-1 rounded-full text-xs font-medium ${stateBadge(will.state)}`}
-          >
-            {will.state}
-          </span>
+          {(() => {
+            const execTs = will.executionTimestampOnChain ?? 0;
+            const nowSec = Math.floor(Date.now() / 1000);
+            const badgeState =
+              will.state === "ACTIVE" && execTs > 0 && nowSec >= execTs
+                ? "EXECUTABLE"
+                : will.state;
+            return (
+              <span
+                className={`px-2.5 py-1 rounded-full text-xs font-medium ${stateBadge(badgeState)}`}
+              >
+                {badgeState}
+              </span>
+            );
+          })()}
           <span
             className={`px-2.5 py-1 rounded-full text-xs font-medium ${smStateBadge(will.myMembership.state)}`}
           >
@@ -245,8 +256,8 @@ function WillCard({ will, onRefresh }: WillCardProps) {
           const isLoading = loadingAction === action.id;
           const anyLoading = loadingAction !== null;
 
-          if (action.id === 'refuse') {
-            console.log('Refuse button state:', {
+          if (action.id === "refuse") {
+            console.log("Refuse button state:", {
               willState: will.state,
               membershipState: will.myMembership.state,
               contractAddress: will.contractAddressInBlockchain,
@@ -280,9 +291,8 @@ function WillCard({ will, onRefresh }: WillCardProps) {
                     );
                   }
                 }}
-                disabled={isDisabled || anyLoading}
                 className={`
-                  w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                  w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all
                   flex items-center justify-center gap-2
                   ${isDisabled || anyLoading ? disabledClass : activeClass[action.color]}
                 `}
@@ -292,6 +302,9 @@ function WillCard({ will, onRefresh }: WillCardProps) {
                     <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                     <span>Confirming…</span>
                   </>
+                ) : action.id === "refuse" &&
+                  will.myMembership.state !== "PENDING" ? (
+                  "Desist"
                 ) : (
                   action.label
                 )}

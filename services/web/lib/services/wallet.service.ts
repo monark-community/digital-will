@@ -2,6 +2,14 @@ import { apiClient } from "../api-client";
 import { API_ROUTES } from "../config";
 import type { Wallet } from "../types";
 
+export interface WalletRemovalEligibilityResponse {
+  canRemove: boolean;
+  obstacles: {
+    ownedDeployedWills: string[];
+    secondaryMemberWills: string[];
+  };
+}
+
 /**
  * Wallet service - handles all wallet API calls
  */
@@ -52,5 +60,18 @@ export const walletService = {
       data: { wallet: Wallet };
     }>(API_ROUTES.WALLETS.UPDATE_LABEL(walletId), { label });
     return response.data.data.wallet;
+  },
+
+  /**
+   * Check if wallet can be removed
+   */
+  checkWalletRemovalEligibility: async (
+    walletId: string
+  ): Promise<WalletRemovalEligibilityResponse> => {
+    const response = await apiClient.get<{
+      success: boolean;
+      data: WalletRemovalEligibilityResponse;
+    }>(`${API_ROUTES.WALLETS.BY_ID(walletId)}/removal-eligibility`);
+    return response.data.data;
   },
 };
