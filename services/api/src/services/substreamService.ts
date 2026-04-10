@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "../lib/prisma";
 
 /**
  * Ensures a WillFactory row exists for the given chainId.

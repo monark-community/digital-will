@@ -1,8 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import { NotificationType } from "../substreams/interfaces/cleaned/model";
 import { cleanupCanceledWill } from "./willService";
-
-const prisma = new PrismaClient();
+import prisma from "../lib/prisma";
 
 export async function createInAppNotification(
   notifType: NotificationType,
