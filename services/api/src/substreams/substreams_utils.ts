@@ -20,6 +20,34 @@ function hasEventOrCallData(message: EventsCalls): boolean {
   );
 }
 
+/**
+ * Extract block number from EventsCalls message.
+ * Looks through events first, then calls to find the block number.
+ */
+function extractBlockNumberFromMessage(message: EventsCalls): number | undefined {
+  if (message.events) {
+    for (const eventType of Object.values(message.events)) {
+      if (Array.isArray(eventType) && eventType.length > 0) {
+        const blockNum = (eventType[0] as any).evtBlockNumber;
+        const parsed = typeof blockNum === 'string' ? parseInt(blockNum) : undefined;
+        return parsed;
+      }
+    }
+  }
+
+  if (message.calls) {
+    for (const callType of Object.values(message.calls)) {
+      if (Array.isArray(callType) && callType.length > 0) {
+        const blockNum = (callType[0] as any).callBlockNumber;
+        const parsed = typeof blockNum === 'string' ? parseInt(blockNum) : undefined;
+        return parsed;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 // Inspired by https://www.npmjs.com/package/@substreams/node
 export async function stream(
   pkg: Awaited<ReturnType<typeof readPackage>>,
@@ -30,17 +58,16 @@ export async function stream(
   onMessage: (message: EventsCalls, chainId: string) => Promise<void>,
   chainId: string,
   cursor?: string,
+  lastProcessedBlock?: number,
 ): Promise<{ cursor: string | undefined }> {
   console.log(
-    `in stream function with startBlockNum: ${startBlockNum} and cursor: ${cursor}`,
+    `in stream function with cursor: ${cursor} and lastProcessedBlock: ${lastProcessedBlock}`,
   );
-
-  const startBlockNumParsed = parseInt(startBlockNum); // will be used for startBlockNum when we will deploy the server
 
   const request = createRequest({
     substreamPackage: pkg,
     outputModule,
-    ...(cursor ? { startCursor: cursor } : { startBlockNum: -1 }),
+    ...(lastProcessedBlock ? { startBlockNum: lastProcessedBlock } : { startBlockNum: -1 }),
   });
 
   // NodeJS Events
@@ -67,7 +94,12 @@ export async function stream(
          * we want to have the last cursor updated in the DB to avoid
          * reprocessing too many blocks when restarting the listener.
          */
-        await updateLastCursorInDB(chainId, cursor);
+        const blockNumber = extractBlockNumberFromMessage(eventsCallsMessage);
+        await updateLastCursorInDB(
+          chainId,
+          cursor,
+          blockNumber,
+        );
       } catch (error) {
         console.error("[Substreams] Error processing message:", error);
       }
@@ -76,15 +108,15 @@ export async function stream(
   });
 
   // Progress — fired each 5 mins with module processing stats (useful for monitoring sync progress)
-  // let lastProgressLog = 0;
-  // emitter.on("progress", (progress: any) => {
-  //   const now = Date.now();
-  //   if (now - lastProgressLog >= 300_000) {
-  //     lastProgressLog = now;
-  //     console.dir(`[Substreams] Progress:`);
-  //     console.dir(progress, { depth: null, colors: true });
-  //   }
-  // });
+  let lastProgressLog = 0;
+  emitter.on("progress", (progress: any) => {
+    const now = Date.now();
+    if (now - lastProgressLog >= 300_000) {
+      lastProgressLog = now;
+      console.dir(`[Substreams] Progress:`);
+      console.dir(progress, { depth: null, colors: true });
+    }
+  });
 
   return new Promise<{ cursor: string | undefined }>((resolve, reject) => {
     (emitter as any).on("close", (error: any) => {

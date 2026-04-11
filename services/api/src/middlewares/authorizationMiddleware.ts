@@ -1,9 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "@prisma/client";
 import { ForbiddenError, NotFoundError } from "../utils/errors";
 import { asyncHandler } from "./errorMiddleware";
-
-const prisma = new PrismaClient();
+import prisma from "../lib/prisma";
 
 // ─── Contacts ────────────────────────────────────────────────────────────────
 

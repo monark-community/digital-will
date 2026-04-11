@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { BadRequestError, ConflictError } from "../utils/errors";
-import { prisma } from "../services/authService";
+import prisma from "../lib/prisma";
 import { REGEX, PASSWORD } from "../utils/constants";
 
 /**

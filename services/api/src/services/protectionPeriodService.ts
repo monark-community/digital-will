@@ -1,5 +1,5 @@
-import { PrismaClient } from "@prisma/client";
 import { ethers } from "ethers";
+import prisma from "../lib/prisma";
 import { getProvider } from "../utils/blockchain";
 import { getWillByContractAddress } from "./willService";
 import { getSecondaryMembersByWillId } from "./secondaryMemberService";
@@ -23,8 +23,6 @@ import {
 } from "../substreams/interfaces/cleaned/model";
 import { generateUserNotification } from "../utils/userNotificationGenerator";
 import { emitUserNotification } from "../gateways/userNotificationGateway";
-
-const prisma = new PrismaClient();
 
 const EXECUTION_TS_ABI = [
   "function executionTimeStampS() view returns (uint256)",
@@ -167,12 +165,24 @@ async function checkExpiredTimers(): Promise<void> {
  * Starts the background poller. Call once at server startup.
  */
 export function startProtectionPeriodPoller(): void {
-  // Immediate first run — catches timers missed during downtime
-  checkExpiredTimers().catch(console.error);
+  let isRunning = false;
 
-  setInterval(() => {
-    checkExpiredTimers().catch(console.error);
-  }, PROTECTION_PERIOD_POLLER_INTERVAL_MS);
+  const run = async () => {
+    if (isRunning) return;
+    isRunning = true;
+    try {
+      await checkExpiredTimers();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      isRunning = false;
+    }
+  };
+
+  // Immediate first run — catches timers missed during downtime
+  run();
+
+  setInterval(run, PROTECTION_PERIOD_POLLER_INTERVAL_MS);
 
   const intervalMs = PROTECTION_PERIOD_POLLER_INTERVAL_MS;
   const intervalLabel = intervalMs === 60000 ? "1m" : `${intervalMs / 1000}s`;
@@ -336,14 +346,24 @@ async function sendProtectionPeriodReminders(): Promise<void> {
  * Sends weekly reminders in production, every minute in other environments.
  */
 export function startProtectionPeriodReminderPoller(): void {
-  // First run after a short delay to let the server fully start
-  setTimeout(() => {
-    sendProtectionPeriodReminders().catch(console.error);
-  }, REMINDER_POLLER_STARTUP_DELAY_MS);
+  let isRunning = false;
 
-  setInterval(() => {
-    sendProtectionPeriodReminders().catch(console.error);
-  }, REMINDER_POLLER_CHECK_INTERVAL_MS);
+  const run = async () => {
+    if (isRunning) return;
+    isRunning = true;
+    try {
+      await sendProtectionPeriodReminders();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      isRunning = false;
+    }
+  };
+
+  // First run after a short delay to let the server fully start
+  setTimeout(run, REMINDER_POLLER_STARTUP_DELAY_MS);
+
+  setInterval(run, REMINDER_POLLER_CHECK_INTERVAL_MS);
 
   const intervalMs = REMINDER_POLLER_CHECK_INTERVAL_MS;
   const intervalLabel =

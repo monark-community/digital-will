@@ -142,7 +142,8 @@ model WillFactory {
   contractAddressInBlockchain String
   chainId                     Int    @unique
   blockDeployed               Int    // the block where the willFactory contract has been deployed
-  lastProcessedCursor         String // given by the stream
+  lastProcessedBlock          Int?
+  lastProcessedCursor         String? // given by the stream
   
   @@map("willfactories")
 }

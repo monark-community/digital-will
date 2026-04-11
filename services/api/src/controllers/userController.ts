@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import * as userService from '../services/userService';
-import { prisma } from '../services/authService';
+import { Request, Response, NextFunction } from "express";
+import * as userService from "../services/userService";
+import prisma from "../lib/prisma";
 
 /**
  * PATCH /api/users/receive-emails
@@ -9,25 +9,28 @@ import { prisma } from '../services/authService';
 export const updateEmailNotifications = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const userId = (req as any).user.userId;
     const { wantToReceiveMails } = req.body;
 
-    if (typeof wantToReceiveMails !== 'boolean') {
+    if (typeof wantToReceiveMails !== "boolean") {
       return res.status(400).json({
         success: false,
-        message: 'wantToReceiveMails must be a boolean'
+        message: "wantToReceiveMails must be a boolean",
       });
     }
 
-    const updatedUser = await userService.updateEmailNotifications(userId, wantToReceiveMails);
+    const updatedUser = await userService.updateEmailNotifications(
+      userId,
+      wantToReceiveMails,
+    );
 
     res.json({
       success: true,
       data: updatedUser,
-      message: 'Email notification preference updated'
+      message: "Email notification preference updated",
     });
   } catch (error) {
     next(error);
@@ -41,15 +44,15 @@ export const updateEmailNotifications = async (
 export const checkDeleteEligibility = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const userId = (req as any).user.userId;
     const result = await userService.checkDeleteEligibility(userId);
-    
+
     res.json({
       success: true,
-      data: result
+      data: result,
     });
   } catch (error) {
     next(error);
@@ -63,31 +66,33 @@ export const checkDeleteEligibility = async (
 export const deleteAccount = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const userId = (req as any).user.userId;
-    
+
     // First, verify again that user can be deleted
-    const { canDelete, obstacles } = await userService.checkDeleteEligibility(userId);
-    
+    const { canDelete, obstacles } =
+      await userService.checkDeleteEligibility(userId);
+
     if (!canDelete) {
       res.status(400).json({
         success: false,
-        message: 'Cannot delete account. You have deployed wills or are a secondary member in active wills.',
-        data: { obstacles }
+        message:
+          "Cannot delete account. You have deployed wills or are a secondary member in active wills.",
+        data: { obstacles },
       });
       return;
     }
-    
+
     // Delete the user (cascade will handle everything else)
     await prisma.user.delete({
-      where: { userId }
+      where: { userId },
     });
-    
+
     res.json({
       success: true,
-      message: 'Account deleted successfully'
+      message: "Account deleted successfully",
     });
   } catch (error) {
     next(error);

@@ -48,7 +48,7 @@ export async function startSubstreamsListener(): Promise<void> {
     );
   }
 
-  const dbCursor = await ensureWillFactoryExists(
+  const dbData = await ensureWillFactoryExists(
     CHAIN_ID,
     WILL_FACTORY_ADDRESS,
     BLOCK_DEPLOYED,
@@ -76,7 +76,7 @@ export async function startSubstreamsListener(): Promise<void> {
   // Exponential backoff state
   let backoffMs = 1_000;
   const maxBackoffMs = 30_000;
-  let lastCursor: string | undefined = dbCursor;
+  let lastCursor: string | undefined = dbData.cursor;
 
   // The infinite loop handles disconnections. Every time a disconnection error is thrown,
   // the loop will automatically reconnect and start consuming from the latest committed cursor.
@@ -95,6 +95,7 @@ export async function startSubstreamsListener(): Promise<void> {
         eventsCallsDispatcher,
         CHAIN_ID,
         lastCursor,
+        dbData.lastProcessedBlock,
       );
       lastCursor = result.cursor;
 
