@@ -145,9 +145,9 @@ The following Solidity interfaces are central to the system. Enum values are ret
 #### `SMState` and `SMInfo`
 ```solidity
 enum SMState {
-    PENDING,
-    VALIDATED,
-    DECLARED_DEATH
+    PENDING,        // 0
+    VALIDATED,      // 1
+    DECLARED_DEATH  // 2
 }
 
 struct SMInfo {
@@ -165,10 +165,10 @@ struct SMPartialInfo {
 #### `WillState`
 ```solidity
 enum WillState {
-    CANCELED,
-    INACTIVE,
-    ACTIVE,
-    EXECUTED
+    CANCELED,  // 0
+    INACTIVE,  // 1
+    ACTIVE,    // 2
+    EXECUTED   // 3
 }
 ```
 
