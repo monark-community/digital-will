@@ -28,11 +28,11 @@ The package is built with **Solidity + Foundry** and includes a **Makefile** for
 Use Forge to run tests and coverage:
 
 ```bash
-forge test
-forge test --match <pattern>
-forge coverage
-forge coverage --report lcov
-genhtml lcov.info --output-directory coverage-report
+forge test # Runs all tests
+forge test --mp tests/WillTestDeclaration.t.sol # Specify file to run tests of
+forge coverage # Shows coverage in terminal
+forge coverage --report lcov # (needs sudo apt install lcov)
+genhtml lcov.info --output-directory coverage-report # generates a html doc with all covered lines.
 ```
 
 Test files include:
