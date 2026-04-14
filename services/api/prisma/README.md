@@ -1,0 +1,406 @@
+# WillChain PostreSQL Database
+## Description
+
+PostgreSQL database for the WillChain backend, managed with Prisma ORM. Stores users, wallets, wills (both deployed and draft), secondary members, contacts, notifications, and protection period timers.
+
+
+## Installation	
+The database is automatically built with the Docker Compose command at the project's root:
+
+```bash
+docker compose -f docker-compose.local.yml up --build -d
+```
+## Database Schema
+```bash
+// Prisma schema file for PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum NotificationType {
+  SIGNATURE_REQUEST
+  WILL_ACTIVATED
+  WILL_CANCELED
+  WILL_CANCELED_ALL_SM_LEFT
+  SM_ADDED
+  SM_UPDATED
+  SM_REMOVED
+  SM_DESISTED
+  SECURITY_PERIOD_UPDATED
+  DEATH_DECLARED
+  DEATH_CONFIRMED
+  VETO_EXERCISED
+  ASSETS_SWAPPED
+  EXECUTE_WILL
+  SM_SIGNATURE_REFUSED
+  PROTECTION_PERIOD_REMINDER
+}
+
+model User {
+  userId        String          @id @default(uuid())
+  firstName     String
+  lastName      String
+  email         String          @unique
+  phoneNo       String?
+  passwordHash  String
+  wantToReceiveMails Boolean    @default(false)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  wallets       Wallet[]
+  contacts      Contact[]
+  notifications Notifications[]
+
+  @@map("users")
+}
+
+model Wallet {
+  walletId         String            @id @default(uuid())
+  address          String            @unique
+  label            String?
+  userId           String
+  user             User              @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  wills            Will[]
+  draftwills       DraftWill[]
+  secondaryMembers SecondaryMember[]
+
+  @@index([userId])
+  @@map("wallets")
+}
+
+model Contact {
+  contactId     String  @id @default(uuid())
+  userId        String
+  user          User    @relation(fields: [userId], references: [userId], onDelete: Cascade) // the user who owns the contact
+  firstName     String
+  lastName      String
+  email         String
+  phoneNumber   String?
+  walletAddress String
+  relationship  String?
+
+  createdAt DateTime @default(now())
+
+  @@map("contacts")
+}
+
+model Will {
+  willId                      String            @id @default(uuid())
+  walletAddress               String
+  willName                    String
+  contractAddressInBlockchain String
+  chainId                     Int
+  isDeletedByUser             Boolean           @default(false)   // when the user deletes/keeps the will as draft. Will not deleted for notifications.
+  wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
+  secondaryMembers            SecondaryMember[]
+  notifications               Notifications[]
+  protectionPeriodTimer       ProtectionPeriodTimer?
+  
+  @@unique([chainId, contractAddressInBlockchain])
+  @@map("wills")
+}
+
+model SecondaryMember {
+  secondaryMemberId String  @id @default(uuid())
+  firstName         String
+  lastName          String
+  email             String
+  phoneNumber       String?
+  tempWalletAddress String? // this is the address used before the SM creates a WillChain account
+  walletAddress     String? // this is the address used when the SM has a WillChain account  
+  willId            String
+  will              Will    @relation(fields: [willId], references: [willId], onDelete: Cascade)
+  wallet            Wallet? @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
+  relationship      String?
+
+  @@map("secondarymembers")
+}
+
+model DraftWill {
+  draftWillId                 String            @id @default(uuid())
+  walletAddress               String
+  willName                    String
+  minSecurityPeriod           Int
+  maxSecurityPeriod           Int
+  wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
+  draftsecondarymembers       draftSecondaryMember[]
+  
+  @@map("draftwills") 
+}
+
+
+model draftSecondaryMember {
+  secondaryMemberId String  @id @default(uuid())
+  firstName         String
+  lastName          String
+  email             String
+  phoneNumber       String?
+  votingPower       Int
+  walletAddress     String? 
+  draftWillId       String
+  draftWill         DraftWill    @relation(fields: [draftWillId], references: [draftWillId], onDelete: Cascade)
+  relationship      String?
+
+  @@map("draftsecondarymembers")
+}
+
+model WillFactory {
+  willFactoryId               String @id @default(uuid())
+  contractAddressInBlockchain String
+  chainId                     Int    @unique
+  blockDeployed               Int    // the block where the willFactory contract has been deployed
+  lastProcessedCursor         String // given by the stream
+  
+  @@map("willfactories")
+}
+
+model Notifications {
+  notifId    String           @id @default(uuid())
+  notifType  NotificationType @default(WILL_ACTIVATED)
+  willId     String?
+  userId     String
+  smName     String?
+  amount     Float?
+  readStatus Boolean
+  createdAt  DateTime         @default(now())
+  will       Will?            @relation(fields: [willId], references: [willId], onDelete: SetNull)
+  user       User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model ProtectionPeriodTimer {
+  timerId           String    @id @default(uuid())
+  willId            String    @unique
+  expiresAt         DateTime
+  fired             Boolean   @default(false)
+  lastReminderAt    DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  will              Will      @relation(fields: [willId], references: [willId], onDelete: Cascade)
+
+  @@index([fired, expiresAt])
+  @@map("protectionperiodtimers")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum NotificationType {
+  SIGNATURE_REQUEST
+  WILL_ACTIVATED
+  WILL_CANCELED
+  WILL_CANCELED_ALL_SM_LEFT
+  SM_ADDED
+  SM_UPDATED
+  SM_REMOVED
+  SM_DESISTED
+  SECURITY_PERIOD_UPDATED
+  DEATH_DECLARED
+  DEATH_CONFIRMED
+  VETO_EXERCISED
+  ASSETS_SWAPPED
+  EXECUTE_WILL
+  SM_SIGNATURE_REFUSED
+  PROTECTION_PERIOD_REMINDER
+}
+
+model User {
+  userId        String          @id @default(uuid())
+  firstName     String
+  lastName      String
+  email         String          @unique
+  phoneNo       String?
+  passwordHash  String
+  wantToReceiveMails Boolean    @default(false)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  wallets       Wallet[]
+  contacts      Contact[]
+  notifications Notifications[]
+
+  @@map("users")
+}
+
+model Wallet {
+  walletId         String            @id @default(uuid())
+  address          String            @unique
+  label            String?
+  userId           String
+  user             User              @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  wills            Will[]
+  draftwills       DraftWill[]
+  secondaryMembers SecondaryMember[]
+
+  @@index([userId])
+  @@map("wallets")
+}
+
+model Contact {
+  contactId     String  @id @default(uuid())
+  userId        String
+  user          User    @relation(fields: [userId], references: [userId], onDelete: Cascade) // the user who owns the contact
+  firstName     String
+  lastName      String
+  email         String
+  phoneNumber   String?
+  walletAddress String
+  relationship  String?
+
+  createdAt DateTime @default(now())
+
+  @@map("contacts")
+}
+
+model Will {
+  willId                      String            @id @default(uuid())
+  walletAddress               String
+  willName                    String
+  contractAddressInBlockchain String
+  chainId                     Int
+  isDeletedByUser             Boolean           @default(false)   // when the user deletes/keeps the will as draft. Will not deleted for notifications.
+  wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
+  secondaryMembers            SecondaryMember[]
+  notifications               Notifications[]
+  protectionPeriodTimer       ProtectionPeriodTimer?
+  
+  @@unique([chainId, contractAddressInBlockchain])
+  @@map("wills")
+}
+
+model SecondaryMember {
+  secondaryMemberId String  @id @default(uuid())
+  firstName         String
+  lastName          String
+  email             String
+  phoneNumber       String?
+  tempWalletAddress String? // this is the address used before the SM creates a WillChain account
+  walletAddress     String? // this is the address used when the SM has a WillChain account  
+  willId            String
+  will              Will    @relation(fields: [willId], references: [willId], onDelete: Cascade)
+  wallet            Wallet? @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
+  relationship      String?
+
+  @@map("secondarymembers")
+}
+
+model DraftWill {
+  draftWillId                 String            @id @default(uuid())
+  walletAddress               String
+  willName                    String
+  minSecurityPeriod           Int
+  maxSecurityPeriod           Int
+  wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
+  draftsecondarymembers       draftSecondaryMember[]
+  
+  @@map("draftwills") 
+}
+
+
+model draftSecondaryMember {
+  secondaryMemberId String  @id @default(uuid())
+  firstName         String
+  lastName          String
+  email             String
+  phoneNumber       String?
+  votingPower       Int
+  walletAddress     String? 
+  draftWillId       String
+  draftWill         DraftWill    @relation(fields: [draftWillId], references: [draftWillId], onDelete: Cascade)
+  relationship      String?
+
+  @@map("draftsecondarymembers")
+}
+
+model WillFactory {
+  willFactoryId               String @id @default(uuid())
+  contractAddressInBlockchain String
+  chainId                     Int    @unique
+  blockDeployed               Int    // the block where the willFactory contract has been deployed
+  lastProcessedCursor         String // given by the stream
+  
+  @@map("willfactories")
+}
+
+model Notifications {
+  notifId    String           @id @default(uuid())
+  notifType  NotificationType @default(WILL_ACTIVATED)
+  willId     String?
+  userId     String
+  smName     String?
+  amount     Float?
+  readStatus Boolean
+  createdAt  DateTime         @default(now())
+  will       Will?            @relation(fields: [willId], references: [willId], onDelete: SetNull)
+  user       User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model ProtectionPeriodTimer {
+  timerId           String    @id @default(uuid())
+  willId            String    @unique
+  expiresAt         DateTime
+  fired             Boolean   @default(false)
+  lastReminderAt    DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  will              Will      @relation(fields: [willId], references: [willId], onDelete: Cascade)
+
+  @@index([fired, expiresAt])
+  @@map("protectionperiodtimers")
+}
+```
+
+### Prisma commands	
+```bash
+npx prisma generate                     #EGenerates Prisma's client
+npx prisma studio                       #Ouvrir l'interface graphique (http://localhost:5555)
+npx prisma migrate dev --name <nom>	    #Créer une migration
+npx prisma db push --accept-data-loss   #Pousser le schéma directement (sans migration)
+npx prisma migrate reset	            #Réinitialiser la base
+```
+## Accès / Inspection	
+### Via Docker
+```bash
+docker exec -it postgres psql -U willchain_local -d willchain_local_db
+```
+
+### Via Prisma Studio
+```bash 
+npx prisma studio
+```
+
+## Schema Modification
+1. Edit schema.prisma file.
+2. ``` npx prisma generate```
+3. ``` npx prisma db push --accept-data-loss```
+4. ``` docker compose -f docker-compose.local.yml up --down -v```
+5. ``` docker compose -f docker-compose.local.yml up --build -d```
+
+## Database Reset	
+### Local Reset
+Simply rebuild project using these two commands:
+1. ```docker compose -f docker-compose.local.yml down -v```
+2. ```docker compose -f docker-compose.local.yml up --build -d```
+
+
+### Reset Database delpoyed on render
+```bash
+DATABASE_URL="postgresql://willchain_user:utP7fdPTfssSED6aANzMaeFIl4qwE3qA@dpg-d72h8l3uibrs73fm0d70-a.oregon-postgres.render.com/willchain_dev?sslmode=require" npx prisma migrate reset
+```
