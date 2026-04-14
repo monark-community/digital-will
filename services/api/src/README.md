@@ -22,10 +22,9 @@ HOSTNAME=0.0.0.0
 POSTGRES_HOST=dpg-d72h8l3uibrs73fm0d70-a
 POSTGRES_PORT=5432
 POSTGRES_USER=willchain_user
-POSTGRES_PASSWORD=utP7fdPTfssSED6aANzMaeFIl4qwE3qA
+POSTGRES_PASSWORD=
 POSTGRES_DB=willchain_dev
-DATABASE_URL=postgresql://willchain_dev
-willchain_user:utP7fdPTfssSED6aANzMaeFIl4qwE3qA@dpg-d72h8l3uibrs73fm0d70-a/
+DATABASE_URL=
 
 #### Logging
 LOG_LEVEL=debug
@@ -37,7 +36,7 @@ API_URL=http://localhost:4000 en local et https://willchain-api-dev.onrender.com
 CORS_ORIGIN=*
 
 #### Auth/JWT
-JWT_SECRET=XsEogUp84QjPoRlsj1d2AxJcHZBVYbW4PLRmszOiKvK
+JWT_SECRET=
 JWT_EXPIRES_IN=15m
 
 #### WebSocket
@@ -48,17 +47,17 @@ WEBSOCKET_CORS_ORIGIN=*
 WEB_URL=https://willchain-dev.vercel.app/
 
 #### Email (Resend)
-RESEND_API_KEY=re_14L5DoBJ_HrePYUFRyiizmswZJsvBcCgU
+RESEND_API_KEY=
 EMAIL_FROM=notifications@noreply.willchain.live
 
 #### Blockchain
-RPC_URL=https://sepolia.rpc.pinax.network/v1/04f024d235225a2cfba7e61998bf0e7ed957eb5a7fbae143/
+RPC_URL=
 CHAIN_ID=11155111
 
 #### Substreams
 MANIFEST=/app/spkg/willchain-events-v0.1.0.spkg
 SUBSTREAMS_URL=https://sepolia.substreams.pinax.network:443
-SUBSTREAMS_API_KEY=04f024d235225a2cfba7e61998bf0e7ed957eb5a7fbae143
+SUBSTREAMS_API_KEY=
 SUBSTREAMS_MODULE=map_events_calls
 WILL_FACTORY_ADDRESS=0x05a61f96958b8c2b8decbc33b5676b6b780dcc28
 BLOCK_DEPLOYED=10585804
