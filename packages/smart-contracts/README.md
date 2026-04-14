@@ -9,7 +9,7 @@ The package is built with **Solidity + Foundry** and includes a **Makefile** for
 ## Setup Instructions
 
 ### 1. Install Required Tools
-- Install the **Juan Blanco Solidity** extension in your editor: [link](https://marketplace.visualstudio.com/items?itemName=JuanBlanco.solidity)
+- Install the **Juan Blanco Solidity** extension in your editor
 - Install **Foundry**: [https://getfoundry.sh/](https://getfoundry.sh/)
 - Install **make**
 
@@ -301,24 +301,24 @@ If you want to call functions on a different deployed Will contract, write its a
 - `make call-get-security-period-config` - Retrieves the security period configuration (min and max periods).
 - `make call-get-exec-time` - Retrieves the execution timestamp.
 - `make call-get-death-declare-time` - Retrieves the death declaration timestamp.
-- `make call-get-totalValidatedPts` - Retrieves the total validated vote power.
+- `make call-get-totalValidatedPts` - Retrieves the total vote power.
 - `make call-get-cumulatedPts` - Retrieves the cumulated declared vote power.
 - `make call-get-state` - Retrieves the current will state.
 
 ### State-changing interactions
 - `make call-deposit USER_ID=X` - Deposits ETH into the will using the specified USER_ID.
 - `make call-withdraw USER_ID=X` - Withdraws ETH from the will using the specified USER_ID.
-- `make call-swapAssets SM_ID=X` - Executes asset swap to USDC using the specified SM_ID.
+- `make call-swap-assets SM_ID=X` - Executes asset swap to USDC using the specified SM_ID.
 - `make call-validate SM_ID=X` - Validates SM participation using the specified SM_ID.
 - `make call-desist SM_ID=X` - Desists SM participation using the specified SM_ID.
 - `make call-declare SM_ID=X` - Declares death using the specified SM_ID.
 - `make call-veto USER_ID=X` - Vetos death declaration using the specified USER_ID.
 - `make call-cancel USER_ID=X` - Cancels the will using the specified USER_ID.
 - `make call-create-new-will USER_ID=X` - Creates a new will using the specified USER_ID.
-- `make call-update-sm-upd USER_ID=X` - Updates existing SM vote powers using the specified USER_ID.
-- `make call-update-sm-add USER_ID=X` - Adds new SMs using the specified USER_ID.
-- `make call-update-sm-del USER_ID=X` - Deletes SMs using the specified USER_ID.
-- `make call-update-sec-upd USER_ID=X` - Updates security period configuration using the specified USER_ID.
+- `make call-update-sm-upd USER_ID=X` - Updates existing SM vote powers (detailed in MakeFile), called by USER_ID.
+- `make call-update-sm-add USER_ID=X` - Adds an SM (detailed in MakeFile), called by USER_ID.
+- `make call-update-sm-del USER_ID=X` - Deletes an existing SM (detailed in MakeFile), called by USER_ID.
+- `make call-update-sec-upd USER_ID=X` - Updates security period (detailed in MakeFile), called by USER_ID.
 
 ### Mock utility
 - `make call-withdraw-weth-as-eth-from-router USER_ID=X` - Withdraws WETH as ETH from the mock router.
