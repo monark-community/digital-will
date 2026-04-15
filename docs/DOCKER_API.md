@@ -94,7 +94,7 @@ Used for **deployment on Render** (current setup). This stage:
 
 ### `production`
 
-**From:** `base`  
+**From:** `builder`  
 **Target:** `production`
 
 Intended for **hardened production deployments**. Identical to `development` in terms of compiled output, but with additional security measures:
