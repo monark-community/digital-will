@@ -274,6 +274,7 @@ The Makefile provides a local workflow for building, deploying, and interacting 
 - `USER_ID = 0` is the default PM.
 - `SM_ID = 1` is the default SM.
 - Wallets 0-9 are preconfigured with Anvil keys.
+- The basic `RPC_URL` corresponds to what Anvil gives by default. Change the `RPC_URL` variable to deploy on other networks and add your address/private keys. You can also configure your credentials in foundry or somehow else so long as you execute the `WillFactoryDeploy.s` script.
 
 Note: `USER_ID` and `SM_ID` select the Anvil wallet address and private key used by Makefile commands. The `WillDeploy.s.sol` script itself receives actual addresses passed from the Makefile, so you can override the default account selection for real network testing by adjusting the variables or script inputs. 
 
