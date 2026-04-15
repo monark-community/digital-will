@@ -111,14 +111,68 @@ cp services/web/.env.example services/web/.env
 > cp services/api/src/substreams/.env.example services/api/src/substreams/.env
 > ```
 
-Each `.env.example` file is fully documented with comments. Key variables to set:
+Each `.env.example` file is fully documented with comments. Below are all required variables for each file:
 
-| File                               | Key Variables                                                                    |
-| ---------------------------------- | -------------------------------------------------------------------------------- |
-| `.env`                             | `POSTGRES_PASSWORD`, `NEXT_PUBLIC_RPC_URL`, `NEXT_PUBLIC_WILL_FACTORY_ADDRESS`   |
-| `services/api/.env`                | `JWT_SECRET`, `RESEND_API_KEY`, `RPC_URL`, `DATABASE_URL`                        |
-| `services/web/.env`                | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_RPC_URL`, `NEXT_PUBLIC_WILL_FACTORY_ADDRESS` |
-| `services/api/src/substreams/.env` | `SUBSTREAMS_API_KEY`, `WILL_FACTORY_ADDRESS`, `BLOCK_DEPLOYED`                   |
+#### Root (`.env`)
+
+| Variable                           | Purpose                                                       |
+| ---------------------------------- | ------------------------------------------------------------- |
+| `NODE_ENV`                         | Application environment: `local`, `development`, `production` |
+| `POSTGRES_USER`                    | PostgreSQL container user                                     |
+| `POSTGRES_PASSWORD`                | PostgreSQL container password (set a strong value)            |
+| `POSTGRES_DB`                      | PostgreSQL database name                                      |
+| `NEXT_PUBLIC_RPC_URL`              | Ethereum RPC endpoint (Sepolia testnet)                       |
+| `NEXT_PUBLIC_WILL_FACTORY_ADDRESS` | Deployed WillFactory contract address (0x...)                 |
+
+#### Backend API (`services/api/.env`)
+
+| Variable                | Purpose                                                                  |
+| ----------------------- | ------------------------------------------------------------------------ |
+| `NODE_ENV`              | Application environment: `local`, `development`, `production`            |
+| `PORT`                  | API server port (default: `4000`)                                        |
+| `HOSTNAME`              | Server hostname (default: `0.0.0.0`)                                     |
+| `POSTGRES_HOST`         | PostgreSQL hostname (`postgres` for Docker, `localhost` for local setup) |
+| `POSTGRES_PORT`         | PostgreSQL port (default: `5432`)                                        |
+| `POSTGRES_USER`         | PostgreSQL username                                                      |
+| `POSTGRES_PASSWORD`     | PostgreSQL password (same as root `.env`)                                |
+| `POSTGRES_DB`           | PostgreSQL database name (same as root `.env`)                           |
+| `DATABASE_URL`          | Full Prisma connection string                                            |
+| `LOG_LEVEL`             | Logging level: `debug`, `info`, `warn`, `error`                          |
+| `API_URL`               | Public API URL (used in emails)                                          |
+| `CORS_ORIGIN`           | CORS origin (typically frontend URL)                                     |
+| `JWT_SECRET`            | JWT signing secret (min 32 characters, use `openssl rand -base64 32`)    |
+| `JWT_EXPIRES_IN`        | JWT token expiration (e.g., `15m`, `7d`)                                 |
+| `WEBSOCKET_PORT`        | WebSocket server port (default: `4001`)                                  |
+| `WEBSOCKET_CORS_ORIGIN` | WebSocket CORS origin (typically frontend URL)                           |
+| `WEB_URL`               | Web app URL (used in email links)                                        |
+| `RESEND_API_KEY`        | Email service API key (get from https://resend.com)                      |
+| `EMAIL_FROM`            | Sender email address for transactional emails                            |
+| `RPC_URL`               | Blockchain RPC endpoint (Sepolia testnet)                                |
+| `CHAIN_ID`              | Blockchain chain ID (`11155111` for Sepolia)                             |
+
+#### Frontend (`services/web/.env`)
+
+| Variable                           | Purpose                                                       |
+| ---------------------------------- | ------------------------------------------------------------- |
+| `NODE_ENV`                         | Application environment: `local`, `development`, `production` |
+| `NEXT_PUBLIC_APP_ENV`              | Frontend app environment (displayed in UI)                    |
+| `NEXT_PUBLIC_API_URL`              | Backend API URL (must be reachable from browser)              |
+| `NEXT_PUBLIC_RPC_URL`              | Blockchain RPC endpoint (for on-chain reads)                  |
+| `NEXT_PUBLIC_WILL_FACTORY_ADDRESS` | Deployed WillFactory contract address (0x...)                 |
+
+#### Substreams Indexer (`services/api/src/substreams/.env`)
+
+| Variable               | Purpose                                                                  |
+| ---------------------- | ------------------------------------------------------------------------ |
+| `MANIFEST`             | Path to `.spkg` file (default: `/app/spkg/willchain-events-v0.1.0.spkg`) |
+| `SUBSTREAMS_URL`       | Substreams gRPC endpoint (network-specific, e.g., Sepolia)               |
+| `SUBSTREAMS_API_KEY`   | API key for Substreams provider (Pinax or The Graph)                     |
+| `SUBSTREAMS_MODULE`    | Module name within the `.spkg` to run                                    |
+| `CHAIN_ID`             | Blockchain chain ID (`11155111` for Sepolia)                             |
+| `WILL_FACTORY_ADDRESS` | Deployed WillFactory contract address (0x...)                            |
+| `BLOCK_DEPLOYED`       | Block number where WillFactory was deployed (Substreams start point)     |
+
+---
 
 ### 3. Docker Configuration
 
