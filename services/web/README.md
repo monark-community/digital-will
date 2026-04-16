@@ -142,3 +142,60 @@ Contains `WillABI.ts` and `WillFactoryABI.ts` — the ABIs for interacting with 
 #### `lib/contract-errors.ts`
 
 Maps Solidity 4-byte error selectors to user-friendly messages, categorized by type (permission, secondary-member, lifecycle, assets, timing).
+
+---
+
+## Limitations / Known Constraints
+
+This frontend is intentionally focused on a pragmatic MVP for managing wills on an EVM chain. The main constraints are:
+
+### Wallet + chain support
+
+- **MetaMask-first**: wallet flows rely on `window.ethereum` and are designed primarily for MetaMask. Other wallets (e.g. WalletConnect) are not a first-class target.
+- **Single-environment configuration**: chain RPC, WillFactory address, and API base URL are taken from `NEXT_PUBLIC_*` configuration. Switching networks is supported only insofar as the configured contracts exist on that network.
+
+### Blockchain realities
+
+- **User pays gas**: deployments and on-chain updates require the connected wallet to have enough funds; transactions can fail due to insufficient balance, gas spikes, or RPC/provider issues.
+- **Finality is probabilistic**: the UI can track submitted transactions, but confirmation time and finality depend on the network. Reorgs and dropped/replaced transactions are outside the app’s control.
+- **Immutability**: once a will is deployed, behavior is constrained by the smart contract. The frontend cannot “fix” or override on-chain state beyond the contract’s allowed methods.
+
+### Real-time notifications
+
+- **Best-effort delivery**: Socket.IO notifications depend on an active connection and browser background behavior. When disconnected, updates may be delayed until reconnection or a manual refresh.
+
+### Session + security tradeoffs
+
+- **JWT storage**: auth tokens are stored in browser storage for convenience. This means the overall security posture depends heavily on preventing XSS (CSP, safe rendering, dependency hygiene).
+
+### Scope limitations
+
+- **Not legal advice**: the app helps manage a digital workflow around wills, but it does not guarantee legal enforceability in any jurisdiction.
+
+---
+
+## Improvements / Future Work
+
+Potential improvements for `services/web` as the project evolves:
+
+### Structure & reuse
+
+- **Refactor pages into reusable feature modules**: reduce duplication across route groups by extracting shared “feature shells” (list + detail + empty/loading states).
+- **Reusable domain models**: introduce shared form/value models (e.g. `WillDraftForm`, `ContactForm`) and map them to API payloads in one place.
+- **Shared UI primitives**: standardize buttons, modals, toasts, tables, and form controls to keep behavior consistent across pages.
+
+### Data fetching & state
+
+- **Query key factory + consistent cache invalidation**: centralize React Query keys and invalidation rules per domain (auth/wallets/contacts/wills).
+- **Optimistic updates where safe**: improve perceived latency for simple CRUD actions (labels, contacts) with rollback on failure.
+- **Schema validation at boundaries**: validate API responses/payloads (e.g. with Zod) to fail fast on contract drift.
+
+### Web3 UX
+
+- **Better transaction lifecycle UX**: unified “pending / confirmed / failed” UI with links to explorers, retries, and clear error messages.
+- **Broader wallet support**: add WalletConnect or additional injected wallets (while keeping MetaMask as the default path).
+
+### Reliability, quality, and accessibility
+
+- **E2E tests for critical flows**: Playwright tests for sign-in/sign-up, will creation, deploy flow, and notification handling.
+- **Component-driven development**: optionally add Storybook to iterate on UI states without running the whole app.

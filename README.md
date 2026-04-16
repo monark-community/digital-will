@@ -212,6 +212,20 @@ The backend will automatically generate the Prisma client and push the schema to
 | Backend API  | [http://localhost:4000](http://localhost:4000)               |
 | Health Check | [http://localhost:4000/health](http://localhost:4000/health) |
 
+### MetaMask (wallet) configuration
+
+MetaMask is a **browser extension** (and mobile app) that acts as the user-controlled Ethereum wallet. It’s used by the frontend for:
+
+- **Authentication (wallet signup / sign-in)**: the app can ask MetaMask to **sign a message** to prove wallet ownership.
+- **On-chain actions**: deploying a will and any contract state changes are sent as **transactions signed by MetaMask** (the user pays gas).
+
+Notes:
+
+- This project targets the **Sepolia testnet** by default (chain id `11155111`). Your MetaMask network should be set to Sepolia.
+- MetaMask must be connected to the **same network** where `NEXT_PUBLIC_WILL_FACTORY_ADDRESS` is deployed.
+- `NEXT_PUBLIC_RPC_URL` is used for **read-only on-chain reads** in the UI; transaction signing still happens via MetaMask.
+- For Sepolia you’ll need **test ETH** in the connected MetaMask account to deploy/update wills.
+
 ### 6. Stopping the services
 
 ```bash
