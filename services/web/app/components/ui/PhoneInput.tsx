@@ -288,6 +288,10 @@ function parseE164(value: string): { country: Country; local: string } {
   return { country: DEFAULT_COUNTRY, local: value.slice(2) };
 }
 
+export function getLocalDigitsFromE164(value: string): string {
+  return parseE164((value || "").trim()).local.replace(/\D/g, "");
+}
+
 interface PhoneInputProps {
   value: string;
   onChange: (e164: string) => void;
@@ -327,21 +331,33 @@ export default function PhoneInput({
 
   useEffect(() => {
     const p = parseE164(value);
+
+    // We cap local number input to 10 digits.
+    const maxLocal = 10;
+    const digits = (p.local || "").replace(/\D/g, "").slice(0, maxLocal);
+
     setSelectedCountry(p.country);
-    setLocalNumber(p.local);
+    setLocalNumber(digits);
   }, [value]);
 
   const handleCountryChange = (code: string) => {
     const country = COUNTRIES.find((c) => c.code === code) ?? DEFAULT_COUNTRY;
     setSelectedCountry(country);
-    if (localNumber) {
-      onChange(`${country.dialCode}${localNumber}`);
+
+    const maxLocal = 10;
+    const digits = (localNumber || "").replace(/\D/g, "").slice(0, maxLocal);
+    setLocalNumber(digits);
+
+    if (digits) {
+      onChange(`${country.dialCode}${digits}`);
+    } else {
+      onChange("");
     }
   };
 
   const handleLocalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow digits, capped to E.164 max (15 total - dial code digits)
-    const maxLocal = 15 - (selectedCountry.dialCode.length - 1);
+    // Only allow digits, capped to 10 local digits.
+    const maxLocal = 10;
     const digits = e.target.value.replace(/\D/g, "").slice(0, maxLocal);
     setLocalNumber(digits);
     if (digits) {
@@ -404,7 +420,7 @@ export default function PhoneInput({
         inputMode="numeric"
         value={localNumber}
         onChange={handleLocalChange}
-        maxLength={15 - (selectedCountry.dialCode.length - 1)}
+        maxLength={10}
         disabled={disabled}
         placeholder={placeholder}
         aria-label="Phone number"

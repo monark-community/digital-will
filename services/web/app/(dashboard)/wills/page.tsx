@@ -26,7 +26,7 @@ import {
   SecurityPeriodCountdown,
   CooldownCountdown,
 } from "@/app/components/ui/SecurityPeriodCountdown";
-import PhoneInput from "@/app/components/ui/PhoneInput";
+import PhoneInput, { getLocalDigitsFromE164 } from "@/app/components/ui/PhoneInput";
 import { getErrorMessage } from "@/lib/contract-errors";
 
 const WILL_STATE_COLORS: Record<string, string> = {
@@ -537,7 +537,8 @@ export default function WillsPage() {
         member.firstName.trim() ||
         member.lastName.trim() ||
         member.email.trim() ||
-        member.address.trim();
+        member.address.trim() ||
+        (member.phoneNumber ?? "").trim();
 
       if (!hasAnyField) return false;
       if (!member.firstName.trim()) return false;
@@ -545,6 +546,11 @@ export default function WillsPage() {
       if (!member.email.trim()) return false;
       if (!emailRegex.test(member.email)) return false;
       if (!member.address.trim()) return false;
+
+      if (member.phoneNumber && member.phoneNumber.trim() !== "") {
+        const localDigits = getLocalDigitsFromE164(member.phoneNumber.trim());
+        if (localDigits.length !== 10) return false;
+      }
 
       try {
         ethers.getAddress(member.address.trim());
@@ -1136,7 +1142,7 @@ export default function WillsPage() {
         firstName: member.firstName,
         lastName: member.lastName,
         email: member.email,
-        phoneNumber: member.phoneNumber,
+        phoneNumber: member.phoneNumber?.trim() ? member.phoneNumber.trim() : undefined,
         walletAddress: member.address,
         relationship: member.relationship,
       });
@@ -1180,7 +1186,7 @@ export default function WillsPage() {
         firstName: member.firstName,
         lastName: member.lastName,
         email: member.email,
-        phoneNumber: undefined,
+        phoneNumber: member.phoneNumber?.trim() ? member.phoneNumber.trim() : undefined,
         walletAddress: member.address,
         relationship: member.relationship,
       });
@@ -1442,8 +1448,8 @@ export default function WillsPage() {
         }
 
         if (member.phoneNumber && member.phoneNumber.trim() !== "") {
-          const e164Regex = /^\+\d{7,15}$/; // E.164 format
-          if (!e164Regex.test(member.phoneNumber)) {
+          const localDigits = getLocalDigitsFromE164(member.phoneNumber.trim());
+          if (localDigits.length !== 10) {
             errors.push(`Member ${i + 1}: Invalid phone number`);
           }
         }
@@ -1473,8 +1479,8 @@ export default function WillsPage() {
           member.phoneNumber &&
           member.phoneNumber.trim() !== ""
         ) {
-          const phoneRegex = /^\d{10}$/;
-          if (!phoneRegex.test(member.phoneNumber)) contactValid = false;
+          const localDigits = getLocalDigitsFromE164(member.phoneNumber.trim());
+          if (localDigits.length !== 10) contactValid = false;
         }
 
         if (contactValid) {
