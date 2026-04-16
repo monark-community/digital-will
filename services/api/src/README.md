@@ -18,6 +18,19 @@ The API server is the backend layer of the WillChain application. It provides a 
 | Email            | **Resend** (transactional emails)                                     |
 | Password Hashing | **bcrypt**                                                            |
 | Build / Dev      | **tsx** (dev), **tsc** (build), **Docker** (deployment)               |
+| API Docs         | **Swagger UI** (`swagger-jsdoc` + `swagger-ui-express`)               |
+
+---
+
+## API Documentation
+
+The API is fully documented with **Swagger / OpenAPI 3.0**. When the server is running locally, the interactive Swagger UI is available at:
+
+```
+http://localhost:4000/api/docs
+```
+
+The specification is generated from JSDoc annotations in the route files and from the schema definitions in `config/swagger.ts`.
 
 ---
 
@@ -71,6 +84,7 @@ Application configuration and environment management.
 
 - **config.ts** — Central typed configuration object (server, database, JWT, CORS, blockchain, email settings). All values come from environment variables with local defaults.
 - **env.ts** — Loads `.env.local` → `.env` → root `.env` with fallback chain. Validates that required variables are present at startup.
+- **swagger.ts** — Swagger/OpenAPI 3.0 specification setup using `swagger-jsdoc`. Defines server info, bearer auth security scheme, and all reusable request/response schemas. The generated spec is served at `http://localhost:4000/api/docs`.
 
 ### `routes/`
 
