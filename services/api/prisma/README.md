@@ -1,16 +1,19 @@
 # WillChain PostreSQL Database
+
 ## Description
 
 PostgreSQL database for the WillChain backend, managed with Prisma ORM. Stores users, wallets, wills (both deployed and draft), secondary members, contacts, notifications, and protection period timers.
 
+## Installation
 
-## Installation	
 The database is automatically built with the Docker Compose command at the project's root:
 
 ```bash
 docker compose -f docker-compose.local.yml up --build -d
 ```
+
 ## Database Schema
+
 ```bash
 // Prisma schema file for PostgreSQL
 
@@ -102,7 +105,7 @@ model Will {
   secondaryMembers            SecondaryMember[]
   notifications               Notifications[]
   protectionPeriodTimer       ProtectionPeriodTimer?
-  
+
   @@unique([chainId, contractAddressInBlockchain])
   @@map("wills")
 }
@@ -114,7 +117,7 @@ model SecondaryMember {
   email             String
   phoneNumber       String?
   tempWalletAddress String? // this is the address used before the SM creates a WillChain account
-  walletAddress     String? // this is the address used when the SM has a WillChain account  
+  walletAddress     String? // this is the address used when the SM has a WillChain account
   willId            String
   will              Will    @relation(fields: [willId], references: [willId], onDelete: Cascade)
   wallet            Wallet? @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
@@ -131,8 +134,8 @@ model DraftWill {
   maxSecurityPeriod           Int
   wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
   draftsecondarymembers       draftSecondaryMember[]
-  
-  @@map("draftwills") 
+
+  @@map("draftwills")
 }
 
 
@@ -143,7 +146,7 @@ model draftSecondaryMember {
   email             String
   phoneNumber       String?
   votingPower       Int
-  walletAddress     String? 
+  walletAddress     String?
   draftWillId       String
   draftWill         DraftWill    @relation(fields: [draftWillId], references: [draftWillId], onDelete: Cascade)
   relationship      String?
@@ -157,7 +160,7 @@ model WillFactory {
   chainId                     Int    @unique
   blockDeployed               Int    // the block where the willFactory contract has been deployed
   lastProcessedCursor         String // given by the stream
-  
+
   @@map("willfactories")
 }
 
@@ -278,7 +281,7 @@ model Will {
   secondaryMembers            SecondaryMember[]
   notifications               Notifications[]
   protectionPeriodTimer       ProtectionPeriodTimer?
-  
+
   @@unique([chainId, contractAddressInBlockchain])
   @@map("wills")
 }
@@ -290,7 +293,7 @@ model SecondaryMember {
   email             String
   phoneNumber       String?
   tempWalletAddress String? // this is the address used before the SM creates a WillChain account
-  walletAddress     String? // this is the address used when the SM has a WillChain account  
+  walletAddress     String? // this is the address used when the SM has a WillChain account
   willId            String
   will              Will    @relation(fields: [willId], references: [willId], onDelete: Cascade)
   wallet            Wallet? @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
@@ -307,8 +310,8 @@ model DraftWill {
   maxSecurityPeriod           Int
   wallet                      Wallet            @relation(fields: [walletAddress], references: [address], onDelete: Cascade)
   draftsecondarymembers       draftSecondaryMember[]
-  
-  @@map("draftwills") 
+
+  @@map("draftwills")
 }
 
 
@@ -319,7 +322,7 @@ model draftSecondaryMember {
   email             String
   phoneNumber       String?
   votingPower       Int
-  walletAddress     String? 
+  walletAddress     String?
   draftWillId       String
   draftWill         DraftWill    @relation(fields: [draftWillId], references: [draftWillId], onDelete: Cascade)
   relationship      String?
@@ -333,7 +336,7 @@ model WillFactory {
   chainId                     Int    @unique
   blockDeployed               Int    // the block where the willFactory contract has been deployed
   lastProcessedCursor         String // given by the stream
-  
+
   @@map("willfactories")
 }
 
@@ -367,40 +370,62 @@ model ProtectionPeriodTimer {
 }
 ```
 
-### Prisma commands	
+### Prisma commands
+
 ```bash
-npx prisma generate                     #EGenerates Prisma's client
-npx prisma studio                       #Ouvrir l'interface graphique (http://localhost:5555)
-npx prisma migrate dev --name <nom>	    #Créer une migration
-npx prisma db push --accept-data-loss   #Pousser le schéma directement (sans migration)
-npx prisma migrate reset	            #Réinitialiser la base
+npx prisma generate                     # Generate Prisma client
+npx prisma studio                       # Open GUI (http://localhost:5555)
+npx prisma migrate dev --name <name>    # Create a migration
+npx prisma db push --accept-data-loss   # Push schema directly (no migration)
+npx prisma migrate reset                # Reset database
 ```
-## Accès / Inspection	
+
+## Access / Inspection
+
 ### Via Docker
+
 ```bash
 docker exec -it postgres psql -U willchain_local -d willchain_local_db
 ```
 
 ### Via Prisma Studio
-```bash 
+
+```bash
 npx prisma studio
 ```
 
 ## Schema Modification
+
 1. Edit schema.prisma file.
-2. ``` npx prisma generate```
-3. ``` npx prisma db push --accept-data-loss```
-4. ``` docker compose -f docker-compose.local.yml up --down -v```
-5. ``` docker compose -f docker-compose.local.yml up --build -d```
+2. ` npx prisma generate`
+3. ` npx prisma db push --accept-data-loss`
+4. ` docker compose -f docker-compose.local.yml down -v`
+5. ` docker compose -f docker-compose.local.yml up --build -d`
 
-## Database Reset	
-### Local Reset
-Simply rebuild project using these two commands:
-1. ```docker compose -f docker-compose.local.yml down -v```
-2. ```docker compose -f docker-compose.local.yml up --build -d```
+## Database Reset
 
+### Reset via Docker
 
-### Reset Database delpoyed on render
+Use Docker to reset the database:
+
 ```bash
-DATABASE_URL="postgresql://willchain_user:utP7fdPTfssSED6aANzMaeFIl4qwE3qA@dpg-d72h8l3uibrs73fm0d70-a.oregon-postgres.render.com/willchain_dev?sslmode=require" npx prisma migrate reset
+docker exec -it postgres psql -U <postgres_user> -d <database_name>
+DROP DATABASE <database_name>;
+CREATE DATABASE <database_name>;
 ```
+
+Then apply migrations:
+
+```bash
+npx prisma migrate deploy
+```
+
+### Reset via Prisma
+
+Use Prisma directly with your database connection string:
+
+```bash
+DATABASE_URL="postgresql://username:password@dpg-xxxxx.postgres.render.com/database_name?sslmode=require" npx prisma migrate reset
+```
+
+> Replace `username`, `password`, `dpg-xxxxx`, and `database_name` with your actual database credentials.

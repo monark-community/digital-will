@@ -44,6 +44,8 @@ WillChain is a decentralized digital will management platform that allows users 
 | PostgreSQL 16  | Relational database |
 | Prisma Migrate | Schema migrations   |
 
+> For more details, see the [Database README](services/api/prisma/README.md).
+
 ### Smart Contracts
 
 | Technology | Purpose                         |
@@ -247,6 +249,7 @@ The application is deployed on [Render](https://render.com) using Docker. Each c
 | Component             | Guide                                              |
 | --------------------- | -------------------------------------------------- |
 | API Server            | [docs/DEPLOY_SERVER.md](docs/DEPLOY_SERVER.md)     |
+| Frontend              | [docs/DEPLOY_WEB.md](docs/DEPLOY_WEB.md)           |
 | Database (PostgreSQL) | [docs/DEPLOY_DATABASE.md](docs/DEPLOY_DATABASE.md) |
 
 For Docker stage documentation:
@@ -313,36 +316,33 @@ This section is a **spec** for an end-user guide (not the guide itself). The goa
 
 ### Frontend (services/web) — pages and user-facing functionality
 
-| Route (page) | What the user can do | Notes / dependencies |
-| --- | --- | --- |
-| `/landing` | Discover the product and entry points to auth | Implemented in [services/web/app/landing/page.tsx](services/web/app/landing/page.tsx#L1) |
-| `/login` | Connect MetaMask, check wallet existence, sign in or redirect to sign up | Implemented in [services/web/app/(auth)/login/page.tsx](services/web/app/(auth)/login/page.tsx#L1); calls wallet check + wallet sign-in |
-| `/signup/wallet` | Create account linked to a wallet (profile fields + email preference) | Implemented in [services/web/app/(auth)/signup/wallet/page.tsx](services/web/app/(auth)/signup/wallet/page.tsx#L1) |
-| `/dashboard` | Post-login landing / navigation hub | Implemented in [services/web/app/dashboard/page.tsx](services/web/app/dashboard/page.tsx#L1) |
-| `/wallets` | Add wallet (signature), label wallet, remove wallet (with eligibility check) | Implemented in [services/web/app/(dashboard)/wallets/page.tsx](services/web/app/(dashboard)/wallets/page.tsx#L1) |
-| `/contacts` | Add/update/delete contacts; validate email and wallet address format | Implemented in [services/web/app/(dashboard)/contacts/page.tsx](services/web/app/(dashboard)/contacts/page.tsx#L1) |
-| `/wills` | PM view: create drafts, edit drafts, validate for deployment, deploy, manage deployed will lifecycle (fund/withdraw/cancel/update members/veto) | Implemented in [services/web/app/(dashboard)/wills/page.tsx](services/web/app/(dashboard)/wills/page.tsx#L1); uses on-chain reads + MetaMask tx |
-| `/wills/associated` | SM view: list wills where the user is a secondary member; validate/refuse/declare death/execute when eligible | Implemented in [services/web/app/(dashboard)/wills/associated/page.tsx](services/web/app/(dashboard)/wills/associated/page.tsx#L1) |
-| `/profile` | View profile, toggle email notifications, check delete eligibility, delete account (confirm) | Implemented in [services/web/app/(dashboard)/profile/page.tsx](services/web/app/(dashboard)/profile/page.tsx#L1) |
-
+| Route (page)        | What the user can do                                                                                                                            | Notes / dependencies                                                                                                                              |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/landing`          | Discover the product and entry points to auth                                                                                                   | Implemented in [services/web/app/landing/page.tsx](services/web/app/landing/page.tsx#L1)                                                          |
+| `/login`            | Connect MetaMask, check wallet existence, sign in or redirect to sign up                                                                        | Implemented in [services/web/app/(auth)/login/page.tsx](<services/web/app/(auth)/login/page.tsx#L1>); calls wallet check + wallet sign-in         |
+| `/signup/wallet`    | Create account linked to a wallet (profile fields + email preference)                                                                           | Implemented in [services/web/app/(auth)/signup/wallet/page.tsx](<services/web/app/(auth)/signup/wallet/page.tsx#L1>)                              |
+| `/dashboard`        | Post-login landing / navigation hub                                                                                                             | Implemented in [services/web/app/dashboard/page.tsx](services/web/app/dashboard/page.tsx#L1)                                                      |
+| `/wallets`          | Add wallet (signature), label wallet, remove wallet (with eligibility check)                                                                    | Implemented in [services/web/app/(dashboard)/wallets/page.tsx](<services/web/app/(dashboard)/wallets/page.tsx#L1>)                                |
+| `/contacts`         | Add/update/delete contacts; validate email and wallet address format                                                                            | Implemented in [services/web/app/(dashboard)/contacts/page.tsx](<services/web/app/(dashboard)/contacts/page.tsx#L1>)                              |
+| `/wills`            | PM view: create drafts, edit drafts, validate for deployment, deploy, manage deployed will lifecycle (fund/withdraw/cancel/update members/veto) | Implemented in [services/web/app/(dashboard)/wills/page.tsx](<services/web/app/(dashboard)/wills/page.tsx#L1>); uses on-chain reads + MetaMask tx |
+| `/wills/associated` | SM view: list wills where the user is a secondary member; validate/refuse/declare death/execute when eligible                                   | Implemented in [services/web/app/(dashboard)/wills/associated/page.tsx](<services/web/app/(dashboard)/wills/associated/page.tsx#L1>)              |
+| `/profile`          | View profile, toggle email notifications, check delete eligibility, delete account (confirm)                                                    | Implemented in [services/web/app/(dashboard)/profile/page.tsx](<services/web/app/(dashboard)/profile/page.tsx#L1>)                                |
 
 ### Backend (services/api) — feature areas and API surface
 
-
-| Feature area | Route file | What it supports |
-| --- | --- | --- |
-| Auth | [services/api/src/routes/authRoutes.ts](services/api/src/routes/authRoutes.ts#L1) | Wallet existence check, wallet-based sign-in, create account with wallet, get current user, refresh/logout |
-| Wallets | [services/api/src/routes/walletRoutes.ts](services/api/src/routes/walletRoutes.ts#L1) | List/add/remove wallets, update labels, check wallet removal eligibility |
-| Contacts | [services/api/src/routes/contactRoutes.ts](services/api/src/routes/contactRoutes.ts#L1) | Contact book CRUD (used for secondary member details) |
-| Wills | [services/api/src/routes/willRoutes.ts](services/api/src/routes/willRoutes.ts#L1) | Draft CRUD, validate for deployment, deploy workflow, get enriched on-chain state, manage secondary membership in DB |
-| Notifications | [services/api/src/routes/notificationRoutes.ts](services/api/src/routes/notificationRoutes.ts#L1) | Mark read, mark all read, delete one/all notifications |
-| User account | [services/api/src/routes/userRoutes.ts](services/api/src/routes/userRoutes.ts#L1) | Toggle email preference, check delete eligibility, delete account |
+| Feature area  | Route file                                                                                        | What it supports                                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Auth          | [services/api/src/routes/authRoutes.ts](services/api/src/routes/authRoutes.ts#L1)                 | Wallet existence check, wallet-based sign-in, create account with wallet, get current user, refresh/logout           |
+| Wallets       | [services/api/src/routes/walletRoutes.ts](services/api/src/routes/walletRoutes.ts#L1)             | List/add/remove wallets, update labels, check wallet removal eligibility                                             |
+| Contacts      | [services/api/src/routes/contactRoutes.ts](services/api/src/routes/contactRoutes.ts#L1)           | Contact book CRUD (used for secondary member details)                                                                |
+| Wills         | [services/api/src/routes/willRoutes.ts](services/api/src/routes/willRoutes.ts#L1)                 | Draft CRUD, validate for deployment, deploy workflow, get enriched on-chain state, manage secondary membership in DB |
+| Notifications | [services/api/src/routes/notificationRoutes.ts](services/api/src/routes/notificationRoutes.ts#L1) | Mark read, mark all read, delete one/all notifications                                                               |
+| User account  | [services/api/src/routes/userRoutes.ts](services/api/src/routes/userRoutes.ts#L1)                 | Toggle email preference, check delete eligibility, delete account                                                    |
 
 User guide backend notes to include:
 
 - **Authentication model**: JWT bearer token issued after wallet signature verification.
 - **Authorization rules** (high level): PM can access/modify own wallets, contacts, and wills; SM can only act on wills where they are a member.
-
 
 ### Indexing, notifications, and emails
 
@@ -382,4 +382,3 @@ WillChain notifications are designed to be **(1) persisted**, **(2) delivered in
 - If a user is **offline**, notifications are still created in DB and will appear on next login (history fetch).
 - If a user is **online**, they should see notifications instantly via WebSocket.
 - Notification text is generated from the notification `type` + context (PM vs SM role, will name, optional SM name / amount).
-
