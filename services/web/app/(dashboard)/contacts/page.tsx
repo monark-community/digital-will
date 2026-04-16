@@ -9,7 +9,7 @@ import {
   useCurrentUser,
 } from "@/lib/hooks";
 import Header from "@/app/components/ui/Header";
-import PhoneInput from "@/app/components/ui/PhoneInput";
+import PhoneInput, { getLocalDigitsFromE164 } from "@/app/components/ui/PhoneInput";
 import type { Contact } from "@/lib/types";
 
 export default function ContactsPage() {
@@ -137,8 +137,8 @@ export default function ContactsPage() {
 
     // Phone (optionnel mais valide si présent)
     if (formData.phoneNumber && formData.phoneNumber.trim() !== "") {
-      const e164Regex = /^\+\d{7,15}$/; // E.164 format
-      if (!e164Regex.test(formData.phoneNumber)) {
+      const localDigits = getLocalDigitsFromE164(formData.phoneNumber.trim());
+      if (localDigits.length !== 10) {
         errors.push("Invalid phone number");
       }
     }
