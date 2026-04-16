@@ -67,6 +67,9 @@ export async function stream(
   const request = createRequest({
     substreamPackage: pkg,
     outputModule,
+    /* using lastProcessedBlock to resume even if cursor is recommended in the literature 
+    because we experienced a bug with a "corrupted" cursor that caused the stream to "freeze"
+    */
     ...(lastProcessedBlock ? { startBlockNum: lastProcessedBlock } : { startBlockNum: -1 }),
   });
 
@@ -91,7 +94,7 @@ export async function stream(
         await onMessage(eventsCallsMessage, chainId);
         /*
          * In case the server crashes before the "close" event is emitted,
-         * we want to have the last cursor updated in the DB to avoid
+         * we want to have the last cursor/block updated in the DB to avoid
          * reprocessing too many blocks when restarting the listener.
          */
         const blockNumber = extractBlockNumberFromMessage(eventsCallsMessage);

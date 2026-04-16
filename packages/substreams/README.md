@@ -45,7 +45,12 @@ the directory services/api/src/substreams must be called once for each network.
 in `How this spkg was created`
 3. It should be possible to create a network-agnostic .spkg; however, this requires manual configuration since 
 the Substreams CLI does not currently support it. Note that doing so may sacrifice contract-specific filtering.
-		
+
+## Known limitations
+In `services/api/src/substreams/substreams_utils.ts`, we resume event streams using `lastProcessedBlock` instead of the officially recommended cursor method. We opted against cursors after encountering a bug where a corrupted cursor would freeze the stream.
+
+As a result, if the server crashes mid-block, events from that partially processed block may be processed again upon recovery.
+
 ## License
 
 [Apache 2.0](LICENSE)
