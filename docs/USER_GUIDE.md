@@ -212,14 +212,14 @@ Not really! WillChain handles the blockchain details for you. You just interact 
 
 **What is the protection period for?**
 
-The protection period gives secondary members time to agree and ensures no hasty decisions are made. It's a safety feature to protect both the will owner's legacy.
+The protection period gives secondary members time to agree and ensures no hasty decisions are made. It corresponds to the time that the implicated users must wait before executing the will, and it is defined via the predicted execution time. It's a safety feature to protect the will owner's legacy.
 
 The protection period has a **minimum** and **maximum duration** that you set:
 
-- It **starts at the maximum duration** when the first secondary member declares your death
-- As more secondary members declare your death, the period **counts down faster** based on their voting weights
-- Once **all secondary members have declared**, the period moves to the **minimum duration**
-- Once the protection period reaches zero, the will becomes executable
+- The secondary members involved in the contract can never wait more than **maximum duration** and less than **minimum duration**. In other words, they must wait at least **minimum period** before executing the contract starting from the moment of the first declaration. 
+- As more secondary members declare your death, the waiting period **decreases** proportionatedly based on their voting weights compared to the total of weights. This is why despite a first declaration, voting weights are already considered and the security period is always less than **maximum duration**
+- Once **all secondary members have declared**, the predicted execution time moves to **first declaration time** + **minimum duration**
+- Once the remaining time until execution shown in the interface reaches zero (the predicted execution time has been passed), the will becomes executable
 
 **Can I have multiple wills?**
 
