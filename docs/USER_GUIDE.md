@@ -200,7 +200,7 @@ Yes! You can modify almost everything in your deployed will **as long as the pro
 - Fund or withdraw funds
 - Modify any other will details
 
-Once the protection period ends, your will becomes immutable and cannot be modified. If you need to make changes after the protection period is over, you must cancel the will and create a new one.
+Once the protection period ends, your will becomes immutable and cannot be modified. 
 
 **What if I'm offline when something happens to my will?**
 
@@ -217,7 +217,7 @@ The protection period gives secondary members time to agree and ensures no hasty
 The protection period has a **minimum** and **maximum duration** that you set:
 
 - The secondary members involved in the contract can never wait more than **maximum duration** and less than **minimum duration**. In other words, they must wait at least **minimum period** before executing the contract starting from the moment of the first declaration. 
-- As more secondary members declare your death, the waiting period **decreases** proportionatedly based on their voting weights compared to the total of weights. This is why despite a first declaration, voting weights are already considered and the security period is always less than **maximum duration**
+- As more secondary members declare your death, the waiting period **decreases** proportionally based on their voting weights compared to the total of weights. This is why despite a first declaration, voting weights are already considered and the security period is always less than **maximum duration**
 - Once **all secondary members have declared**, the predicted execution time moves to **first declaration time** + **minimum duration**
 - Once the remaining time until execution shown in the interface reaches zero (the predicted execution time has been passed), the will becomes executable
 
