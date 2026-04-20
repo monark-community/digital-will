@@ -82,7 +82,7 @@ digital-will/
 │   └── web/                 ← Frontend (Next.js + React)
 ├── packages/
 │   ├── smart-contracts/     ← Solidity contracts (Foundry)
-│   ├── substreams/          ← Blockchain indexer definitions
+│   ├── substreams/          ← Substream Package
 │   ├── common/              ← Shared contracts & helpers
 │   ├── shared/              ← Shared types & utilities
 │   └── components/          ← Shared UI components
