@@ -21,7 +21,7 @@ type TemplateArgs = {
 };
 
 const LOGIN_URL = `${config.webUrl}/login`;
-const SIGNUP_URL = `${config.webUrl}/signup`;
+const SIGNUP_URL = `${config.webUrl}/login`;
 const CURRENT_YEAR = new Date().getFullYear();
 
 /**
