@@ -21,15 +21,6 @@ export async function validateSignUp(
     );
   }
 
-  // Validate name lengths
-  if (firstName.length > 30) {
-    throw new BadRequestError("First name must not exceed 30 characters");
-  }
-
-  if (lastName.length > 30) {
-    throw new BadRequestError("Last name must not exceed 30 characters");
-  }
-
   // Validate email format
   if (!REGEX.EMAIL.test(email)) {
     throw new BadRequestError("Invalid email format");
@@ -82,11 +73,6 @@ export function validateSignIn(
   // Validate email format
   if (!REGEX.EMAIL.test(email)) {
     throw new BadRequestError("Invalid email format");
-  }
-
-  // Validate email length (RFC 5321)
-  if (email.length > 254) {
-    throw new BadRequestError("Email address must not exceed 254 characters");
   }
 
   next();

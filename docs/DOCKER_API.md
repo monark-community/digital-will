@@ -11,11 +11,11 @@ The build context is set to the **root of the repository** (`.`) because the Doc
 The Dockerfile is organized into **5 stages**. Each stage has a specific purpose and only the relevant assets from previous stages are carried over. This keeps the final image as lean as possible.
 
 ```
-base → deps → local
-                 ↘
-              builder → development
-                     ↘
-                      production
+base
+ ↓
+deps ─┬→ local
+      └→ builder ─┬→ development
+                  └→ production
 ```
 
 ---
@@ -47,7 +47,7 @@ Installs all Node.js dependencies. This stage:
 
 ### `local`
 
-**From:** `base`  
+**From:** `deps`  
 **Target:** `local`
 
 Used for **local development** (via `docker-compose.local.yml`). This stage:
@@ -63,7 +63,7 @@ Used for **local development** (via `docker-compose.local.yml`). This stage:
 
 ### `builder`
 
-**From:** `base`
+**From:** `deps`
 
 A **build-only** stage used as an intermediate step for the `development` and `production` targets. This stage:
 
@@ -79,7 +79,7 @@ This stage is **never deployed directly** — it only produces compiled artifact
 
 ### `development`
 
-**From:** `base`  
+**From:** `builder`  
 **Target:** `development`
 
 Used for **deployment on Render** (current setup). This stage:
@@ -94,7 +94,7 @@ Used for **deployment on Render** (current setup). This stage:
 
 ### `production`
 
-**From:** `base`  
+**From:** `builder`  
 **Target:** `production`
 
 Intended for **hardened production deployments**. Identical to `development` in terms of compiled output, but with additional security measures:

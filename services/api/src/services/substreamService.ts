@@ -75,7 +75,10 @@ export async function updateLastCursorInDB(
   }
   await prisma.willFactory.update({
     where: { chainId: parseInt(chainId) },
-    data: { lastProcessedCursor: cursor, lastProcessedBlock: blockNumber ?? null },
+    data: {
+      lastProcessedCursor: cursor,
+      ...(blockNumber !== undefined && { lastProcessedBlock: blockNumber }),
+    },
   });
   console.log(
     `[SubstreamsDB] Cursor persisted for chainId ${chainId}: ${cursor} and last processed block: ${blockNumber}`,

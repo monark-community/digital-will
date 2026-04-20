@@ -1,6 +1,4 @@
 export {
-  useSignIn,
-  useSignUp,
   useLogout,
   useCurrentUser,
   useCheckWallet,

@@ -2,6 +2,7 @@ import express from "express";
 import { createServer } from "http";
 import cors from "cors";
 import { StatusCodes } from "http-status-codes";
+import swaggerUi from "swagger-ui-express";
 import { loadEnvironment, validateEnvironment } from "./config/env";
 import { config } from "./config/config";
 import router from "./routes/router";
@@ -14,6 +15,7 @@ import {
   startProtectionPeriodPoller,
   startProtectionPeriodReminderPoller,
 } from "./services/protectionPeriodService";
+import { swaggerSpec } from "./config/swagger";
 
 // Load environment variables
 loadEnvironment();
@@ -42,6 +44,11 @@ app.use(express.urlencoded({ extended: true }));
 // API Routes
 app.use(ROUTES.BASE, router);
 
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get("/api/docs.json", (_req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.send(swaggerSpec);
+});
 app.get("/", (_req, res) => {
   res.status(StatusCodes.OK).json({
     message: "Express API is running",

@@ -34,8 +34,6 @@ export const config = {
 // API Routes
 export const API_ROUTES = {
   AUTH: {
-    SIGNUP: "/api/auth/signup",
-    SIGNIN: "/api/auth/signin",
     ME: "/api/auth/me",
     LOGOUT: "/api/auth/logout",
     REFRESH: "/api/auth/refresh",

@@ -11,11 +11,11 @@ The build context is set to the **`services/web/` directory**, as all frontend f
 The Dockerfile is organized into **5 stages**. Each stage has a specific purpose, and only the relevant assets from previous stages are carried over to keep the final image small and secure.
 
 ```
-base → deps → local
-                 ↘
-              development
-           deps ↗
-              builder → production
+base
+ ↓
+deps ─┬→ local
+      ├→ development
+      └→ builder → production
 ```
 
 ---
@@ -44,7 +44,7 @@ Installs all Node.js dependencies. This stage:
 
 ### `local`
 
-**From:** `base`  
+**From:** `deps`  
 **Target:** `local`
 
 Used for **local development** (via `docker-compose.local.yml`). This stage:
@@ -61,7 +61,7 @@ Used for **local development** (via `docker-compose.local.yml`). This stage:
 
 ### `development`
 
-**From:** `base`  
+**From:** `deps`  
 **Target:** `development`
 
 Functionally identical to the `local` stage, but with `NODE_ENV=development`. This stage:
@@ -76,7 +76,7 @@ Functionally identical to the `local` stage, but with `NODE_ENV=development`. Th
 
 ### `builder`
 
-**From:** `base`
+**From:** `deps`
 
 A **build-only** stage used as an intermediate step for the `production` target. This stage:
 

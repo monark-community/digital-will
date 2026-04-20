@@ -1,8 +1,6 @@
 import { apiClient } from "../api-client";
 import { API_ROUTES } from "../config";
 import type {
-  SignUpRequest,
-  SignInRequest,
   AuthResponse,
   User,
   WalletCheckResponse,
@@ -13,28 +11,6 @@ import type {
  * Auth service - handles all authentication API calls
  */
 export const authService = {
-  /**
-   * Sign up a new user
-   */
-  signUp: async (data: SignUpRequest): Promise<AuthResponse> => {
-    const response = await apiClient.post<{
-      success: boolean;
-      data: AuthResponse;
-    }>(API_ROUTES.AUTH.SIGNUP, data);
-    return response.data.data;
-  },
-
-  /**
-   * Sign in an existing user
-   */
-  signIn: async (data: SignInRequest): Promise<AuthResponse> => {
-    const response = await apiClient.post<{
-      success: boolean;
-      data: AuthResponse;
-    }>(API_ROUTES.AUTH.SIGNIN, data);
-    return response.data.data;
-  },
-
   /**
    * Get current user profile
    */

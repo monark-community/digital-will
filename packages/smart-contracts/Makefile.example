@@ -1,6 +1,6 @@
 # Makefile for Foundry deployment
 
-# RPC URL
+# RPC URL := SEPOLIA_URL_HERE
 RPC_URL := 127.0.0.1:8545
 
 # Private keys  |  keep comments close cause otherwise parser breaks.
@@ -148,6 +148,11 @@ deploy-all-exec-mocks:
 # -----------------
 # 	Getters
 # -----------------
+call-get-pm:
+	@echo "Fetching SM info, called by user $(USER_KEY) for SM $(SM_KEY) @$(SM_ADDR)"
+	@RAW=$$(cast call $(WILL_ADDR) "PM_I()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "PM_I()(address)" $$RAW --json
+
 call-get-sm:
 	@echo "Fetching SM info, called by user $(USER_KEY) for SM $(SM_KEY) @$(SM_ADDR)"
 	@RAW=$$(cast call $(WILL_ADDR) "getDetailedSm(address)" $(SM_ADDR) --rpc-url $(RPC_URL)); \
@@ -185,8 +190,23 @@ call-get-security-period-config:
 
 call-get-exec-time:
 	@echo "Fetching execution time with user $(USER_KEY)..."
-	@RAW=$$(cast call $(WILL_ADDR) "getExecutionPossibleTimestamp()" --rpc-url $(RPC_URL)); \
-	cast decode-abi "getExecutionPossibleTimestamp()(uint256)" $$RAW --json
+	@RAW=$$(cast call $(WILL_ADDR) "executionTimeStampS()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "executionTimeStampS()(uint256)" $$RAW --json
+
+call-get-death-declare-time:
+	@echo "Fetching death declaration time with user $(USER_KEY)..."
+	@RAW=$$(cast call $(WILL_ADDR) "deathDeclarationTimestampS()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "deathDeclarationTimestampS()(uint256)" $$RAW --json
+
+call-get-totalValidatedPts:
+	@echo "Fetching total validated points with user $(USER_KEY)..."
+	@RAW=$$(cast call $(WILL_ADDR) "totalVotePowerS()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "totalVotePowerS()(uint16)" $$RAW --json
+
+call-get-cumulatedPts:
+	@echo "Fetching cumulated points with user $(USER_KEY)..."
+	@RAW=$$(cast call $(WILL_ADDR) "cumulatedVotePowerS()" --rpc-url $(RPC_URL)); \
+	cast decode-abi "cumulatedVotePowerS()(uint16)" $$RAW --json
 
 call-get-state:
 	@echo "Fetching state with user $(USER_KEY)..."
@@ -348,8 +368,8 @@ call-update-sec-upd:
 ##########################
 # Mocks related
 ##########################
-MOCK_SWAP_ROUTER_ADDR=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0#For anvil.
-WETH_ADDR=0x5FbDB2315678afecb367f032d93F642f64180aa3#For anvil.
+MOCK_SWAP_ROUTER_ADDR=0x8b55A53774114eD4F51ac5D1ef76de70D54776eB#For anvil.
+WETH_ADDR=0xB1BDdb5b44A9F030bae56EE771Cd5DB0462D582e#For anvil.
 call-withdraw-weth-as-eth-from-router:
 	@echo "Withdrawing WETH as ETH from router at $(MOCK_SWAP_ROUTER_ADDR) by user $(USER_KEY)..."
 	@cast send $(MOCK_SWAP_ROUTER_ADDR) \

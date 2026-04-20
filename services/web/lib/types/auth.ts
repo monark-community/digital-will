@@ -29,20 +29,6 @@ export interface Contact {
   relationship?: string | null;
 }
 
-export interface SignUpRequest {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNo?: string;
-  password: string;
-  confirmPassword: string;
-}
-
-export interface SignInRequest {
-  email: string;
-  password: string;
-}
-
 export interface WalletCheckResponse {
   exists: boolean;
   userId?: string;

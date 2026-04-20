@@ -24,12 +24,15 @@ function hasEventOrCallData(message: EventsCalls): boolean {
  * Extract block number from EventsCalls message.
  * Looks through events first, then calls to find the block number.
  */
-function extractBlockNumberFromMessage(message: EventsCalls): number | undefined {
+function extractBlockNumberFromMessage(
+  message: EventsCalls,
+): number | undefined {
   if (message.events) {
     for (const eventType of Object.values(message.events)) {
       if (Array.isArray(eventType) && eventType.length > 0) {
         const blockNum = (eventType[0] as any).evtBlockNumber;
-        const parsed = typeof blockNum === 'string' ? parseInt(blockNum) : undefined;
+        const parsed =
+          typeof blockNum === "string" ? parseInt(blockNum) : undefined;
         return parsed;
       }
     }
@@ -39,7 +42,8 @@ function extractBlockNumberFromMessage(message: EventsCalls): number | undefined
     for (const callType of Object.values(message.calls)) {
       if (Array.isArray(callType) && callType.length > 0) {
         const blockNum = (callType[0] as any).callBlockNumber;
-        const parsed = typeof blockNum === 'string' ? parseInt(blockNum) : undefined;
+        const parsed =
+          typeof blockNum === "string" ? parseInt(blockNum) : undefined;
         return parsed;
       }
     }
@@ -67,7 +71,12 @@ export async function stream(
   const request = createRequest({
     substreamPackage: pkg,
     outputModule,
-    ...(lastProcessedBlock ? { startBlockNum: lastProcessedBlock } : { startBlockNum: -1 }),
+    /* using lastProcessedBlock to resume even if cursor is recommended in the literature 
+    because we experienced a bug with a "corrupted" cursor that caused the stream to "freeze"
+    */
+    ...(lastProcessedBlock
+      ? { startBlockNum: lastProcessedBlock + 1 }
+      : { startBlockNum: -1 }),
   });
 
   // NodeJS Events
@@ -91,15 +100,11 @@ export async function stream(
         await onMessage(eventsCallsMessage, chainId);
         /*
          * In case the server crashes before the "close" event is emitted,
-         * we want to have the last cursor updated in the DB to avoid
+         * we want to have the last cursor/block updated in the DB to avoid
          * reprocessing too many blocks when restarting the listener.
          */
         const blockNumber = extractBlockNumberFromMessage(eventsCallsMessage);
-        await updateLastCursorInDB(
-          chainId,
-          cursor,
-          blockNumber,
-        );
+        await updateLastCursorInDB(chainId, cursor, blockNumber);
       } catch (error) {
         console.error("[Substreams] Error processing message:", error);
       }
