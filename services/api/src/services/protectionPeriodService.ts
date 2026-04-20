@@ -223,7 +223,7 @@ async function sendReminder(
   role: NotificationRecipientRole,
 ): Promise<void> {
   const type = NotificationType.PROTECTION_PERIOD_REMINDER;
-  const notifId = await createInAppNotification(type, willId, userId);
+  const notifId = await createInAppNotification(type, willId, userId, role);
   emitUserNotification(userId, {
     ...buildReminderNotif(willName, willId, role),
     id: notifId,

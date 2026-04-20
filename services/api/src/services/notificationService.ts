@@ -1,11 +1,22 @@
-import { NotificationType } from "../substreams/interfaces/cleaned/model";
+import {
+  NotificationType,
+  NotificationRecipientRole,
+} from "../substreams/interfaces/cleaned/model";
+import { NotificationRecipientRole as PrismaRole } from "@prisma/client";
 import { cleanupCanceledWill } from "./willService";
 import prisma from "../lib/prisma";
+
+const roleToPrisma: Record<NotificationRecipientRole, PrismaRole> = {
+  [NotificationRecipientRole.PM]: PrismaRole.PM,
+  [NotificationRecipientRole.SM]: PrismaRole.SM,
+  [NotificationRecipientRole.SM_TARGET]: PrismaRole.SM_TARGET,
+};
 
 export async function createInAppNotification(
   notifType: NotificationType,
   willId: string | null,
   userId: string,
+  role: NotificationRecipientRole,
   smName?: string,
   amount?: number,
 ): Promise<string> {
@@ -14,6 +25,7 @@ export async function createInAppNotification(
       notifType,
       willId,
       userId,
+      recipientRole: roleToPrisma[role],
       smName: smName ?? null,
       amount: amount ?? null,
       readStatus: false,

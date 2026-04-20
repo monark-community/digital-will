@@ -100,6 +100,7 @@ async function broadcastSplit(
       type,
       willId,
       pmUserId,
+      NotificationRecipientRole.PM,
       smName,
       amount,
     );
@@ -128,6 +129,7 @@ async function broadcastSplit(
       type,
       willId,
       userId,
+      NotificationRecipientRole.SM,
       smName,
       amount,
     );
@@ -235,6 +237,7 @@ async function handleSignatureRequest(
       NotificationType.SIGNATURE_REQUEST,
       will.willId,
       userId,
+      NotificationRecipientRole.SM,
     );
     emitUserNotification(userId, {
       ...buildUserNotif(
@@ -294,6 +297,7 @@ async function notifySpecificSm(
     type,
     will.willId,
     userId,
+    NotificationRecipientRole.SM_TARGET,
   );
   emitUserNotification(userId, {
     ...buildUserNotif(
@@ -347,6 +351,7 @@ async function notifyOthersAndTarget(
       type,
       will.willId,
       targetUserId,
+      NotificationRecipientRole.SM_TARGET,
     );
     emitUserNotification(targetUserId, {
       ...buildUserNotif(
@@ -387,6 +392,7 @@ async function notifyWillAutoCanceled(will: {
     NotificationType.WILL_CANCELED_ALL_SM_LEFT,
     will.willId,
     pmUserId,
+    NotificationRecipientRole.PM,
   );
   emitUserNotification(pmUserId, {
     ...buildUserNotif(
@@ -418,6 +424,7 @@ async function notifyWillPmCanceled(
       NotificationType.WILL_CANCELED,
       will.willId,
       userId,
+      NotificationRecipientRole.SM,
     );
     emitUserNotification(userId, {
       ...buildUserNotif(

@@ -148,17 +148,24 @@ model WillFactory {
   @@map("willfactories")
 }
 
+enum NotificationRecipientRole {
+  PM
+  SM
+  SM_TARGET
+}
+
 model Notifications {
-  notifId    String           @id @default(uuid())
-  notifType  NotificationType @default(WILL_ACTIVATED)
-  willId     String?
-  userId     String
-  smName     String?
-  amount     Float?
-  readStatus Boolean
-  createdAt  DateTime         @default(now())
-  will       Will?            @relation(fields: [willId], references: [willId], onDelete: SetNull)
-  user       User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  notifId        String                    @id @default(uuid())
+  notifType      NotificationType          @default(WILL_ACTIVATED)
+  recipientRole  NotificationRecipientRole @default(SM)
+  willId         String?
+  userId         String
+  smName         String?
+  amount         Float?
+  readStatus     Boolean
+  createdAt      DateTime                  @default(now())
+  will           Will?                     @relation(fields: [willId], references: [willId], onDelete: SetNull)
+  user           User                      @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@map("notifications")
 }

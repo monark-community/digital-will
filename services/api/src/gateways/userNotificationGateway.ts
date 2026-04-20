@@ -7,8 +7,15 @@ import {
   NotificationRecipientRole,
   UserNotification,
 } from "../substreams/interfaces/cleaned/model";
+import { NotificationRecipientRole as PrismaRole } from "@prisma/client";
 import { getNotificationsForUser } from "../services/notificationService";
 import { generateUserNotification } from "../utils/userNotificationGenerator";
+
+const prismaRoleToTs: Record<PrismaRole, NotificationRecipientRole> = {
+  [PrismaRole.PM]: NotificationRecipientRole.PM,
+  [PrismaRole.SM]: NotificationRecipientRole.SM,
+  [PrismaRole.SM_TARGET]: NotificationRecipientRole.SM_TARGET,
+};
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -59,11 +66,8 @@ export function initGateway(httpServer: HttpServer): void {
         const rows = await getNotificationsForUser(userId);
         const notifications = rows.map((n) => {
           const willName = n.will?.willName ?? "";
-          const pmUserId = n.will?.wallet?.user?.userId;
           const role =
-            pmUserId === userId
-              ? NotificationRecipientRole.PM
-              : NotificationRecipientRole.SM_TARGET;
+            prismaRoleToTs[n.recipientRole] ?? NotificationRecipientRole.SM;
           const { title, message } = generateUserNotification(
             n.notifType as NotificationType,
             willName,
