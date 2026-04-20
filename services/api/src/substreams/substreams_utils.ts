@@ -75,7 +75,7 @@ export async function stream(
     because we experienced a bug with a "corrupted" cursor that caused the stream to "freeze"
     */
     ...(lastProcessedBlock
-      ? { startBlockNum: lastProcessedBlock }
+      ? { startBlockNum: lastProcessedBlock + 1 }
       : { startBlockNum: -1 }),
   });
 
