@@ -67,6 +67,12 @@ export async function startSubstreamsListener(): Promise<void> {
     return next(req);
   };
 
+  const transport = createGrpcTransport({
+    baseUrl: SUBSTREAMS_URL,
+    httpVersion: "2",
+    interceptors: [apiKeyInterceptor],
+  } as Parameters<typeof createGrpcTransport>[0]);
+
   // Exponential backoff state
   let backoffMs = 1_000;
   const maxBackoffMs = 30_000;
@@ -80,13 +86,6 @@ export async function startSubstreamsListener(): Promise<void> {
   while (true) {
     try {
       console.log("in the try block of startSubstreamsListener...");
-
-      // ALWAYS create a fresh transport on each attempt to prevent hanging on reusing a closed/broken HTTP/2 session
-      const transport = createGrpcTransport({
-        baseUrl: SUBSTREAMS_URL,
-        httpVersion: "2",
-        interceptors: [apiKeyInterceptor],
-      } as Parameters<typeof createGrpcTransport>[0]);
 
       const result = await stream(
         substreamPackage,
