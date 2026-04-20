@@ -94,18 +94,34 @@ export default function SessionManager() {
     const markActive = () => {
       lastActivityRef.current = Date.now();
       isActiveRef.current = true;
+      // Broadcast activity to all other tabs via localStorage
+      localStorage.setItem("lastActivity", String(Date.now()));
+    };
+
+    // Listen for activity broadcast from other tabs
+    const onStorageActivity = (e: StorageEvent) => {
+      if (e.key === "lastActivity" && e.newValue) {
+        lastActivityRef.current = Number(e.newValue);
+        isActiveRef.current = true;
+      }
+      // Another tab logged out — mirror the logout here immediately
+      if (e.key === "token" && e.newValue === null) {
+        doLogout(false);
+      }
     };
 
     const events = ["mousedown", "keydown", "scroll", "touchstart", "click"];
     events.forEach((e) =>
       window.addEventListener(e, markActive, { passive: true }),
     );
+    window.addEventListener("storage", onStorageActivity);
 
     return () => {
       events.forEach((e) => window.removeEventListener(e, markActive));
+      window.removeEventListener("storage", onStorageActivity);
       (window as any).__sessionManaged = false;
     };
-  }, []);
+  }, [doLogout]);
 
   // ────────────────────── Main timer ──────────────────────
 
